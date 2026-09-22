@@ -5,6 +5,7 @@ import { PrimaryButton } from '../../components/PrimaryButton';
 import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
 import { colors } from '../../theme/colors';
+import logo from '../../assets/logo.png';
 
 export const PhoneLoginScreen = ({ navigation }: any) => {
   const [phone, setPhone] = useState('');
@@ -18,7 +19,7 @@ export const PhoneLoginScreen = ({ navigation }: any) => {
   return (
     <ScreenContainer style={styles.container}>
       <View style={styles.header}>
-        <Image source={require('../../assets/logo.png')} style={styles.logo} resizeMode="contain" />
+        <Image source={logo} style={styles.logo} resizeMode="contain" />
       </View>
       
       <View style={styles.content}>

@@ -3,13 +3,14 @@ import { View, Text, Image, StyleSheet } from 'react-native';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { typography } from '../../theme/typography';
 import { colors } from '../../theme/colors';
+import logo from '../../assets/logo.png';
 
 export const SplashScreen = () => {
   return (
     <ScreenContainer style={styles.container}>
       <View style={styles.logoContainer}>
         <Image 
-          source={require('../../assets/logo.png')} 
+          source={logo} 
           style={styles.logo}
           resizeMode="contain"
         />

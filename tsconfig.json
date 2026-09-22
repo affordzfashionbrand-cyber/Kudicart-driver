@@ -2,9 +2,12 @@
   "extends": "@tsconfig/react-native/tsconfig.json",
   "compilerOptions": {
     "strict": true,
+    "skipLibCheck": true,
+    "types": ["react-native", "jest", "vite/client"],
     "baseUrl": "./src",
     "paths": {
       "@/*": ["*"]
     }
-  }
+  },
+  "include": ["src/**/*"]
 }

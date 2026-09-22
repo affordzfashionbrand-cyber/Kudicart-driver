@@ -4,7 +4,7 @@ import { RootNavigator } from './src/navigation/RootNavigator';
 
 const App = () => {
   return (
-    <SafeAreaProvider>
+    <SafeAreaProvider style={{ flex: 1 }}>
       <RootNavigator />
     </SafeAreaProvider>
   );

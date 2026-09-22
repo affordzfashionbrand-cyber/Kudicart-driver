@@ -8,6 +8,7 @@
     "lint": "eslint .",
     "start": "react-native start",
     "web": "vite --host --port 3000 --open",
+    "build": "vite build",
     "test": "jest"
   },
   "dependencies": {
@@ -32,6 +33,7 @@
     "@react-native/eslint-config": "^0.72.2",
     "@react-native/metro-config": "^0.72.11",
     "@tsconfig/react-native": "^3.0.0",
+    "@types/node": "^18.11.18",
     "@types/react": "^18.0.24",
     "@types/react-test-renderer": "^18.0.0",
     "@vitejs/plugin-react": "^6.1.1",

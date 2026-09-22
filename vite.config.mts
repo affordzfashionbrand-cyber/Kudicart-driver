@@ -1,6 +1,5 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import path from 'path';
 
 export default defineConfig({
   plugins: [react()],
@@ -15,8 +14,12 @@ export default defineConfig({
     __DEV__: true,
   },
   optimizeDeps: {
-    esbuildOptions: {
-      resolveExtensions: ['.web.tsx', '.tsx', '.web.ts', '.ts', '.web.jsx', '.jsx', '.web.js', '.js'],
-    },
+    exclude: [
+      'react-native-screens',
+      'react-native-safe-area-context',
+    ],
+  },
+  build: {
+    chunkSizeWarningLimit: 1500,
   },
 });
