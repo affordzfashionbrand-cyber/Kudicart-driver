@@ -5,10 +5,12 @@ import { PrimaryButton } from '../../components/PrimaryButton';
 import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
 import { colors } from '../../theme/colors';
+import { useAuthStore } from '../../store/useAuthStore';
 import logo from '../../assets/logo.png';
 
 export const PhoneLoginScreen = ({ navigation }: any) => {
-  const [phone, setPhone] = useState('');
+  const { initialPhone } = useAuthStore();
+  const [phone, setPhone] = useState(initialPhone || '');
   const [isFocused, setIsFocused] = useState(false);
   const [isTermsAccepted, setIsTermsAccepted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);

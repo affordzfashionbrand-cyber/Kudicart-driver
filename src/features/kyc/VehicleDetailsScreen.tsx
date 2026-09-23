@@ -7,23 +7,7 @@ import { spacing } from '../../theme/spacing';
 import { colors } from '../../theme/colors';
 import { useDriverStore } from '../../store/useDriverStore';
 import logo from '../../assets/logo.png';
-
-const Icon = ({ name, color, size = 20 }: { name: string; color: string; size?: number }) => {
-  const getIcon = () => {
-    switch (name) {
-      case 'arrow-left': return '←';
-      case 'chevron-down': return '▼';
-      case 'chevron-up': return '▲';
-      case 'check': return '✓';
-      default: return '•';
-    }
-  };
-  return (
-    <Text style={{ fontSize: size, color: color, textAlign: 'center', lineHeight: size * 1.2 }}>
-      {getIcon()}
-    </Text>
-  );
-};
+import { KudiIcon } from '../../components/KudiIcon';
 
 export const VehicleDetailsScreen = ({ navigation }: any) => {
   const { vehicle, updateVehicle } = useDriverStore();
@@ -78,7 +62,7 @@ export const VehicleDetailsScreen = ({ navigation }: any) => {
   const handleContinue = () => {
     if (validate()) {
       updateVehicle({ registrationNumber, vehicleType, make, model });
-      navigation.navigate('RcUpload');
+      navigation.navigate('DocumentUploads');
     }
   };
 
@@ -92,7 +76,7 @@ export const VehicleDetailsScreen = ({ navigation }: any) => {
           
           <View style={styles.header}>
             <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-              <Icon name="arrow-left" color={colors.primary} size={24} />
+              <KudiIcon name="arrow-left" color={colors.primary} size={24} />
             </TouchableOpacity>
             <View style={styles.logoContainer}>
               <Image source={logo} style={styles.logo} resizeMode="contain" />
@@ -101,7 +85,7 @@ export const VehicleDetailsScreen = ({ navigation }: any) => {
           </View>
 
           <View style={styles.content}>
-            <Text style={styles.stepText}>PARTNER KYC • STEP 2 OF 4</Text>
+            <Text style={styles.stepText}>PARTNER KYC • STEP 2 OF 3</Text>
 
             <Text style={styles.title}>Vehicle Details</Text>
             <Text style={styles.subtitle}>
@@ -174,7 +158,7 @@ export const VehicleDetailsScreen = ({ navigation }: any) => {
                 <Text style={[styles.dropdownText, !vehicleType && { color: colors.textMuted }]}>
                   {vehicleType || 'Select Vehicle Type'}
                 </Text>
-                <Icon name={isDropdownOpen ? 'chevron-up' : 'chevron-down'} color={colors.textSecondary} size={12} />
+                <KudiIcon name={isDropdownOpen ? 'chevron-up' : 'chevron-down'} color={colors.textSecondary} size={12} />
               </TouchableOpacity>
               
               {isDropdownOpen && (
@@ -197,7 +181,7 @@ export const VehicleDetailsScreen = ({ navigation }: any) => {
                       styles.dropdownItemText,
                       vehicleType === type && { color: colors.primary, fontWeight: '600' }
                     ]}>{type}</Text>
-                    {vehicleType === type && <Icon name="check" color={colors.primary} size={14} />}
+                    {vehicleType === type && <KudiIcon name="check" color={colors.primary} size={14} />}
                   </TouchableOpacity>
                 ))}
               </View>

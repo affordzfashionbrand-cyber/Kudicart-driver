@@ -6,28 +6,8 @@ import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
 import { colors } from '../../theme/colors';
 import { useAuthStore } from '../../store/useAuthStore';
+import { KudiIcon } from '../../components/KudiIcon';
 
-// Simple mock icon helper
-const Icon = ({ name, color, size = 20 }: { name: string; color: string; size?: number }) => {
-  const getIcon = () => {
-    switch (name) {
-      case 'arrow-left': return '←';
-      case 'check-circle': return '✓';
-      case 'check-badge': return '🏅';
-      case 'calendar': return '📅';
-      case 'document': return '📄';
-      case 'shield': return '🛡️';
-      case 'upload': return '↑';
-      case 'id-card': return '🪪';
-      default: return '•';
-    }
-  };
-  return (
-    <Text style={{ fontSize: size, color: color, textAlign: 'center', lineHeight: size * 1.2 }}>
-      {getIcon()}
-    </Text>
-  );
-};
 
 export const KycSubmissionScreen = () => {
   const { setKycStatus } = useAuthStore();
@@ -43,7 +23,7 @@ export const KycSubmissionScreen = () => {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <TouchableOpacity style={styles.backButton}>
-            <Icon name="arrow-left" color={colors.primary} size={24} />
+            <KudiIcon name="arrow-left" color={colors.primary} size={24} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>KudiCart</Text>
           <Text style={styles.headerDot}>•</Text>
@@ -59,7 +39,7 @@ export const KycSubmissionScreen = () => {
         {/* Progress Step Header */}
         <View style={styles.topBadgeRow}>
           <View style={styles.badgeContainer}>
-            <Icon name="shield" color={colors.primary} size={14} />
+            <KudiIcon name="shield" color={colors.primary} size={14} />
             <Text style={styles.badgeText}>FLEET ONBOARDING • STEP 02/04</Text>
           </View>
         </View>
@@ -73,7 +53,7 @@ export const KycSubmissionScreen = () => {
         <View style={styles.stepperBox}>
           <View style={styles.stepItem}>
             <View style={[styles.stepCircle, styles.stepCircleCompleted]}>
-              <Icon name="check-circle" color={colors.white} size={14} />
+              <KudiIcon name="check-circle" color={colors.white} size={14} />
             </View>
             <Text style={[styles.stepText, styles.stepTextCompleted]}>Driver</Text>
           </View>
@@ -107,11 +87,11 @@ export const KycSubmissionScreen = () => {
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <View style={styles.cardHeaderLeft}>
-              <View style={styles.cardIconBox}><Icon name="id-card" color={colors.primary} size={16} /></View>
+              <View style={styles.cardIconBox}><KudiIcon name="id-card" color={colors.primary} size={16} /></View>
               <Text style={styles.cardTitle}>DRIVER IDENTITY</Text>
             </View>
             <View style={styles.verifiedBadge}>
-              <Icon name="check-circle" color={colors.success} size={12} />
+              <KudiIcon name="check-circle" color={colors.success} size={12} />
               <Text style={styles.verifiedText}>Verified</Text>
             </View>
           </View>
@@ -119,7 +99,7 @@ export const KycSubmissionScreen = () => {
           <Text style={styles.inputLabel}>Full Legal Name <Text style={styles.required}>*</Text></Text>
           <View style={styles.readOnlyInput}>
             <Text style={styles.readOnlyText}>Babajide Samuel Adeleke</Text>
-            <Icon name="check-badge" color={colors.success} size={20} />
+            <KudiIcon name="check-badge" color={colors.success} size={20} />
           </View>
           <Text style={styles.helperText}>Matched automatically with partner registered account.</Text>
 
@@ -128,7 +108,7 @@ export const KycSubmissionScreen = () => {
               <Text style={styles.inputLabel}>Date of Birth <Text style={styles.required}>*</Text></Text>
               <View style={styles.inputBox}>
                 <Text style={styles.inputText}>14 / 08 / 1994</Text>
-                <Icon name="calendar" color={colors.textSecondary} size={16} />
+                <KudiIcon name="calendar" color={colors.textSecondary} size={16} />
               </View>
             </View>
             <View style={styles.spacer} />
@@ -145,7 +125,7 @@ export const KycSubmissionScreen = () => {
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <View style={styles.cardHeaderLeft}>
-              <View style={styles.cardIconBox}><Text>🚲</Text></View>
+              <View style={styles.cardIconBox}><KudiIcon name="vehicle" color={colors.primary} size={16} /></View>
               <Text style={styles.cardTitle}>VEHICLE SPECIFICATION</Text>
             </View>
             <Text style={styles.editingText}>• Editing</Text>
@@ -191,33 +171,33 @@ export const KycSubmissionScreen = () => {
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <View style={styles.cardHeaderLeft}>
-              <View style={styles.cardIconBox}><Icon name="document" color={colors.primary} size={16} /></View>
+              <View style={styles.cardIconBox}><KudiIcon name="document" color={colors.primary} size={16} /></View>
               <Text style={styles.cardTitle}>DOCUMENT VERIFICATION</Text>
             </View>
             <Text style={styles.editingText}>2 of 3 Uploaded</Text>
           </View>
 
           <View style={styles.docUploadedItem}>
-            <View style={styles.docIconBoxSuccess}><Icon name="document" color={colors.success} size={20} /></View>
+            <View style={styles.docIconBoxSuccess}><KudiIcon name="document" color={colors.success} size={20} /></View>
             <View style={styles.docInfo}>
               <Text style={styles.docTitle}>Driving Licence (Front & Back)</Text>
-              <Text style={styles.docSubtitleSuccess}>✓ licence_front_back.jpg • 1.2MB</Text>
+              <Text style={styles.docSubtitleSuccess}>licence_front_back.jpg • 1.2MB</Text>
             </View>
             <Text style={styles.replaceText}>Replace</Text>
           </View>
 
           <View style={styles.docUploadedItem}>
-            <View style={styles.docIconBoxSuccess}><Icon name="document" color={colors.success} size={20} /></View>
+            <View style={styles.docIconBoxSuccess}><KudiIcon name="document" color={colors.success} size={20} /></View>
             <View style={styles.docInfo}>
               <Text style={styles.docTitle}>Vehicle Registration Certificate (RC)</Text>
-              <Text style={styles.docSubtitleSuccess}>✓ vehicle_rc_copy.pdf • 840KB</Text>
+              <Text style={styles.docSubtitleSuccess}>vehicle_rc_copy.pdf • 840KB</Text>
             </View>
             <Text style={styles.replaceText}>Replace</Text>
           </View>
 
           <View style={styles.docPendingItem}>
             <View style={styles.docPendingTopRow}>
-              <View style={styles.docIconBoxPending}><Icon name="id-card" color={colors.primary} size={20} /></View>
+              <View style={styles.docIconBoxPending}><KudiIcon name="id-card" color={colors.primary} size={20} /></View>
               <View style={styles.docInfo}>
                 <Text style={styles.docTitle}>National ID / Govt ID</Text>
                 <Text style={styles.docSubtitle}>NIN slip, Voter's Card, or Govt ID</Text>
@@ -230,7 +210,7 @@ export const KycSubmissionScreen = () => {
             <View style={styles.docPendingBottomRow}>
               <Text style={styles.docSupportedText}>Supported: PDF, JPG, PNG (Max 10MB)</Text>
               <TouchableOpacity style={styles.uploadButton}>
-                <Icon name="upload" color={colors.white} size={14} />
+                <KudiIcon name="upload" color={colors.white} size={14} />
                 <Text style={styles.uploadButtonText}>Upload Document →</Text>
               </TouchableOpacity>
             </View>
@@ -239,7 +219,7 @@ export const KycSubmissionScreen = () => {
 
         {/* Info Box */}
         <View style={styles.infoBox}>
-          <Icon name="shield" color={colors.textSecondary} size={16} />
+          <KudiIcon name="shield" color={colors.textSecondary} size={16} />
           <Text style={styles.infoBoxText}>
             All documents are encrypted with <Text style={{fontWeight: '700'}}>256-bit AES storage</Text>. Once submitted, verification typically takes <Text style={{color: colors.primary, fontWeight: '700'}}>2 to 24 hours</Text> by KudiCart Fleet Operations.
           </Text>
@@ -311,7 +291,7 @@ const styles = StyleSheet.create({
   },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.l },
   cardHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.s },
-  cardIconBox: { width: 32, height: 32, borderRadius: 8, backgroundColor: '#F0F4FF', justifyContent: 'center', alignItems: 'center' },
+  cardIconBox: { justifyContent: 'center', alignItems: 'center', marginRight: spacing.s },
   cardTitle: { ...typography.bodyMedium, fontWeight: '700', letterSpacing: 0.5 },
   verifiedBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#E6F4EA', paddingHorizontal: spacing.s, paddingVertical: 4, borderRadius: 12, gap: 4 },
   verifiedText: { ...typography.caption, color: colors.success, fontWeight: '600' },
@@ -352,7 +332,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border, borderRadius: 8,
     padding: spacing.m, marginBottom: spacing.m,
   },
-  docIconBoxSuccess: { width: 36, height: 36, borderRadius: 8, backgroundColor: '#E6F4EA', justifyContent: 'center', alignItems: 'center', marginRight: spacing.m },
+  docIconBoxSuccess: { justifyContent: 'center', alignItems: 'center', marginRight: spacing.m },
   docInfo: { flex: 1 },
   docTitle: { ...typography.bodyMedium, fontWeight: '600', marginBottom: 2 },
   docSubtitleSuccess: { ...typography.caption, color: colors.success },
@@ -363,7 +343,7 @@ const styles = StyleSheet.create({
     borderRadius: 8, padding: spacing.m,
   },
   docPendingTopRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: spacing.l },
-  docIconBoxPending: { width: 36, height: 36, borderRadius: 8, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center', marginRight: spacing.m },
+  docIconBoxPending: { justifyContent: 'center', alignItems: 'center', marginRight: spacing.m },
   docSubtitle: { ...typography.caption, color: colors.textSecondary },
   actionRequiredBadge: { backgroundColor: '#FFEBEB', paddingHorizontal: spacing.s, paddingVertical: 4, borderRadius: 4 },
   actionRequiredText: { ...typography.caption, color: colors.danger, fontWeight: '700' },

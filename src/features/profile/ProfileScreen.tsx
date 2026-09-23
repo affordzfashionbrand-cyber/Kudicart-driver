@@ -5,6 +5,7 @@ import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
 import { colors } from '../../theme/colors';
 import { useDriverStore } from '../../store/useDriverStore';
+import { KudiIcon } from '../../components/KudiIcon';
 
 export const ProfileScreen = () => {
   const { profile, vehicle, kyc } = useDriverStore();
@@ -17,7 +18,7 @@ export const ProfileScreen = () => {
           <Text style={styles.headerSubtitle}>Account & Verification Sync</Text>
         </View>
         <TouchableOpacity>
-          <Text style={styles.helpIcon}>❓</Text>
+          <KudiIcon name="help" size={24} color={colors.textSecondary} />
         </TouchableOpacity>
       </View>
 
@@ -45,17 +46,17 @@ export const ProfileScreen = () => {
           </View>
           <View style={styles.divider} />
           <View style={styles.contactRow}>
-            <Text style={styles.phoneText}>📞 {profile.phone}</Text>
-            <Text style={styles.tierText}>🛡️ {profile.tier}</Text>
+            <Text style={styles.phoneText}><KudiIcon name="phone" size={14} color={colors.textSecondary} /> {profile.phone}</Text>
+            <Text style={styles.tierText}><KudiIcon name="shield" size={14} color={colors.textSecondary} /> {profile.tier}</Text>
           </View>
         </View>
 
         {/* KYC Card */}
         <View style={styles.card}>
           <View style={styles.kycHeader}>
-            <Text style={styles.kycTitle}>🛡️ KYC Status</Text>
+            <Text style={styles.kycTitle}><KudiIcon name="shield" size={18} color={colors.primary} /> KYC Status</Text>
             <View style={styles.kycApprovedBadge}>
-              <Text style={styles.kycApprovedText}>✅ KYC Approved</Text>
+              <Text style={styles.kycApprovedText}><KudiIcon name="check-circle" size={14} color={colors.success} /> KYC Approved</Text>
             </View>
           </View>
           <Text style={styles.kycDesc}>
@@ -63,25 +64,25 @@ export const ProfileScreen = () => {
           </Text>
           
           <View style={styles.docRow}>
-            <Text style={styles.docTitle}>🪪 Driver License</Text>
-            <Text style={styles.docStatus}>✅ {kyc.licenseStatus}</Text>
+            <Text style={styles.docTitle}><KudiIcon name="id-card" size={16} color={colors.text} /> Driver License</Text>
+            <Text style={styles.docStatus}><KudiIcon name="check-circle" size={14} color={colors.success} /> {kyc.licenseStatus}</Text>
           </View>
           <Text style={styles.docSubtitle}>{kyc.licenseNumber}</Text>
 
           <View style={styles.docRow}>
-            <Text style={styles.docTitle}>🆔 National ID (Aadhaar)</Text>
-            <Text style={styles.docStatus}>✅ {kyc.aadhaarStatus}</Text>
+            <Text style={styles.docTitle}><KudiIcon name="id-card" size={16} color={colors.text} /> National ID (Aadhaar)</Text>
+            <Text style={styles.docStatus}><KudiIcon name="check-circle" size={14} color={colors.success} /> {kyc.aadhaarStatus}</Text>
           </View>
           <Text style={styles.docSubtitle}>{kyc.aadhaarNumber}</Text>
 
           <View style={styles.docRow}>
-            <Text style={styles.docTitle}>📄 Vehicle RC</Text>
-            <Text style={styles.docStatus}>✅ {vehicle.rcStatus}</Text>
+            <Text style={styles.docTitle}><KudiIcon name="document" size={16} color={colors.text} /> Vehicle RC</Text>
+            <Text style={styles.docStatus}><KudiIcon name="check-circle" size={14} color={colors.success} /> {vehicle.rcStatus}</Text>
           </View>
           <Text style={styles.docSubtitle}>{vehicle.rcNumber}</Text>
 
           <View style={styles.lockRow}>
-            <Text style={styles.lockIcon}>🔒</Text>
+            <KudiIcon name="lock" size={16} color={colors.textSecondary} />
             <Text style={styles.lockText}>
               Backend verified. Changes require Fleet Admin audit.
             </Text>
@@ -91,9 +92,9 @@ export const ProfileScreen = () => {
         {/* Personal Info Card */}
         <View style={styles.card}>
           <View style={styles.kycHeader}>
-            <Text style={styles.kycTitle}>👤 Personal Information</Text>
+            <Text style={styles.kycTitle}><KudiIcon name="user" size={18} color={colors.primary} /> Personal Information</Text>
             <TouchableOpacity style={styles.editButton}>
-              <Text style={styles.editButtonText}>✏️ Edit</Text>
+              <Text style={styles.editButtonText}><KudiIcon name="edit" size={14} color={colors.primary} /> Edit</Text>
             </TouchableOpacity>
           </View>
           <View style={styles.infoRow}>

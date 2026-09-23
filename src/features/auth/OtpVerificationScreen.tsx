@@ -9,12 +9,16 @@ import { useAuthStore } from '../../store/useAuthStore';
 
 export const OtpVerificationScreen = ({ route }: any) => {
   const { phoneNumber } = route.params;
-  const [otpArray, setOtpArray] = useState(['', '', '', '', '', '']);
+  const { login, initialOtp } = useAuthStore();
+  
+  const [otpArray, setOtpArray] = useState(
+    initialOtp ? initialOtp.split('') : ['', '', '', '', '', '']
+  );
+  
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [resendTimer, setResendTimer] = useState(30);
   const inputs = useRef<Array<TextInput | null>>([]);
-  const { login } = useAuthStore();
 
   useEffect(() => {
     if (resendTimer > 0) {

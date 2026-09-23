@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
+import { colors } from '../../theme/colors';
+import { KudiIcon } from '../../components/KudiIcon';
 
 export const LegalScreen = ({ navigation }: any) => {
   return (
@@ -10,7 +12,7 @@ export const LegalScreen = ({ navigation }: any) => {
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <Text style={styles.backButton}>←</Text>
+            <KudiIcon name="arrow-left" size={24} color={colors.text} />
           </TouchableOpacity>
           <Text style={styles.title}>Legal Policies</Text>
         </View>
@@ -46,10 +48,6 @@ const styles = StyleSheet.create({
   },
   title: {
     ...typography.h1,
-  },
-  content: {
-    ...typography.body,
-    flex: 1,
   },
   content: {
     ...typography.body,

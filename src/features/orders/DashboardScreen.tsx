@@ -6,6 +6,7 @@ import { spacing } from '../../theme/spacing';
 import { colors } from '../../theme/colors';
 import { useDriverStore } from '../../store/useDriverStore';
 import { useOrderStore } from '../../store/useOrderStore';
+import { KudiIcon } from '../../components/KudiIcon';
 
 export const DashboardScreen = ({ navigation }: any) => {
   const { profile, isOnline, setIsOnline } = useDriverStore();
@@ -18,7 +19,7 @@ export const DashboardScreen = ({ navigation }: any) => {
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.headerRow}>
           <View style={{ flex: 1, marginRight: spacing.s }}>
-            <Text style={styles.greeting} numberOfLines={1}>Good morning, {profile.name.split(' ')[0]}</Text>
+            <Text style={styles.greeting} numberOfLines={1}>Good morning, {profile.name?.split(' ')[0]}</Text>
             <Text style={styles.subGreeting} numberOfLines={1}>{profile.role} • ID: {profile.id}</Text>
           </View>
           <View style={styles.kycBadge}>
@@ -83,7 +84,7 @@ export const DashboardScreen = ({ navigation }: any) => {
         <View style={styles.grid}>
           <TouchableOpacity style={styles.gridCard} onPress={() => navigation.navigate('Orders')}>
             <View style={styles.cardHeader}>
-               <Text>📋</Text>
+               <KudiIcon name="clipboard" color={colors.primary} size={24} />
                <View style={styles.activeBadge}><Text style={styles.activeBadgeText}>{activeOrders.length} Active</Text></View>
             </View>
             <Text style={styles.cardTitle}>Assigned Orders</Text>
@@ -91,21 +92,21 @@ export const DashboardScreen = ({ navigation }: any) => {
           </TouchableOpacity>
           <TouchableOpacity style={styles.gridCard} onPress={() => navigation.navigate('History')}>
             <View style={styles.cardHeader}>
-               <Text>🕒</Text>
+               <KudiIcon name="clock" color={colors.primary} size={24} />
             </View>
             <Text style={styles.cardTitle}>Order History</Text>
             <Text style={styles.cardDesc}>Completed runs</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.gridCard} onPress={() => navigation.navigate('Profile')}>
              <View style={styles.cardHeader}>
-               <Text>👤</Text>
+               <KudiIcon name="user" color={colors.primary} size={24} />
             </View>
             <Text style={styles.cardTitle}>Fleet Profile</Text>
             <Text style={styles.cardDesc}>Vehicle & KYC</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.gridCard}>
              <View style={styles.cardHeader}>
-               <Text>🎧</Text>
+               <KudiIcon name="headphones" color={colors.primary} size={24} />
                <View style={styles.statusDotSm} />
             </View>
             <Text style={styles.cardTitle}>Partner Support</Text>

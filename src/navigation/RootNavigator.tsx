@@ -9,11 +9,14 @@ import { LegalScreen } from '../features/auth/LegalScreen';
 import { MainNavigator } from './MainNavigator';
 import { KycNavigator } from './KycNavigator';
 
+import { VerificationApprovedScreen } from '../features/kyc/VerificationApprovedScreen';
+
 export type RootStackParamList = {
   Splash: undefined;
   PhoneLogin: undefined;
   OtpVerification: { phoneNumber: string };
   Legal: undefined;
+  VerificationApproved: undefined;
   MainApp: undefined;
   KycFlow: undefined;
 };
@@ -44,7 +47,10 @@ export const RootNavigator = () => {
             <Stack.Screen name="Legal" component={LegalScreen} options={{ presentation: 'modal' }} />
           </>
         ) : kycStatus === 'APPROVED' ? (
-          <Stack.Screen name="MainApp" component={MainNavigator} />
+          <>
+            <Stack.Screen name="VerificationApproved" component={VerificationApprovedScreen} />
+            <Stack.Screen name="MainApp" component={MainNavigator} />
+          </>
         ) : (
           <Stack.Screen name="KycFlow" component={KycNavigator} />
         )}

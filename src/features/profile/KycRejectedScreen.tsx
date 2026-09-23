@@ -6,29 +6,8 @@ import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
 import { colors } from '../../theme/colors';
 import { useAuthStore } from '../../store/useAuthStore';
+import { KudiIcon } from '../../components/KudiIcon';
 
-// Simple mock icon helper
-const Icon = ({ name, color, size = 20 }: { name: string; color: string; size?: number }) => {
-  const getIcon = () => {
-    switch (name) {
-      case 'shield-cross': return '🛡️';
-      case 'info-circle': return 'ℹ️';
-      case 'check-circle': return '✓';
-      case 'cross-circle': return '✕';
-      case 'document': return '📄';
-      case 'document-error': return '📄';
-      case 'vehicle': return '🏍️';
-      case 'lock': return '🔒';
-      default: return '•';
-    }
-  };
-  
-  return (
-    <Text style={{ fontSize: size, color: color, textAlign: 'center', lineHeight: size * 1.2 }}>
-      {getIcon()}
-    </Text>
-  );
-};
 
 export const KycRejectedScreen = () => {
   const { setKycStatus } = useAuthStore();
@@ -51,7 +30,7 @@ export const KycRejectedScreen = () => {
         {/* Status Header */}
         <View style={styles.statusHeader}>
           <View style={styles.shieldIconContainer}>
-            <Icon name="shield-cross" color={colors.danger} size={32} />
+            <KudiIcon name="shield-cross" color={colors.danger} size={32} />
           </View>
           <View style={styles.badgeContainer}>
             <Text style={styles.badgeText}>VERIFICATION NOT APPROVED</Text>
@@ -69,7 +48,7 @@ export const KycRejectedScreen = () => {
         <View style={styles.noticeCard}>
           <View style={styles.noticeHeaderRow}>
             <View style={styles.noticeHeaderLeft}>
-              <Icon name="info-circle" color={colors.danger} size={16} />
+              <KudiIcon name="info-circle" color={colors.danger} size={16} />
               <Text style={styles.noticeTitle}>VERIFICATION NOTICE</Text>
             </View>
             <View style={styles.backendBadge}>
@@ -93,42 +72,42 @@ export const KycRejectedScreen = () => {
           
           <View style={styles.itemCard}>
             <View style={styles.itemIconBox}>
-              <Icon name="document" color={colors.success} size={20} />
+              <KudiIcon name="document" color={colors.success} size={20} />
             </View>
             <View style={styles.itemContent}>
               <Text style={styles.itemTitle}>Commercial Driver License</Text>
               <Text style={styles.itemSubtitle}>DL - •••• 9024</Text>
             </View>
             <View style={[styles.statusBadge, styles.statusBadgeSuccess]}>
-              <Icon name="check-circle" color={colors.success} size={12} />
+              <KudiIcon name="check-circle" color={colors.success} size={12} />
               <Text style={styles.statusBadgeTextSuccess}>Verified</Text>
             </View>
           </View>
 
           <View style={[styles.itemCard, styles.itemCardError]}>
             <View style={[styles.itemIconBox, styles.itemIconBoxError]}>
-              <Icon name="document-error" color={colors.danger} size={20} />
+              <KudiIcon name="document" color={colors.danger} size={20} />
             </View>
             <View style={styles.itemContent}>
               <Text style={styles.itemTitle}>National ID / Govt ID</Text>
               <Text style={styles.itemSubtitleError}>Blurry image • Unreadable</Text>
             </View>
             <View style={[styles.statusBadge, styles.statusBadgeError]}>
-              <Icon name="cross-circle" color={colors.danger} size={12} />
+              <KudiIcon name="error-circle" color={colors.danger} size={12} />
               <Text style={styles.statusBadgeTextError}>Requires Resubmission</Text>
             </View>
           </View>
 
           <View style={styles.itemCard}>
             <View style={styles.itemIconBox}>
-              <Icon name="vehicle" color={colors.success} size={20} />
+              <KudiIcon name="vehicle" color={colors.success} size={20} />
             </View>
             <View style={styles.itemContent}>
               <Text style={styles.itemTitle}>Vehicle RC (EV Commercial)</Text>
               <Text style={styles.itemSubtitle}>KA-05-••••41</Text>
             </View>
             <View style={[styles.statusBadge, styles.statusBadgeSuccess]}>
-              <Icon name="check-circle" color={colors.success} size={12} />
+              <KudiIcon name="check-circle" color={colors.success} size={12} />
               <Text style={styles.statusBadgeTextSuccess}>Verified</Text>
             </View>
           </View>
@@ -136,7 +115,7 @@ export const KycRejectedScreen = () => {
 
         {/* Info Box */}
         <View style={styles.infoBox}>
-          <Icon name="lock" color={colors.textSecondary} size={16} />
+          <KudiIcon name="lock" color={colors.textSecondary} size={16} />
           <Text style={styles.infoBoxText}>
             Central Dispatch operations and order assignments are paused until KYC verification is successfully approved.
           </Text>

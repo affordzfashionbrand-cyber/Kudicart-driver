@@ -7,21 +7,7 @@ import { spacing } from '../../theme/spacing';
 import { colors } from '../../theme/colors';
 import { useDriverStore } from '../../store/useDriverStore';
 import logo from '../../assets/logo.png';
-
-const Icon = ({ name, color, size = 20 }: { name: string; color: string; size?: number }) => {
-  const getIcon = () => {
-    switch (name) {
-      case 'arrow-left': return '←';
-      case 'calendar': return '📅';
-      default: return '•';
-    }
-  };
-  return (
-    <Text style={{ fontSize: size, color: color, textAlign: 'center', lineHeight: size * 1.2 }}>
-      {getIcon()}
-    </Text>
-  );
-};
+import { KudiIcon } from '../../components/KudiIcon';
 
 export const DriverDetailsScreen = ({ navigation }: any) => {
   const { profile, updateProfile } = useDriverStore();
@@ -157,7 +143,7 @@ export const DriverDetailsScreen = ({ navigation }: any) => {
           </View>
 
           <View style={styles.content}>
-            <Text style={styles.stepText}>PARTNER KYC • STEP 1 OF 4</Text>
+            <Text style={styles.stepText}>PARTNER KYC • STEP 1 OF 3</Text>
 
             <Text style={styles.title}>Driver Details</Text>
             <Text style={styles.subtitle}>
