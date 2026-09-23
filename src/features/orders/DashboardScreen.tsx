@@ -17,9 +17,9 @@ export const DashboardScreen = ({ navigation }: any) => {
     <ScreenContainer>
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.headerRow}>
-          <View>
-            <Text style={styles.greeting}>Good morning, {profile.name.split(' ')[0]}</Text>
-            <Text style={styles.subGreeting}>{profile.role} • ID: {profile.id}</Text>
+          <View style={{ flex: 1, marginRight: spacing.s }}>
+            <Text style={styles.greeting} numberOfLines={1}>Good morning, {profile.name.split(' ')[0]}</Text>
+            <Text style={styles.subGreeting} numberOfLines={1}>{profile.role} • ID: {profile.id}</Text>
           </View>
           <View style={styles.kycBadge}>
             <Text style={styles.kycBadgeText}>KYC Approved</Text>
@@ -55,7 +55,7 @@ export const DashboardScreen = ({ navigation }: any) => {
             </View>
             
             <View style={styles.locationBlock}>
-              <Text style={styles.locationTitle}>{activeOrder.pickupLocation.substring(0, 42)}...</Text>
+              <Text style={styles.locationTitle} numberOfLines={1}>{activeOrder.pickupLocation}</Text>
               <Text style={styles.locationDesc}>
                 {activeOrder.pickupTime ? `Pickup completed at ${activeOrder.pickupTime}` : `Pickup pending`} • {activeOrder.itemsCount} items (Tote {activeOrder.toteId})
               </Text>

@@ -19,6 +19,9 @@ export const colors = {
   border: '#E0E0E0',
   divider: '#E0E0E0',
   
+  inputBorder: '#C6C6C6',
+  inputFocusedBorder: '#0F62FE',
+  
   white: '#FFFFFF',
   black: '#000000',
   transparent: 'transparent',

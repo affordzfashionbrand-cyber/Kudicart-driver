@@ -16,7 +16,7 @@ export const VerificationPendingScreen = () => {
         <Text style={styles.subtitle}>Your documents are being reviewed by our Fleet Operations team.</Text>
       </View>
       <View style={styles.footer}>
-        <PrimaryButton title="Check Status (Simulate Approval)" onPress={() => setKycStatus('APPROVED')} />
+        <PrimaryButton title="DEV: Simulate Approval" onPress={() => setKycStatus('APPROVED')} />
       </View>
     </ScreenContainer>
   );

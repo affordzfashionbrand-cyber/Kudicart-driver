@@ -15,7 +15,7 @@ export const MainNavigator = () => {
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
-        tabBarStyle: { paddingBottom: 5, height: 60, backgroundColor: colors.surface },
+        tabBarStyle: { paddingBottom: 5, paddingTop: 5, minHeight: 60, backgroundColor: colors.surface },
       }}
     >
       <Tab.Screen name="Home" component={DashboardScreen} />

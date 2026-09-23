@@ -5,6 +5,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import { SplashScreen } from '../features/auth/SplashScreen';
 import { PhoneLoginScreen } from '../features/auth/PhoneLoginScreen';
 import { OtpVerificationScreen } from '../features/auth/OtpVerificationScreen';
+import { LegalScreen } from '../features/auth/LegalScreen';
 import { MainNavigator } from './MainNavigator';
 import { KycNavigator } from './KycNavigator';
 
@@ -12,6 +13,7 @@ export type RootStackParamList = {
   Splash: undefined;
   PhoneLogin: undefined;
   OtpVerification: { phoneNumber: string };
+  Legal: undefined;
   MainApp: undefined;
   KycFlow: undefined;
 };
@@ -39,6 +41,7 @@ export const RootNavigator = () => {
           <>
             <Stack.Screen name="PhoneLogin" component={PhoneLoginScreen} />
             <Stack.Screen name="OtpVerification" component={OtpVerificationScreen} />
+            <Stack.Screen name="Legal" component={LegalScreen} options={{ presentation: 'modal' }} />
           </>
         ) : kycStatus === 'APPROVED' ? (
           <Stack.Screen name="MainApp" component={MainNavigator} />

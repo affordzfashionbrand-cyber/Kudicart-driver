@@ -43,7 +43,8 @@
 
 ## Phase 3 — Profile and KYC
 **Status:** [~] PARTIAL 
-**Evidence:** `ProfileScreen`, `KycSubmissionScreen`, and `VerificationPendingScreen` UIs built and bound to `useDriverStore`. **Missing:** Real backend KYC validation endpoints and document upload handlers.
+**Evidence:** `DriverDetailsScreen` and `RcUploadScreen` are implemented as the genuine frontend input flow. Mock state bypasses have been removed. 
+**Missing:** Vehicle details, final KYC submission, real backend KYC validation endpoints, and document upload handlers.
 
 ## Phase 4 — Availability Management
 **Status:** [~] PARTIAL 
@@ -71,7 +72,9 @@
 
 ## Phase 10 — Integration Testing & Web Stabilization
 **Status:** [x] COMPLETE 
-**Evidence:** Manual UI testing was conducted via Chrome preview (`npm run web`). Web preview was fully stabilized by correcting Vite's `optimizeDeps` pre-bundling configuration, allowing React Native Web to properly route to `.web.js` platform files without crashing on native codegen modules. Automated integration suites (e.g. Jest) are deferred.
+**Evidence:** 
+- Manual UI testing was conducted via Chrome preview (`npm run web`). Web preview was fully stabilized by correcting Vite's `optimizeDeps` pre-bundling configuration, allowing React Native Web to properly route to `.web.js` platform files without crashing on native codegen modules.
+- **Responsive UI Audit:** Completed. Identified and fixed layout issues in `PhoneLoginScreen`, `OtpVerificationScreen`, `KycSubmissionScreen`, `DashboardScreen`, and `ProfileScreen` (fixed widths, missing ScrollViews, text truncation logic). Documented in `responsive_ui_audit.md`. Automated integration suites (e.g. Jest) are deferred.
 
 ## Phase 11 — Build and Release
 **Status:** [ ] Not started 

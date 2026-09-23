@@ -177,6 +177,8 @@ const styles = StyleSheet.create({
   },
   name: {
     ...typography.h4,
+    flexShrink: 1,
+    marginRight: spacing.s,
   },
   activeBadge: {
     flexDirection: 'row',

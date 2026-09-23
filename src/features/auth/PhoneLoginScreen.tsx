@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, Image } from 'react-native';
+import { View, Text, TextInput, StyleSheet, Image, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity } from 'react-native';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { typography } from '../../theme/typography';
@@ -9,156 +9,210 @@ import logo from '../../assets/logo.png';
 
 export const PhoneLoginScreen = ({ navigation }: any) => {
   const [phone, setPhone] = useState('');
+  const [isFocused, setIsFocused] = useState(false);
+  const [isTermsAccepted, setIsTermsAccepted] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleGetOtp = () => {
-    if (phone.length === 10) {
-      navigation.navigate('OtpVerification', { phoneNumber: phone });
+    if (phone.length === 10 && isTermsAccepted) {
+      setIsLoading(true);
+      // Simulate network request for 1s
+      setTimeout(() => {
+        setIsLoading(false);
+        navigation.navigate('OtpVerification', { phoneNumber: phone });
+      }, 1000);
     }
   };
 
   return (
-    <ScreenContainer style={styles.container}>
-      <View style={styles.header}>
-        <Image source={logo} style={styles.logo} resizeMode="contain" />
-      </View>
-      
-      <View style={styles.content}>
-        <Text style={styles.stepText}>STEP 1 OF 2</Text>
-        <View style={styles.portalBadge}>
-          <Text style={styles.portalText}>🚚 DELIVERY PARTNER PORTAL</Text>
-        </View>
-        
-        <Text style={styles.title}>Enter your phone number</Text>
-        <Text style={styles.subtitle}>
-          We'll send a 6-digit one-time password (OTP) via SMS to verify your fleet partner profile.
-        </Text>
-
-        <View style={styles.inputContainer}>
-          <View style={styles.prefixContainer}>
-            <Text style={styles.prefixText}>🇮🇳 +91</Text>
+    <ScreenContainer>
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoid}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView contentContainerStyle={styles.scrollContainer} bounces={false}>
+          <View style={styles.header}>
+            <Image source={logo} style={styles.logo} resizeMode="contain" />
+            <Text style={styles.portalSubtitle}>Delivery Partner Portal</Text>
           </View>
-          <TextInput
-            style={styles.input}
-            value={phone}
-            onChangeText={setPhone}
-            placeholder="9876543210"
-            keyboardType="phone-pad"
-            maxLength={10}
-          />
-        </View>
-        <Text style={styles.validationText}>
-          {phone.length === 10 ? '✅ Valid commercial phone number' : '10 digits required'}
-        </Text>
-      </View>
 
-      <View style={styles.footer}>
-        <PrimaryButton 
-          title="Get OTP →" 
-          onPress={handleGetOtp} 
-          disabled={phone.length !== 10} 
-        />
-        <Text style={styles.termsText}>
-          By continuing, you agree to KudiCart's Partner Terms of Service & Privacy Policy
-        </Text>
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>🛡️ 256-BIT ENCRYPTED FIREBASE AUTH</Text>
-        </View>
-      </View>
+          <View style={styles.content}>
+            <Text style={styles.stepText}>STEP 1 OF 2</Text>
+
+            <Text style={styles.title}>Mobile Number</Text>
+
+            <View style={[styles.inputContainer, isFocused && styles.inputFocused]}>
+              <View style={styles.prefixContainer}>
+                <Text style={styles.prefixText}>+91</Text>
+              </View>
+              <TextInput
+                style={styles.input}
+                value={phone}
+                onChangeText={setPhone}
+                placeholder="Enter Your Number"
+                placeholderTextColor={colors.textMuted}
+                keyboardType="phone-pad"
+                maxLength={10}
+                onFocus={() => setIsFocused(true)}
+                onBlur={() => setIsFocused(false)}
+              />
+            </View>
+            {phone.length > 0 && phone.length < 10 && !isFocused && (
+              <Text style={styles.validationError}>
+                10-digit number required
+              </Text>
+            )}
+
+            <TouchableOpacity
+              style={styles.checkboxContainer}
+              onPress={() => setIsTermsAccepted(!isTermsAccepted)}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.checkbox, isTermsAccepted && styles.checkboxChecked]}>
+                {isTermsAccepted && <Text style={styles.checkmark}>✓</Text>}
+              </View>
+              <Text style={styles.checkboxText}>
+                I have read and agreed to{' '}
+                <Text style={styles.linkText} onPress={() => navigation.navigate('Legal')}>
+                  Terms and Conditions
+                </Text>
+                {' '}and{' '}
+                <Text style={styles.linkText} onPress={() => navigation.navigate('Legal')}>
+                  Privacy Policy
+                </Text>
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.footer}>
+            <PrimaryButton
+              title="Get OTP →"
+              onPress={handleGetOtp}
+              disabled={phone.length !== 10 || !isTermsAccepted || isLoading}
+              loading={isLoading}
+            />
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </ScreenContainer>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  keyboardAvoid: {
+    flex: 1,
+  },
+  scrollContainer: {
+    flexGrow: 1,
     padding: spacing.l,
-    justifyContent: 'space-between',
   },
   header: {
     marginTop: spacing.xl,
+    alignItems: 'center',
   },
   logo: {
-    width: 120,
-    height: 40,
+    width: 180,
+    height: 60,
+  },
+  portalSubtitle: {
+    ...typography.h4,
+    color: colors.primaryDark,
+    marginTop: spacing.xs,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   content: {
-    flex: 1,
     marginTop: spacing.xxl,
   },
   stepText: {
     ...typography.caption,
     letterSpacing: 1,
-    marginBottom: spacing.m,
-  },
-  portalBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#EAEFFF',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-    marginBottom: spacing.l,
-  },
-  portalText: {
-    ...typography.caption,
-    color: colors.primaryDark,
-    fontWeight: '700',
+    marginBottom: spacing.s,
+    color: colors.textMuted,
   },
   title: {
-    ...typography.h1,
-    marginBottom: spacing.s,
-  },
-  subtitle: {
-    ...typography.body,
-    color: colors.textSecondary,
-    marginBottom: spacing.xl,
+    ...typography.h2,
+    fontWeight: '500',
+    marginBottom: spacing.m,
   },
   inputContainer: {
     flexDirection: 'row',
-    borderWidth: 2,
-    borderColor: colors.primary,
-    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.inputBorder,
+    borderRadius: 16,
+    backgroundColor: colors.white,
+    alignItems: 'center',
     overflow: 'hidden',
-    backgroundColor: colors.surface,
+  },
+  inputFocused: {
+    borderColor: colors.primary,
+    borderWidth: 1.5,
   },
   prefixContainer: {
-    padding: spacing.m,
+    paddingLeft: spacing.l,
+    paddingRight: spacing.m,
     justifyContent: 'center',
-    backgroundColor: '#F3F4F6',
     borderRightWidth: 1,
     borderColor: colors.border,
+    height: 24, // Fixed height for a sleek, small line
+    marginRight: spacing.s,
   },
   prefixText: {
-    ...typography.h3,
+    ...typography.bodyLarge,
+    fontWeight: '500',
+    color: colors.text,
   },
   input: {
     flex: 1,
-    padding: spacing.m,
-    ...typography.h2,
+    paddingVertical: spacing.l,
+    paddingRight: spacing.l,
+    ...typography.bodyLarge,
+    fontWeight: '400',
+    // @ts-ignore - RN Web outline fix
+    outlineStyle: 'none',
   },
-  validationText: {
+  validationError: {
     ...typography.caption,
-    color: colors.success,
+    color: colors.danger,
     marginTop: spacing.s,
   },
   footer: {
+    marginTop: spacing.xxl,
     alignItems: 'center',
+    marginBottom: spacing.xl,
   },
-  termsText: {
-    ...typography.caption,
-    textAlign: 'center',
-    marginTop: spacing.l,
-    marginBottom: spacing.l,
+  checkboxContainer: {
+    flexDirection: 'row',
+    marginTop: spacing.xl,
+    alignItems: 'flex-start',
   },
-  badge: {
-    backgroundColor: colors.surface,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    borderWidth: 1,
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderWidth: 2,
     borderColor: colors.border,
+    borderRadius: 4,
+    marginRight: spacing.m,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 2,
   },
-  badgeText: {
-    ...typography.caption,
-    fontWeight: '600',
+  checkboxChecked: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  checkmark: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  checkboxText: {
+    ...typography.body,
+    flex: 1,
     color: colors.textSecondary,
+    lineHeight: 24,
+  },
+  linkText: {
+    color: colors.primary,
   },
 });

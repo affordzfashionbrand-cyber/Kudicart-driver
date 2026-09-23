@@ -30,18 +30,19 @@ export const PrimaryButton = ({ title, onPress, disabled, loading }: Props) => {
 
 const styles = StyleSheet.create({
   button: {
-    backgroundColor: '#1E3C87', // Derived from the dark blue button in the screenshot
-    paddingVertical: spacing.m,
+    backgroundColor: colors.primary,
+    height: 56, // Large, comfortable touch target
     paddingHorizontal: spacing.l,
-    borderRadius: 12,
+    borderRadius: 16, // Matches input border radius
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',
   },
   disabled: {
-    backgroundColor: colors.textMuted,
+    opacity: 0.5,
   },
   text: {
     ...typography.button,
+    fontSize: 18, // Clearly readable size
   },
 });

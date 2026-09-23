@@ -191,7 +191,18 @@ The Driver App must NOT implement:
 
 ---
 
-# 12. Antigravity Instructions
+# 12. Responsive and Adaptive UI Requirements
+
+The Driver App must adapt correctly across supported Android phone screen sizes and the Chrome development preview.
+
+- **Reference Size:** The reference Stitch viewport is a DESIGN REFERENCE, not a fixed device size. The implementation should match the supplied design at the reference size without depending on one exact width/height.
+- **Adaptation:** The UI must support different screen widths, heights, aspect ratios, and safe areas. It should preserve the established visual hierarchy while adapting dimensions naturally using flex layouts, percentage sizing, and content-driven heights. Do not simply scale the entire UI proportionally.
+- **Handling Constraints:** Long text should wrap or safely truncate with ellipsis. Scroll containers must be used for variable-height content to avoid clipping on smaller screens. The keyboard should not hide important form actions or inputs.
+- **Responsive Layout:** Do NOT introduce a large desktop-oriented breakpoint system or multi-column layouts for the web preview. The Chrome version is a development/visual-preview target for a mobile application and must remain a mobile composition.
+
+---
+
+# 13. Antigravity Instructions
 
 Before implementing a driver app feature:
 1. Identify the requirement it satisfies.

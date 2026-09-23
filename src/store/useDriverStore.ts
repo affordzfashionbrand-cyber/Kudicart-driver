@@ -1,60 +1,75 @@
 import { create } from 'zustand';
 
 export interface DriverProfile {
-  id: string;
-  name: string;
-  phone: string;
-  role: string;
-  tier: string;
-  status: string; // e.g., 'Active Fleet'
-  avatarInitial: string;
-}
-
-export interface DriverVehicle {
-  rcStatus: string;
-  rcNumber: string;
-}
-
-export interface DriverKyc {
-  licenseStatus: string;
-  licenseNumber: string;
-  aadhaarStatus: string;
+  id: string; // Internal, can remain
+  fullName: string;
   aadhaarNumber: string;
+  panNumber: string;
+  dob: string;
+  licenseNumber: string;
+}
+
+export interface RcDocument {
+  uri: string;
+  name: string;
+  size: string;
+  type: string;
+}
+
+export interface VehicleProfile {
+  registrationNumber: string;
+  vehicleType: string;
+  make: string;
+  model: string;
 }
 
 interface DriverState {
   profile: DriverProfile;
-  vehicle: DriverVehicle;
-  kyc: DriverKyc;
-  isOnline: boolean;
+  vehicle: VehicleProfile;
+  rcDocument: RcDocument | null;
   
   // Actions
-  setIsOnline: (online: boolean) => void;
   updateProfile: (updates: Partial<DriverProfile>) => void;
+  updateVehicle: (updates: Partial<VehicleProfile>) => void;
+  setRcDocument: (doc: RcDocument | null) => void;
+  clearKycData: () => void;
 }
 
 export const useDriverStore = create<DriverState>((set) => ({
   profile: {
-    id: 'KC-DRV-8492',
-    name: 'Arjun Sharma',
-    phone: '+91 98765 43210',
-    role: 'Fleet Delivery Partner',
-    tier: 'Tier 1 Secured',
-    status: 'Active Fleet',
-    avatarInitial: 'AS',
+    id: 'KC-DRV-8492', // Static driver ID for now since there's no backend auth
+    fullName: '',
+    aadhaarNumber: '',
+    panNumber: '',
+    dob: '',
+    licenseNumber: '',
   },
   vehicle: {
-    rcStatus: 'Verified',
-    rcNumber: 'KA - 05 - •• 41',
+    registrationNumber: '',
+    vehicleType: '',
+    make: '',
+    model: '',
   },
-  kyc: {
-    licenseStatus: 'Verified',
-    licenseNumber: 'DL - •••• 9024',
-    aadhaarStatus: 'Verified',
-    aadhaarNumber: 'UID - •••• 7381',
-  },
-  isOnline: false,
+  rcDocument: null,
 
-  setIsOnline: (online) => set({ isOnline: online }),
   updateProfile: (updates) => set((state) => ({ profile: { ...state.profile, ...updates } })),
+  updateVehicle: (updates) => set((state) => ({ vehicle: { ...state.vehicle, ...updates } })),
+  setRcDocument: (doc) => set({ rcDocument: doc }),
+  clearKycData: () => set({
+    profile: {
+      id: 'KC-DRV-8492',
+      fullName: '',
+      aadhaarNumber: '',
+      panNumber: '',
+      dob: '',
+      licenseNumber: '',
+    },
+    vehicle: {
+      registrationNumber: '',
+      vehicleType: '',
+      make: '',
+      model: '',
+    },
+    rcDocument: null,
+  })
 }));
