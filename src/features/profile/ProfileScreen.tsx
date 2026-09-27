@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { typography } from '../../theme/typography';
@@ -9,6 +9,7 @@ import { KudiIcon } from '../../components/KudiIcon';
 
 export const ProfileScreen = () => {
   const { profile, vehicle, kyc } = useDriverStore();
+  const [isProfileExpanded, setIsProfileExpanded] = useState(false);
 
   return (
     <ScreenContainer>
@@ -45,16 +46,41 @@ export const ProfileScreen = () => {
             </View>
           </View>
           <View style={styles.divider} />
-          <View style={styles.contactRow}>
-            <Text style={styles.phoneText}><KudiIcon name="phone" size={14} color={colors.textSecondary} /> {profile.phone}</Text>
-            <Text style={styles.tierText}><KudiIcon name="shield" size={14} color={colors.textSecondary} /> {profile.tier}</Text>
+          <View style={[styles.contactRow, { justifyContent: 'center', paddingVertical: spacing.xs }]}>
+            <TouchableOpacity 
+              style={{ flexDirection: 'row', alignItems: 'center' }}
+              onPress={() => setIsProfileExpanded(!isProfileExpanded)}
+            >
+              <KudiIcon name="user" size={16} color={colors.primaryDark} />
+              <Text style={[styles.tierText, { marginLeft: spacing.s, fontSize: 14 }]}>Personal Information</Text>
+              <View style={{ marginLeft: spacing.xs }}>
+                <KudiIcon name={isProfileExpanded ? "chevron-up" : "chevron-down"} size={16} color={colors.primaryDark} />
+              </View>
+            </TouchableOpacity>
           </View>
+          
+          {isProfileExpanded && (
+            <View style={{ marginTop: spacing.m, paddingTop: spacing.m, borderTopWidth: 1, borderTopColor: colors.border }}>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Full Name</Text>
+                <Text style={styles.infoValue}>{profile.fullName || profile.name}</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Phone Number</Text>
+                <Text style={styles.infoValue}>{profile.phone}</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Date of Birth</Text>
+                <Text style={styles.infoValue}>{profile.dob || '15/08/1990'}</Text>
+              </View>
+            </View>
+          )}
         </View>
 
-        {/* KYC Card */}
+        {/* Documents Card */}
         <View style={styles.card}>
           <View style={styles.kycHeader}>
-            <Text style={styles.kycTitle}><KudiIcon name="shield" size={18} color={colors.primary} /> KYC Status</Text>
+            <Text style={styles.kycTitle}><KudiIcon name="document" size={18} color={colors.primary} /> Documents</Text>
             <View style={styles.kycApprovedBadge}>
               <Text style={styles.kycApprovedText}><KudiIcon name="check-circle" size={14} color={colors.success} /> KYC Approved</Text>
             </View>
@@ -81,28 +107,43 @@ export const ProfileScreen = () => {
           </View>
           <Text style={styles.docSubtitle}>{vehicle.rcNumber}</Text>
 
-          <View style={styles.lockRow}>
-            <KudiIcon name="lock" size={16} color={colors.textSecondary} />
-            <Text style={styles.lockText}>
-              Backend verified. Changes require Fleet Admin audit.
-            </Text>
+        </View>
+
+        {/* Driver Details Card */}
+        <View style={styles.card}>
+          <View style={styles.kycHeader}>
+            <Text style={styles.kycTitle}><KudiIcon name="id-card" size={18} color={colors.primary} /> Driver Details</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Driving License</Text>
+            <Text style={styles.infoValue}>{profile.licenseNumber}</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Aadhaar Number</Text>
+            <Text style={styles.infoValue}>{profile.aadhaarNumber}</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>PAN Number</Text>
+            <Text style={styles.infoValue}>{profile.panNumber}</Text>
           </View>
         </View>
 
-        {/* Personal Info Card */}
+        {/* Vehicle Details Card */}
         <View style={styles.card}>
           <View style={styles.kycHeader}>
-            <Text style={styles.kycTitle}><KudiIcon name="user" size={18} color={colors.primary} /> Personal Information</Text>
-            <TouchableOpacity style={styles.editButton}>
-              <Text style={styles.editButtonText}><KudiIcon name="edit" size={14} color={colors.primary} /> Edit</Text>
-            </TouchableOpacity>
+            <Text style={styles.kycTitle}><KudiIcon name="clipboard" size={18} color={colors.primary} /> Vehicle Details</Text>
           </View>
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Full Name</Text>
-            <View style={{alignItems: 'flex-end'}}>
-              <Text style={styles.infoValue}>{profile.name}</Text>
-              <Text style={styles.editableText}>Editable</Text>
-            </View>
+            <Text style={styles.infoLabel}>Registration Number</Text>
+            <Text style={styles.infoValue}>{vehicle.registrationNumber}</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Vehicle Type</Text>
+            <Text style={styles.infoValue}>{vehicle.vehicleType}</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Make & Model</Text>
+            <Text style={styles.infoValue}>{vehicle.make} {vehicle.model}</Text>
           </View>
         </View>
       </ScrollView>

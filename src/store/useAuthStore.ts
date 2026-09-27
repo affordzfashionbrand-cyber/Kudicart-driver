@@ -15,9 +15,16 @@ interface AuthState {
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  isAuthenticated: false,
-  phoneNumber: null,
-  kycStatus: 'NOT_SUBMITTED', // Default state for start of flow
+  // --- ORIGINAL STATE (Uncomment for production/testing flow) ---
+  // isAuthenticated: false,
+  // phoneNumber: null,
+  // kycStatus: 'NOT_SUBMITTED', 
+  
+  // --- TEMPORARY FOR DEVELOPMENT: Start directly on the Dashboard ---
+  isAuthenticated: true,
+  phoneNumber: DEMO_VERIFICATION_MODE ? DEMO_PHONE : null,
+  kycStatus: 'APPROVED', 
+  
   initialPhone: DEMO_VERIFICATION_MODE ? DEMO_PHONE : '',
   initialOtp: DEMO_VERIFICATION_MODE ? DEMO_OTP : '',
   login: (token: string, phone: string) => set({ isAuthenticated: true, kycStatus: 'NOT_SUBMITTED', phoneNumber: phone }),

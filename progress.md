@@ -60,7 +60,7 @@
 
 ## Phase 7 — Pickup and Delivery Workflow
 **Status:** [~] PARTIAL 
-**Evidence:** The complete state machine (`ASSIGNED -> PICKED_UP -> OUT_FOR_DELIVERY -> DELIVERED`) works perfectly in the frontend UI via `useOrderStore`. **Missing:** Authoritative backend business logic and payload confirmations.
+**Evidence:** The complete state machine (`ASSIGNED -> Accept -> PICKUP -> PICKED_UP -> OUT_FOR_DELIVERY -> DELIVERED`) works perfectly in the frontend UI via `useOrderStore` and `OrderDetailsScreen`, enforcing explicit acceptance before pickup actions are available. **Missing:** Authoritative backend business logic and payload confirmations.
 
 ## Phase 8 — Push Notifications
 **Status:** [~] PARTIAL 

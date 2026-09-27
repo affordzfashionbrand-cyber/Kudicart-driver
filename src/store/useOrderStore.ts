@@ -14,6 +14,7 @@ export interface Order {
   distance: string;
   eta: string;
   date: string;
+  accepted?: boolean;
 }
 
 interface OrderState {
@@ -39,7 +40,8 @@ const mockOrders: Order[] = [
     customerAddress: 'Flat 402, Skyline Heights, 12th Main Road, HAL 2nd Stage',
     distance: '1.8 km',
     eta: '10:35 AM',
-    date: 'Today, 10:14 AM'
+    date: 'Today, 10:14 AM',
+    accepted: false
   },
 ];
 
@@ -55,7 +57,8 @@ const mockHistory: Order[] = [
     customerAddress: 'Block C, Golden Estate',
     distance: '2.4 km',
     eta: '09:25 AM',
-    date: 'Today, 09:15 AM'
+    date: 'Today, 09:15 AM',
+    accepted: true
   },
 ];
 
@@ -64,9 +67,13 @@ export const useOrderStore = create<OrderState>((set) => ({
   historicalOrders: mockHistory,
 
   acceptOrder: (orderId) => {
-    // In this mock, ASSIGNED is the initial state that implies it's in the queue. 
-    // Accepting might just be acknowledging it, keeping it ASSIGNED or preparing for pickup.
-    // We keep it as ASSIGNED and the next step is pickup.
+    set((state) => ({
+      activeOrders: state.activeOrders.map((order) =>
+        order.id === orderId && order.status === 'ASSIGNED' && !order.accepted
+          ? { ...order, accepted: true }
+          : order
+      ),
+    }));
   },
 
   confirmPickup: (orderId) =>

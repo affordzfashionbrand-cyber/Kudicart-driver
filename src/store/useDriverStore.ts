@@ -66,7 +66,15 @@ interface DriverState {
 
 export const useDriverStore = create<DriverState>((set) => ({
   profile: DEMO_VERIFICATION_MODE 
-    ? { ...DEMO_DRIVER_PROFILE, name: '', role: '', status: '', phone: '', tier: '', avatarInitial: '' }
+    ? { 
+        ...DEMO_DRIVER_PROFILE, 
+        name: 'Babajide A.', 
+        role: 'Delivery Partner', 
+        status: 'Active', 
+        phone: '+91 9876543210', 
+        tier: 'Gold Tier', 
+        avatarInitial: 'BA' 
+      }
     : {
         id: 'KC-DRV-8492', // Static driver ID for now since there's no backend auth
         fullName: '',
@@ -82,7 +90,7 @@ export const useDriverStore = create<DriverState>((set) => ({
         licenseNumber: '',
       },
   vehicle: DEMO_VERIFICATION_MODE 
-    ? { ...DEMO_VEHICLE_PROFILE }
+    ? { ...DEMO_VEHICLE_PROFILE, rcStatus: 'Verified', rcNumber: 'TN-14-AB-1234' }
     : {
         registrationNumber: '',
         vehicleType: '',
@@ -97,6 +105,12 @@ export const useDriverStore = create<DriverState>((set) => ({
         drivingLicence: { front: null, back: null },
         vehicleRc: { front: null, back: null },
       },
+  kyc: {
+    licenseStatus: 'Verified',
+    licenseNumber: 'DL-14202100',
+    aadhaarStatus: 'Verified',
+    aadhaarNumber: 'XXXX-XXXX-1234',
+  },
   isOnline: false,
   setIsOnline: (isOnline: boolean) => set({ isOnline }),
 

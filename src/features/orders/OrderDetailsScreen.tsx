@@ -9,7 +9,7 @@ import { useOrderStore } from '../../store/useOrderStore';
 
 export const OrderDetailsScreen = ({ route, navigation }: any) => {
   const { orderId } = route.params || {};
-  const { activeOrders, confirmPickup, startDelivery, confirmDelivery } = useOrderStore();
+  const { activeOrders, acceptOrder, confirmPickup, startDelivery, confirmDelivery } = useOrderStore();
   
   const order = activeOrders.find(o => o.id === orderId);
 
@@ -35,7 +35,13 @@ export const OrderDetailsScreen = ({ route, navigation }: any) => {
           <Text style={styles.body}>{order.pickupLocation}</Text>
           <Text style={styles.body}>Items: {order.itemsCount} (Tote {order.toteId})</Text>
           
-          {order.status === 'ASSIGNED' && (
+          {order.status === 'ASSIGNED' && !order.accepted && (
+            <View style={styles.actionRow}>
+              <PrimaryButton title="Accept Order" onPress={() => acceptOrder(order.id)} />
+            </View>
+          )}
+
+          {order.status === 'ASSIGNED' && order.accepted && (
             <View style={styles.actionRow}>
               <PrimaryButton title="Navigate to Pickup" onPress={() => console.log('Mock Map Pickup')} />
               <PrimaryButton title="Confirm Pickup" onPress={() => confirmPickup(order.id)} />

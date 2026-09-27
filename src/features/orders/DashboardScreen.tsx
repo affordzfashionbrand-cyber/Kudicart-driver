@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Switch, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Switch, TouchableOpacity, Image } from 'react-native';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
@@ -7,6 +7,7 @@ import { colors } from '../../theme/colors';
 import { useDriverStore } from '../../store/useDriverStore';
 import { useOrderStore } from '../../store/useOrderStore';
 import { KudiIcon } from '../../components/KudiIcon';
+import logo from '../../assets/logo.png';
 
 export const DashboardScreen = ({ navigation }: any) => {
   const { profile, isOnline, setIsOnline } = useDriverStore();
@@ -14,8 +15,32 @@ export const DashboardScreen = ({ navigation }: any) => {
   
   const activeOrder = activeOrders.length > 0 ? activeOrders[0] : null;
 
+  // Extract initials from full name or default to 'AS'
+  const getInitials = () => {
+    if (profile.avatarInitial) return profile.avatarInitial;
+    if (profile.fullName) {
+      const parts = profile.fullName.split(' ');
+      return (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
+    }
+    return 'AS';
+  };
+
   return (
     <ScreenContainer>
+      <View style={styles.topNav}>
+        <Image source={logo} style={styles.navLogo} resizeMode="contain" />
+        <View style={styles.navActions}>
+          <TouchableOpacity style={styles.iconButton}>
+            <KudiIcon name="notifications" size={24} color={colors.primaryDark} />
+            <View style={styles.notificationDot} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.avatarButton} onPress={() => navigation.navigate('Profile')}>
+            <Text style={styles.avatarText}>{getInitials()}</Text>
+            <View style={[styles.onlineStatusDot, { backgroundColor: isOnline ? colors.success : colors.textMuted }]} />
+          </TouchableOpacity>
+        </View>
+      </View>
+      
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.headerRow}>
           <View style={{ flex: 1, marginRight: spacing.s }}>
@@ -75,7 +100,9 @@ export const DashboardScreen = ({ navigation }: any) => {
               style={styles.continueButton} 
               onPress={() => navigation.navigate('OrderDetails', { orderId: activeOrder.id })}
             >
-              <Text style={styles.continueButtonText}>Continue Delivery →</Text>
+              <Text style={styles.continueButtonText}>
+                {activeOrder.status === 'ASSIGNED' && !activeOrder.accepted ? 'Review Assignment →' : 'Continue Delivery →'}
+              </Text>
             </TouchableOpacity>
           </View>
         )}
@@ -122,6 +149,72 @@ export const DashboardScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
   container: {
     padding: spacing.l,
+  },
+  topNav: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.l,
+    paddingVertical: spacing.m,
+    backgroundColor: '#FAFBFC',
+  },
+  navLogo: {
+    width: 100,
+    height: 30,
+  },
+  navActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.s,
+  },
+  iconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2,
+  },
+  notificationDot: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.danger,
+    borderWidth: 1.5,
+    borderColor: colors.white,
+  },
+  avatarButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#EAEFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  avatarText: {
+    ...typography.bodyMedium,
+    color: colors.primaryDark,
+    fontWeight: '700',
+  },
+  onlineStatusDot: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: colors.success,
+    borderWidth: 2,
+    borderColor: '#FAFBFC',
   },
   headerRow: {
     flexDirection: 'row',
