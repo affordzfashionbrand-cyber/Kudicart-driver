@@ -8,10 +8,20 @@ import { colors } from '../theme/colors';
 
 import { KudiIcon } from '../components/KudiIcon';
 import { IconName } from '../components/KudiIcon.types';
+import { useOrderStore } from '../store/useOrderStore';
+import { useDriverStore } from '../store/useDriverStore';
 
 const Tab = createBottomTabNavigator();
 
 export const MainNavigator = () => {
+  const isOnline = useDriverStore((s) => s.isOnline);
+  const activeOrders = useOrderStore((s) => s.activeOrders);
+
+  // Hide the tab bar when the assignment overlay is visible (online + unaccepted order)
+  const hasPendingAssignment = isOnline && activeOrders.some(
+    (o) => o.status === 'ASSIGNED' && !o.accepted
+  );
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -28,7 +38,9 @@ export const MainNavigator = () => {
         },
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
-        tabBarStyle: { paddingBottom: 5, paddingTop: 5, minHeight: 60, backgroundColor: colors.surface },
+        tabBarStyle: hasPendingAssignment
+          ? { display: 'none' }
+          : { paddingBottom: 5, paddingTop: 5, minHeight: 60, backgroundColor: colors.surface },
       })}
     >
       <Tab.Screen name="Home" component={DashboardScreen} />

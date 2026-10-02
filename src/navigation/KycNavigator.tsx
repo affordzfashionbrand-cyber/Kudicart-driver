@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { DriverDetailsScreen } from '../features/kyc/DriverDetailsScreen';
 import { VehicleDetailsScreen } from '../features/kyc/VehicleDetailsScreen';
 import { DocumentUploadsScreen } from '../features/kyc/DocumentUploadsScreen';
+import { SelfieScreen } from '../features/kyc/SelfieScreen';
 import { DocumentUploadDetailScreen } from '../features/kyc/DocumentUploadDetailScreen';
 import { VerificationPendingScreen } from '../features/kyc/VerificationPendingScreen';
 import { VerificationRejectedScreen } from '../features/kyc/VerificationRejectedScreen';
@@ -31,6 +32,7 @@ export const KycNavigator = () => {
       <Stack.Screen name="DriverDetails" component={DriverDetailsScreen} />
       <Stack.Screen name="VehicleDetails" component={VehicleDetailsScreen} />
       <Stack.Screen name="DocumentUploads" component={DocumentUploadsScreen} />
+      <Stack.Screen name="Selfie" component={SelfieScreen} />
       <Stack.Screen name="DocumentUploadDetail" component={DocumentUploadDetailScreen} />
     </Stack.Navigator>
   );

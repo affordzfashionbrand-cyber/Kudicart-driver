@@ -138,10 +138,38 @@ No scope changes recorded. (Automatic dispatch, delivery zones, and earnings UI 
 1. Created `VerificationRejectedScreen.tsx` for the `REJECTED` state, using the identical design system and structural hierarchy as `VerificationApprovedScreen`.
 2. Wired `VerificationRejectedScreen` into `KycNavigator` as the initial route when the user's KYC status is `REJECTED`.
 3. The "Review & Resubmit" CTA returns the user to the editable `DriverDetailsScreen`.
-4. Extended `demoVerificationState.ts` to seamlessly toggle the 5-second timer outcome between `APPROVED` and `REJECTED`.
-**Result:** Complete verification flow successfully resolves into operational approved or rejected states, with seamless recovery to the KYC flow on rejection, while remaining strictly isolated from production business logic.
+**Result:** Complete verification flow successfully resolves into operational approved or rejected states, with seamless recovery to the KYC flow on rejection.
+
+**Issue 7:** Removed temporary frontend demo verification layer.
+**Correction:** 
+1. Deleted `demoVerificationState.ts` and `demo_verification_flow.md`.
+2. Removed demo state fallbacks (`DEMO_VERIFICATION_MODE`, `DEMO_PHONE`, `DEMO_OTP`, `DEMO_DRIVER_PROFILE`, `DEMO_VEHICLE_PROFILE`, `DEMO_DOCUMENTS`) from `useAuthStore.ts` and `useDriverStore.ts`, restoring normal production initial states.
+3. Removed the `useDemoVerificationTimer` from `VerificationPendingScreen.tsx` that was providing automatic approval after 5 seconds.
+**Result:** The application now completely relies on real authentication and backend KYC state.
+
+**Issue 8:** Added Work Preference to Driver Details.
+**Correction:** 
+1. Added a `workPreference` field to the `DriverProfile` state in `useDriverStore.ts`.
+2. Added a required two-option selection UI (Full-Time / Part-Time) to `DriverDetailsScreen.tsx` using the existing design system.
+3. Added strict validation requiring a selection before advancing to Vehicle Details.
+**Result:** The onboarding flow correctly captures employment preference according to UI/UX specifications.
+
+**Issue 9:** Added Selfie Verification step to KYC flow.
+**Correction:** 
+1. Created `SelfieScreen.tsx` capturing a final selfie using the standard KYC design system.
+2. Added `selfie` to the `DocumentsProfile` in `useDriverStore.ts` to manage local capture state.
+3. Updated `DocumentUploadsScreen` to point to `SelfieScreen` rather than `VerificationPending`.
+**Result:** Flow is now: Documents → Selfie → Verification Pending.
+
+**Issue 10:** Dashboard/Home UI Refactored for Operational Focus.
+**Correction:** 
+1. Re-structured `DashboardScreen.tsx` to prioritize Driver Identity, Availability, Current Work, and Next Action.
+2. Completely removed the "Operational Desk" grid which redundantly duplicated Bottom Navigation cards (Assigned Orders, History, Fleet Profile) and empty features (Partner Support).
+3. Designed an "Empty State" (No Active Delivery) matching the KudiCart design system.
+4. Preserved existing Zustand state boundaries (`useAuthStore`, `useDriverStore`, `useOrderStore`).
+**Result:** The Dashboard is now an operational hub without redundant UI elements.
 
 ---
 
 # 7. Next Action
-**Proceed to Phase 11 (Build and Release)** and wait for backend APIs.
+**Proceed to backend integration or next requested frontend refactor.**

@@ -81,12 +81,7 @@ The following operational features are required by the spec but are entirely abs
 
 ## 7. Duplicated / Redundant UI
 
-The **DashboardScreen (Home)** contains an "Operational Desk" section grid with 4 cards. Three of these cards are exact duplicates of the Bottom Tab Navigator destinations:
-- `Assigned Orders` card → Navigates to `Orders` Tab
-- `Order History` card → Navigates to `History` Tab
-- `Fleet Profile` card → Navigates to `Profile` Tab
-
-This is redundant. The Dashboard should focus on the active delivery context (which it does well with the "Active Assignment" card) and quick actions, rather than duplicating the persistent bottom navigation.
+*RESOLVED:* The **DashboardScreen (Home)** previously contained an "Operational Desk" section grid that duplicated the Bottom Tab Navigator destinations. This has been refactored out. The Dashboard now correctly serves as a focused, operational overview showing Driver Identity, Availability, and the Active Assignment with a clear CTA.
 
 ## 8. Screens Currently Implemented
 - `src/features/auth/PhoneLoginScreen.tsx`
@@ -127,7 +122,7 @@ MISSING:
 Google Maps intent navigation, Explicit Order Acceptance transition, Firebase Auth integration, Real API synchronization, FCM Push Notifications, Sentry.
 
 DUPLICATED: 
-The Dashboard's "Operational Desk" grid cards entirely duplicate the persistent Bottom Tab Navigator.
+(Resolved) Dashboard duplication has been removed.
 
 MOST IMPORTANT FUNCTIONAL GAP: 
 Google Maps navigation intents (critical for driver operation) and real-time backend API synchronization.

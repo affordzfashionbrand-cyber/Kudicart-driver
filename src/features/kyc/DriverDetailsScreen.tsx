@@ -17,6 +17,7 @@ export const DriverDetailsScreen = ({ navigation }: any) => {
   const [panNumber, setPanNumber] = useState(profile.panNumber || '');
   const [dob, setDob] = useState(profile.dob || '');
   const [licenseNumber, setLicenseNumber] = useState(profile.licenseNumber || '');
+  const [workPreference, setWorkPreference] = useState(profile.workPreference || '');
 
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
@@ -87,6 +88,9 @@ export const DriverDetailsScreen = ({ navigation }: any) => {
         if (!value.trim()) return 'PAN number is required';
         if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(value.toUpperCase().trim())) return 'Enter a valid PAN number';
         return '';
+      case 'workPreference':
+        if (!value) return 'Please Select A Work Preference';
+        return '';
       default:
         return '';
     }
@@ -107,6 +111,7 @@ export const DriverDetailsScreen = ({ navigation }: any) => {
       licenseNumber: getFieldError('licenseNumber', licenseNumber),
       dob: getFieldError('dob', dob),
       panNumber: getFieldError('panNumber', panNumber),
+      workPreference: getFieldError('workPreference', workPreference),
     };
 
     const activeErrors: { [key: string]: string } = {};
@@ -124,7 +129,7 @@ export const DriverDetailsScreen = ({ navigation }: any) => {
 
   const handleContinue = () => {
     if (validate()) {
-      updateProfile({ fullName, aadhaarNumber, panNumber, dob, licenseNumber });
+      updateProfile({ fullName, aadhaarNumber, panNumber, dob, licenseNumber, workPreference: workPreference as any });
       navigation.navigate('VehicleDetails');
     }
   };
@@ -339,6 +344,37 @@ export const DriverDetailsScreen = ({ navigation }: any) => {
                 {errors.panNumber ? <Text style={styles.validationError}>{errors.panNumber}</Text> : null}
               </View>
             </View>
+
+            {/* Work Preference */}
+            <Text style={[styles.inputLabel, { marginTop: spacing.xxl }]}>Work Preference <Text style={styles.required}>*</Text></Text>
+            <Text style={styles.sectionDescription}>How Would You Like To Work?</Text>
+
+            <View style={styles.preferenceRow}>
+              <TouchableOpacity 
+                style={[styles.preferenceButton, workPreference === 'FULL_TIME' && styles.preferenceButtonSelected]}
+                onPress={() => {
+                  setWorkPreference('FULL_TIME');
+                  if (errors.workPreference) setErrors(prev => ({ ...prev, workPreference: '' }));
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.preferenceText, workPreference === 'FULL_TIME' && styles.preferenceTextSelected]}>Full-Time</Text>
+              </TouchableOpacity>
+
+              <View style={styles.spacer} />
+
+              <TouchableOpacity 
+                style={[styles.preferenceButton, workPreference === 'PART_TIME' && styles.preferenceButtonSelected]}
+                onPress={() => {
+                  setWorkPreference('PART_TIME');
+                  if (errors.workPreference) setErrors(prev => ({ ...prev, workPreference: '' }));
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.preferenceText, workPreference === 'PART_TIME' && styles.preferenceTextSelected]}>Part-Time</Text>
+              </TouchableOpacity>
+            </View>
+            {errors.workPreference ? <Text style={styles.validationError}>{errors.workPreference}</Text> : null}
           </View>
 
           <View style={styles.footer}>
@@ -431,6 +467,39 @@ const styles = StyleSheet.create({
   rowInputs: { flexDirection: 'row', marginTop: spacing.xl },
   flexHalf: { flex: 1 },
   spacer: { width: spacing.m },
+
+  sectionDescription: {
+    ...typography.bodyMedium,
+    color: colors.textSecondary,
+    marginBottom: spacing.m,
+  },
+  preferenceRow: {
+    flexDirection: 'row',
+    marginTop: spacing.xs,
+  },
+  preferenceButton: {
+    flex: 1,
+    paddingVertical: spacing.l,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 16,
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  preferenceButtonSelected: {
+    borderColor: colors.primary,
+    backgroundColor: '#F0F4FF',
+    borderWidth: 1.5,
+  },
+  preferenceText: {
+    ...typography.bodyLarge,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  preferenceTextSelected: {
+    color: colors.primary,
+  },
 
   footer: {
     marginTop: spacing.xxl,

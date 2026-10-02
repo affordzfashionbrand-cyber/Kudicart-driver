@@ -36,6 +36,13 @@ import {
   ClipboardList,
   Headphones,
   AlertCircle,
+  Navigation,
+  Power,
+  Radar,
+  Wallet,
+  Star,
+  Package,
+  Camera,
   LucideIcon,
 } from 'lucide-react';
 import { IconName, KudiIconProps } from './KudiIcon.types';
@@ -73,6 +80,13 @@ const iconMap: Record<IconName, LucideIcon> = {
   'clock': Clock,
   'headphones': Headphones,
   'alert-circle': AlertCircle,
+  'navigation': Navigation,
+  'power': Power,
+  'radar': Radar,
+  'wallet': Wallet,
+  'star': Star,
+  'package': Package,
+  'camera': Camera,
 };
 
 export type { IconName, KudiIconProps };

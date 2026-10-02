@@ -37,7 +37,14 @@ export type IconName =
   | 'clipboard-list'
   | 'clock'
   | 'headphones'
-  | 'alert-circle';
+  | 'alert-circle'
+  | 'navigation'
+  | 'power'
+  | 'radar'
+  | 'wallet'
+  | 'star'
+  | 'package'
+  | 'camera';
 
 export interface KudiIconProps {
   name: IconName;

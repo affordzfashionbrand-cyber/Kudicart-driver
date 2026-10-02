@@ -8,6 +8,8 @@ import { OtpVerificationScreen } from '../features/auth/OtpVerificationScreen';
 import { LegalScreen } from '../features/auth/LegalScreen';
 import { MainNavigator } from './MainNavigator';
 import { KycNavigator } from './KycNavigator';
+import { StoreDetailsScreen } from '../features/store/StoreDetailsScreen';
+import { OrderDetailsScreen } from '../features/orders/OrderDetailsScreen';
 
 import { VerificationApprovedScreen } from '../features/kyc/VerificationApprovedScreen';
 
@@ -50,6 +52,8 @@ export const RootNavigator = () => {
           <>
             <Stack.Screen name="VerificationApproved" component={VerificationApprovedScreen} />
             <Stack.Screen name="MainApp" component={MainNavigator} />
+            <Stack.Screen name="StoreDetails" component={StoreDetailsScreen} />
+            <Stack.Screen name="OrderDetails" component={OrderDetailsScreen} />
           </>
         ) : (
           <Stack.Screen name="KycFlow" component={KycNavigator} />

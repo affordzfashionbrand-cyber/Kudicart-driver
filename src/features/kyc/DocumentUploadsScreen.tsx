@@ -66,7 +66,7 @@ export const DocumentUploadsScreen = ({ navigation }: any) => {
     (documents.vehicleRc.front && documents.vehicleRc.back);
 
   const handleContinue = () => {
-    setKycStatus('PENDING');
+    navigation.navigate('Selfie');
   };
 
   const goToDetail = (docType: keyof DocumentsProfile, title: string) => {
@@ -92,7 +92,7 @@ export const DocumentUploadsScreen = ({ navigation }: any) => {
           </View>
 
           <View style={styles.content}>
-            <Text style={styles.stepText}>PARTNER KYC • STEP 3 OF 3</Text>
+            <Text style={styles.stepText}>PARTNER KYC • STEP 3 OF 4</Text>
 
             <Text style={styles.title}>Document Uploads</Text>
             <Text style={styles.subtitle}>

@@ -8,13 +8,10 @@ import { colors } from '../../theme/colors';
 import { KudiIcon } from '../../components/KudiIcon';
 import logo from '../../assets/logo.png';
 import { useAuthStore } from '../../store/useAuthStore';
-import { useDemoVerificationTimer } from '../../store/demoVerificationState';
 
 export const VerificationPendingScreen = () => {
   const { logout } = useAuthStore();
   
-  // TEMPORARY DEMO FLOW: Advances to APPROVED state after 5 seconds
-  useDemoVerificationTimer();
 
   return (
     <ScreenContainer>

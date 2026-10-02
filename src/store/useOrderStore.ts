@@ -2,6 +2,13 @@ import { create } from 'zustand';
 
 export type OrderStatus = 'ASSIGNED' | 'PICKED_UP' | 'OUT_FOR_DELIVERY' | 'DELIVERED';
 
+export interface OrderItem {
+  id: string;
+  name: string;
+  variant?: string;
+  quantity: number;
+}
+
 export interface Order {
   id: string;
   status: OrderStatus;
@@ -14,7 +21,7 @@ export interface Order {
   distance: string;
   eta: string;
   date: string;
-  accepted?: boolean;
+  items?: OrderItem[];
 }
 
 interface OrderState {
@@ -22,7 +29,8 @@ interface OrderState {
   historicalOrders: Order[];
 
   // Actions
-  acceptOrder: (orderId: string) => void;
+  receiveMockOrder: () => void;
+  clearOrders: () => void;
   confirmPickup: (orderId: string) => void;
   startDelivery: (orderId: string) => void;
   confirmDelivery: (orderId: string) => void;
@@ -41,7 +49,11 @@ const mockOrders: Order[] = [
     distance: '1.8 km',
     eta: '10:35 AM',
     date: 'Today, 10:14 AM',
-    accepted: false
+    items: [
+      { id: '1', name: 'Men\'s Oversized Graphic T-Shirt', variant: 'Size: L • Black', quantity: 1 },
+      { id: '2', name: 'Classic Denim Jacket', variant: 'Size: M • Blue Wash', quantity: 1 },
+      { id: '3', name: 'Urban Cargo Pants', variant: 'Size: 32 • Olive Green', quantity: 1 }
+    ]
   },
 ];
 
@@ -57,24 +69,20 @@ const mockHistory: Order[] = [
     customerAddress: 'Block C, Golden Estate',
     distance: '2.4 km',
     eta: '09:25 AM',
-    date: 'Today, 09:15 AM',
-    accepted: true
+    date: 'Today, 09:15 AM'
   },
 ];
 
 export const useOrderStore = create<OrderState>((set) => ({
-  activeOrders: mockOrders,
+  activeOrders: [],
   historicalOrders: mockHistory,
 
-  acceptOrder: (orderId) => {
-    set((state) => ({
-      activeOrders: state.activeOrders.map((order) =>
-        order.id === orderId && order.status === 'ASSIGNED' && !order.accepted
-          ? { ...order, accepted: true }
-          : order
-      ),
-    }));
-  },
+  receiveMockOrder: () => set((state) => {
+    if (state.activeOrders.some(o => o.id === mockOrders[0].id)) return state;
+    return { activeOrders: [mockOrders[0]] };
+  }),
+
+  clearOrders: () => set({ activeOrders: [] }),
 
   confirmPickup: (orderId) =>
     set((state) => ({
