@@ -1,26 +1,26 @@
 export const colors = {
-  primary: '#0F62FE', // Primary brand color
-  primaryDark: '#0043CE',
-  primaryLight: '#D0E2FF',
+  primary: '#FF5A1F',
+  primaryDark: '#D94B17',
+  primaryLight: '#FFF0E8',
   
   secondary: '#393939',
-  success: '#198038',
+  success: '#16805A',
   danger: '#DA1E28',
   warning: '#F1C21B',
   info: '#0043CE',
   
-  background: '#F4F4F4',
+  background: '#F3F1EC',
   surface: '#FFFFFF',
   
-  text: '#161616',
-  textSecondary: '#526A7A', // Replaced with a softer text color commonly used in mobile
+  text: '#171716',
+  textSecondary: '#65635F',
   textMuted: '#A8A8A8',
   
-  border: '#E0E0E0',
-  divider: '#E0E0E0',
+  border: '#E2DED7',
+  divider: '#E2DED7',
   
-  inputBorder: '#C6C6C6',
-  inputFocusedBorder: '#0F62FE',
+  inputBorder: '#E2DED7',
+  inputFocusedBorder: '#FF5A1F',
   
   white: '#FFFFFF',
   black: '#000000',

@@ -9,20 +9,24 @@ interface Props {
   onPress: () => void;
   disabled?: boolean;
   loading?: boolean;
+  style?: any;
+  textStyle?: any;
 }
 
-export const PrimaryButton = ({ title, onPress, disabled, loading }: Props) => {
+export const PrimaryButton = ({ title, onPress, disabled, loading, style, textStyle }: Props) => {
   return (
     <TouchableOpacity
-      style={[styles.button, disabled && styles.disabled]}
+      style={[styles.button, disabled && styles.disabled, style]}
       onPress={onPress}
       disabled={disabled || loading}
       activeOpacity={0.8}
     >
       {loading ? (
-        <ActivityIndicator color={colors.white} />
+        <ActivityIndicator color={disabled ? colors.textSecondary : colors.white} />
       ) : (
-        <Text style={styles.text}>{title}</Text>
+        <Text style={[styles.text, disabled && styles.textDisabled, textStyle]}>
+          {title}
+        </Text>
       )}
     </TouchableOpacity>
   );
@@ -31,7 +35,7 @@ export const PrimaryButton = ({ title, onPress, disabled, loading }: Props) => {
 const styles = StyleSheet.create({
   button: {
     backgroundColor: colors.primary,
-    height: 56, // Large, comfortable touch target
+    height: 48, // Standard 48px height
     paddingHorizontal: spacing.l,
     borderRadius: 16, // Matches input border radius
     alignItems: 'center',
@@ -39,10 +43,15 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   disabled: {
-    opacity: 0.5,
+    backgroundColor: colors.border, // #E2DED7 readable neutral styling
   },
   text: {
     ...typography.button,
-    fontSize: 18, // Clearly readable size
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.white,
+  },
+  textDisabled: {
+    color: colors.textSecondary, // #65635F dark readable text on neutral background
   },
 });

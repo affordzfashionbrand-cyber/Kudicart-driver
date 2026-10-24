@@ -8,6 +8,7 @@
 import React from 'react';
 import {
   ArrowLeft,
+  ChevronLeft,
   ChevronRight,
   ChevronDown,
   ChevronUp,
@@ -42,12 +43,23 @@ import {
   Wallet,
   Star,
   Package,
+  Camera,
+  LocateFixed,
+  Eye,
+  EyeOff,
+  Search,
+  Zap,
+  CloudRain,
+  Download,
+  ArrowRight,
+  RefreshCw,
   LucideIcon,
 } from 'lucide-react-native';
 import { IconName, KudiIconProps } from './KudiIcon.types';
 
 const iconMap: Record<IconName, LucideIcon> = {
   'arrow-left': ArrowLeft,
+  'chevron-left': ChevronLeft,
   'chevron-right': ChevronRight,
   'chevron-down': ChevronDown,
   'chevron-up': ChevronUp,
@@ -63,6 +75,7 @@ const iconMap: Record<IconName, LucideIcon> = {
   'lock': Lock,
   'help': HelpCircle,
   'vehicle': Bike,
+  'bike': Bike,
   'user': User,
   'home': Home,
   'history': Clock,
@@ -85,6 +98,17 @@ const iconMap: Record<IconName, LucideIcon> = {
   'wallet': Wallet,
   'star': Star,
   'package': Package,
+  'camera': Camera,
+  'crosshair': LocateFixed,
+  'eye': Eye,
+  'eye-off': EyeOff,
+  'search': Search,
+  'zap': Zap,
+  'cloud-rain': CloudRain,
+  'download': Download,
+  'arrow-right': ArrowRight,
+  'refresh': RefreshCw,
+  'refresh-cw': RefreshCw,
 };
 
 export type { IconName, KudiIconProps };

@@ -21,6 +21,24 @@ export const DriverDetailsScreen = ({ navigation }: any) => {
 
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [touchedFields, setTouchedFields] = useState<{ [key: string]: boolean }>({});
+  const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [showAadhaar, setShowAadhaar] = useState(false);
+
+  const shouldShowError = (field: string) => {
+    return (hasSubmitted || !!touchedFields[field]) && !!errors[field];
+  };
+
+  const getAadhaarDisplayValue = () => {
+    if (focusedField === 'aadhaar' || showAadhaar) {
+      return aadhaarNumber;
+    }
+    const clean = aadhaarNumber.replace(/\s/g, '');
+    if (clean.length === 12) {
+      return `•••• •••• ${clean.slice(8, 12)}`;
+    }
+    return aadhaarNumber;
+  };
 
   const formatAadhaar = (val: string) => {
     const digits = val.replace(/\D/g, '').slice(0, 12);
@@ -89,7 +107,7 @@ export const DriverDetailsScreen = ({ navigation }: any) => {
         if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(value.toUpperCase().trim())) return 'Enter a valid PAN number';
         return '';
       case 'workPreference':
-        if (!value) return 'Please Select A Work Preference';
+        if (!value) return 'Please select a work preference';
         return '';
       default:
         return '';
@@ -98,10 +116,9 @@ export const DriverDetailsScreen = ({ navigation }: any) => {
 
   const handleBlur = (field: string, value: string) => {
     setFocusedField(null);
+    setTouchedFields(prev => ({ ...prev, [field]: true }));
     const error = getFieldError(field, value);
-    if (error) {
-      setErrors(prev => ({ ...prev, [field]: error }));
-    }
+    setErrors(prev => ({ ...prev, [field]: error }));
   };
 
   const validate = () => {
@@ -128,6 +145,7 @@ export const DriverDetailsScreen = ({ navigation }: any) => {
   };
 
   const handleContinue = () => {
+    setHasSubmitted(true);
     if (validate()) {
       updateProfile({ fullName, aadhaarNumber, panNumber, dob, licenseNumber, workPreference: workPreference as any });
       navigation.navigate('VehicleDetails');
@@ -148,7 +166,7 @@ export const DriverDetailsScreen = ({ navigation }: any) => {
           </View>
 
           <View style={styles.content}>
-            <Text style={styles.stepText}>PARTNER KYC • STEP 1 OF 3</Text>
+            <Text style={styles.stepText}>Partner KYC · Step 1 of 3</Text>
 
             <Text style={styles.title}>Driver Details</Text>
             <Text style={styles.subtitle}>
@@ -159,13 +177,14 @@ export const DriverDetailsScreen = ({ navigation }: any) => {
             <View style={[
               styles.inputContainer,
               focusedField === 'name' && styles.inputFocused,
-              errors.fullName ? styles.inputError : null
+              shouldShowError('fullName') ? styles.inputError : null
             ]}>
               <TextInput
                 style={styles.input}
                 placeholder="e.g. Babajide Samuel Adeleke"
                 placeholderTextColor={colors.textMuted}
                 value={fullName}
+                autoCorrect={false}
                 onChangeText={(text) => {
                   const formatted = text.replace(/[^A-Za-z\s\-']/g, '');
                   setFullName(formatted);
@@ -175,21 +194,24 @@ export const DriverDetailsScreen = ({ navigation }: any) => {
                 onBlur={() => handleBlur('fullName', fullName)}
               />
             </View>
-            {errors.fullName ? <Text style={styles.validationError}>{errors.fullName}</Text> : null}
+            {shouldShowError('fullName') ? <Text style={styles.validationError}>{errors.fullName}</Text> : null}
 
-            <Text style={[styles.inputLabel, { marginTop: spacing.xl }]}>Aadhaar Number <Text style={styles.required}>*</Text></Text>
+            <Text style={[styles.inputLabel, styles.fieldMargin]}>Aadhaar Number <Text style={styles.required}>*</Text></Text>
             <View style={[
               styles.inputContainer,
               focusedField === 'aadhaar' && styles.inputFocused,
-              errors.aadhaarNumber ? styles.inputError : null
+              shouldShowError('aadhaarNumber') ? styles.inputError : null
             ]}>
               <TextInput
                 style={styles.input}
                 placeholder="XXXX XXXX XXXX"
                 placeholderTextColor={colors.textMuted}
-                value={aadhaarNumber}
+                value={getAadhaarDisplayValue()}
                 keyboardType="number-pad"
                 maxLength={14}
+                autoCorrect={false}
+                autoComplete="off"
+                textContentType="none"
                 onChangeText={(text) => {
                   if (errors.aadhaarNumber) setErrors(prev => ({ ...prev, aadhaarNumber: '' }));
                   if (text.length > aadhaarNumber.length) {
@@ -211,14 +233,28 @@ export const DriverDetailsScreen = ({ navigation }: any) => {
                   handleBlur('aadhaarNumber', formatted);
                 }}
               />
+              {aadhaarNumber.replace(/\s/g, '').length === 12 && (
+                <TouchableOpacity
+                  style={styles.eyeToggle}
+                  onPress={() => setShowAadhaar(!showAadhaar)}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <KudiIcon
+                    name={showAadhaar ? 'eye-off' : 'eye'}
+                    size={18}
+                    color={colors.textSecondary}
+                  />
+                </TouchableOpacity>
+              )}
             </View>
-            {errors.aadhaarNumber ? <Text style={styles.validationError}>{errors.aadhaarNumber}</Text> : null}
+            {shouldShowError('aadhaarNumber') ? <Text style={styles.validationError}>{errors.aadhaarNumber}</Text> : null}
 
-            <Text style={[styles.inputLabel, { marginTop: spacing.xl }]}>Licence No. <Text style={styles.required}>*</Text></Text>
+            <Text style={[styles.inputLabel, styles.fieldMargin]}>Licence No. <Text style={styles.required}>*</Text></Text>
             <View style={[
               styles.inputContainer,
               focusedField === 'licence' && styles.inputFocused,
-              errors.licenseNumber ? styles.inputError : null
+              shouldShowError('licenseNumber') ? styles.inputError : null
             ]}>
               <TextInput
                 style={[styles.input, { textTransform: 'uppercase' }]}
@@ -226,6 +262,9 @@ export const DriverDetailsScreen = ({ navigation }: any) => {
                 placeholderTextColor={colors.textMuted}
                 value={licenseNumber}
                 autoCapitalize="characters"
+                autoCorrect={false}
+                autoComplete="off"
+                textContentType="none"
                 maxLength={16}
                 onChangeText={(text) => { 
                   if (errors.licenseNumber) setErrors(prev => ({ ...prev, licenseNumber: '' }));
@@ -256,7 +295,7 @@ export const DriverDetailsScreen = ({ navigation }: any) => {
                 }}
               />
             </View>
-            {errors.licenseNumber ? <Text style={styles.validationError}>{errors.licenseNumber}</Text> : null}
+            {shouldShowError('licenseNumber') ? <Text style={styles.validationError}>{errors.licenseNumber}</Text> : null}
 
             <View style={styles.rowInputs}>
               <View style={styles.flexHalf}>
@@ -264,7 +303,7 @@ export const DriverDetailsScreen = ({ navigation }: any) => {
                 <View style={[
                   styles.inputContainer,
                   focusedField === 'dob' && styles.inputFocused,
-                  errors.dob ? styles.inputError : null
+                  shouldShowError('dob') ? styles.inputError : null
                 ]}>
                   <TextInput
                     style={styles.input}
@@ -273,6 +312,9 @@ export const DriverDetailsScreen = ({ navigation }: any) => {
                     value={dob}
                     keyboardType="number-pad"
                     maxLength={10}
+                    autoCorrect={false}
+                    autoComplete="off"
+                    textContentType="none"
                     onChangeText={(text) => {
                       if (errors.dob) setErrors(prev => ({ ...prev, dob: '' }));
                       if (text.length > dob.length) {
@@ -295,7 +337,7 @@ export const DriverDetailsScreen = ({ navigation }: any) => {
                     }}
                   />
                 </View>
-                {errors.dob ? <Text style={styles.validationError}>{errors.dob}</Text> : null}
+                {shouldShowError('dob') ? <Text style={styles.validationError}>{errors.dob}</Text> : null}
               </View>
 
               <View style={styles.spacer} />
@@ -305,7 +347,7 @@ export const DriverDetailsScreen = ({ navigation }: any) => {
                 <View style={[
                   styles.inputContainer,
                   focusedField === 'pan' && styles.inputFocused,
-                  errors.panNumber ? styles.inputError : null
+                  shouldShowError('panNumber') ? styles.inputError : null
                 ]}>
                   <TextInput
                     style={[styles.input, { textTransform: 'uppercase' }]}
@@ -313,6 +355,9 @@ export const DriverDetailsScreen = ({ navigation }: any) => {
                     placeholderTextColor={colors.textMuted}
                     value={panNumber}
                     autoCapitalize="characters"
+                    autoCorrect={false}
+                    autoComplete="off"
+                    textContentType="none"
                     maxLength={10}
                     onChangeText={(text) => {
                       if (errors.panNumber) setErrors(prev => ({ ...prev, panNumber: '' }));
@@ -341,40 +386,60 @@ export const DriverDetailsScreen = ({ navigation }: any) => {
                     }}
                   />
                 </View>
-                {errors.panNumber ? <Text style={styles.validationError}>{errors.panNumber}</Text> : null}
+                {shouldShowError('panNumber') ? <Text style={styles.validationError}>{errors.panNumber}</Text> : null}
               </View>
             </View>
 
             {/* Work Preference */}
-            <Text style={[styles.inputLabel, { marginTop: spacing.xxl }]}>Work Preference <Text style={styles.required}>*</Text></Text>
-            <Text style={styles.sectionDescription}>How Would You Like To Work?</Text>
+            <Text style={[styles.inputLabel, styles.sectionMargin]}>Work Preference <Text style={styles.required}>*</Text></Text>
+            <Text style={styles.sectionDescription}>How would you like to work?</Text>
 
             <View style={styles.preferenceRow}>
               <TouchableOpacity 
-                style={[styles.preferenceButton, workPreference === 'FULL_TIME' && styles.preferenceButtonSelected]}
+                style={[
+                  styles.radioCard,
+                  workPreference === 'FULL_TIME' ? styles.radioCardSelected : styles.radioCardUnselected,
+                ]}
                 onPress={() => {
                   setWorkPreference('FULL_TIME');
+                  setTouchedFields(prev => ({ ...prev, workPreference: true }));
                   if (errors.workPreference) setErrors(prev => ({ ...prev, workPreference: '' }));
                 }}
                 activeOpacity={0.7}
               >
-                <Text style={[styles.preferenceText, workPreference === 'FULL_TIME' && styles.preferenceTextSelected]}>Full-Time</Text>
+                <View style={[
+                  styles.radioCircle,
+                  workPreference === 'FULL_TIME' ? styles.radioCircleSelected : styles.radioCircleUnselected,
+                ]}>
+                  {workPreference === 'FULL_TIME' && <View style={styles.radioInnerDot} />}
+                </View>
+                <Text style={styles.radioLabel}>Full-time</Text>
               </TouchableOpacity>
 
               <View style={styles.spacer} />
 
               <TouchableOpacity 
-                style={[styles.preferenceButton, workPreference === 'PART_TIME' && styles.preferenceButtonSelected]}
+                style={[
+                  styles.radioCard,
+                  workPreference === 'PART_TIME' ? styles.radioCardSelected : styles.radioCardUnselected,
+                ]}
                 onPress={() => {
                   setWorkPreference('PART_TIME');
+                  setTouchedFields(prev => ({ ...prev, workPreference: true }));
                   if (errors.workPreference) setErrors(prev => ({ ...prev, workPreference: '' }));
                 }}
                 activeOpacity={0.7}
               >
-                <Text style={[styles.preferenceText, workPreference === 'PART_TIME' && styles.preferenceTextSelected]}>Part-Time</Text>
+                <View style={[
+                  styles.radioCircle,
+                  workPreference === 'PART_TIME' ? styles.radioCircleSelected : styles.radioCircleUnselected,
+                ]}>
+                  {workPreference === 'PART_TIME' && <View style={styles.radioInnerDot} />}
+                </View>
+                <Text style={styles.radioLabel}>Part-time</Text>
               </TouchableOpacity>
             </View>
-            {errors.workPreference ? <Text style={styles.validationError}>{errors.workPreference}</Text> : null}
+            {shouldShowError('workPreference') ? <Text style={styles.validationError}>{errors.workPreference}</Text> : null}
           </View>
 
           <View style={styles.footer}>
@@ -389,7 +454,11 @@ export const DriverDetailsScreen = ({ navigation }: any) => {
 
 const styles = StyleSheet.create({
   keyboardAvoid: { flex: 1 },
-  scrollContainer: { flexGrow: 1, padding: spacing.l },
+  scrollContainer: {
+    paddingHorizontal: spacing.l,
+    paddingTop: spacing.m,
+    paddingBottom: 8,
+  },
 
   header: {
     alignItems: 'center',
@@ -402,12 +471,12 @@ const styles = StyleSheet.create({
   },
 
   content: {
-    marginTop: spacing.s,
+    marginTop: spacing.xs,
   },
   stepText: {
     ...typography.caption,
-    letterSpacing: 1,
-    marginBottom: spacing.s,
+    letterSpacing: 0.5,
+    marginBottom: 6,
     color: colors.primary,
     fontWeight: '700',
   },
@@ -415,26 +484,33 @@ const styles = StyleSheet.create({
     ...typography.h1,
     fontWeight: '700',
     color: '#1A2C5B',
-    marginBottom: spacing.xs,
+    marginBottom: 6,
   },
   subtitle: {
     ...typography.bodyMedium,
     color: colors.textSecondary,
-    marginBottom: spacing.xxl,
+    marginBottom: 24,
   },
 
   inputLabel: {
-    ...typography.bodyMedium,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '500',
     color: colors.text,
-    marginBottom: spacing.s,
+    marginBottom: 8,
+  },
+  fieldMargin: {
+    marginTop: 22,
+  },
+  sectionMargin: {
+    marginTop: 28,
   },
   required: { color: colors.danger },
 
   inputContainer: {
     flexDirection: 'row',
+    height: 48,
     borderWidth: 1,
-    borderColor: '#E2E8F0', // Matched to inputBorder from Login
+    borderColor: colors.inputBorder,
     borderRadius: 16,
     backgroundColor: colors.white,
     alignItems: 'center',
@@ -450,60 +526,98 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    paddingVertical: spacing.m,
+    height: 48,
+    paddingVertical: 0,
     paddingHorizontal: spacing.m,
     ...typography.bodyLarge,
+    fontSize: 15,
     fontWeight: '400',
     color: colors.text,
     // @ts-ignore
     outlineStyle: 'none',
   },
+  eyeToggle: {
+    paddingRight: spacing.m,
+    paddingLeft: spacing.s,
+    height: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   validationError: {
     ...typography.caption,
+    fontSize: 12,
     color: colors.danger,
-    marginTop: spacing.s,
+    marginTop: 5,
   },
 
-  rowInputs: { flexDirection: 'row', marginTop: spacing.xl },
+  rowInputs: {
+    flexDirection: 'row',
+    marginTop: 22,
+    alignItems: 'flex-start',
+  },
   flexHalf: { flex: 1 },
   spacer: { width: spacing.m },
 
   sectionDescription: {
-    ...typography.bodyMedium,
+    fontSize: 13,
+    fontWeight: '400',
     color: colors.textSecondary,
-    marginBottom: spacing.m,
+    marginTop: 4,
+    marginBottom: 12,
   },
   preferenceRow: {
     flexDirection: 'row',
-    marginTop: spacing.xs,
+    marginTop: 0,
   },
-  preferenceButton: {
+  radioCard: {
     flex: 1,
-    paddingVertical: spacing.l,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    height: 48,
     borderRadius: 16,
-    backgroundColor: colors.white,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    paddingHorizontal: spacing.m,
   },
-  preferenceButtonSelected: {
-    borderColor: colors.primary,
-    backgroundColor: '#F0F4FF',
+  radioCardSelected: {
+    backgroundColor: '#FFF0E8',
+    borderColor: '#FF5A1F',
     borderWidth: 1.5,
   },
-  preferenceText: {
-    ...typography.bodyLarge,
-    fontWeight: '600',
-    color: colors.textSecondary,
+  radioCardUnselected: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E2DED7',
+    borderWidth: 1,
   },
-  preferenceTextSelected: {
-    color: colors.primary,
+  radioCircle: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  radioCircleSelected: {
+    borderColor: '#FF5A1F',
+  },
+  radioCircleUnselected: {
+    borderColor: '#8A8781',
+  },
+  radioInnerDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#FF5A1F',
+  },
+  radioLabel: {
+    ...typography.body,
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#171716',
   },
 
   footer: {
-    marginTop: spacing.xxl,
+    marginTop: 24,
     alignItems: 'center',
-    marginBottom: spacing.xl,
+    marginBottom: 0,
   },
 });

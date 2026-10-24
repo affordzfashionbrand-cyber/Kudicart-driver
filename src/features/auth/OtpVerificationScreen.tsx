@@ -6,6 +6,7 @@ import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
 import { colors } from '../../theme/colors';
 import { useAuthStore } from '../../store/useAuthStore';
+import { toast } from '../../store/useToastStore';
 
 export const OtpVerificationScreen = ({ route }: any) => {
   const { phoneNumber } = route.params;
@@ -38,11 +39,16 @@ export const OtpVerificationScreen = ({ route }: any) => {
 
   const handleVerify = () => {
     const code = otpArray.join('');
+    if (code.length < 6) {
+      toast.error('Please enter the complete 6-digit OTP.');
+      return;
+    }
     if (code.length === 6) {
       setIsVerifying(true);
       // Simulate network request for 1.5s
       setTimeout(() => {
         setIsVerifying(false);
+        toast.success('Mobile verification successful.');
         login('mock_token_123', route.params.phoneNumber);
       }, 1500);
     }
@@ -51,9 +57,10 @@ export const OtpVerificationScreen = ({ route }: any) => {
   const handleResend = () => {
     if (resendTimer === 0) {
       setResendTimer(30);
-      // Actual resend logic would go here
+      toast.info('A new OTP has been sent.');
     }
   };
+
 
   const handleOtpChange = (value: string, index: number) => {
     // Handle pasting a string of numbers
@@ -98,7 +105,6 @@ export const OtpVerificationScreen = ({ route }: any) => {
       >
         <ScrollView contentContainerStyle={styles.scrollContainer} bounces={false}>
           <View style={styles.content}>
-            <Text style={styles.stepText}>STEP 2 OF 2</Text>
             <Text style={styles.title}>Enter OTP</Text>
             <Text style={styles.subtitle}>
               Sent to +91 {phoneNumber}
@@ -153,6 +159,8 @@ export const OtpVerificationScreen = ({ route }: any) => {
               onPress={handleVerify} 
               disabled={otpArray.join('').length !== 6 || isVerifying} 
               loading={isVerifying}
+              style={styles.verifyButton}
+              textStyle={styles.verifyButtonText}
             />
           </View>
         </ScrollView>
@@ -171,12 +179,6 @@ const styles = StyleSheet.create({
   },
   content: {
     marginTop: spacing.xxl,
-  },
-  stepText: {
-    ...typography.caption,
-    letterSpacing: 1,
-    marginBottom: spacing.s,
-    color: colors.textMuted,
   },
   title: {
     ...typography.h2,
@@ -243,5 +245,14 @@ const styles = StyleSheet.create({
     marginTop: spacing.xxl,
     alignItems: 'center',
     marginBottom: spacing.xl,
+  },
+  verifyButton: {
+    height: 56,
+    borderRadius: 16,
+  },
+  verifyButtonText: {
+    fontSize: 17,
+    fontWeight: '600',
+    letterSpacing: 0.3,
   },
 });

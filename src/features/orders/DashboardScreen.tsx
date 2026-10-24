@@ -1,12 +1,61 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated, Switch, useColorScheme, Dimensions } from 'react-native';
-import { ScreenContainer } from '../../components/ScreenContainer';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, LayoutAnimation, Animated } from 'react-native';
 import { useDriverStore } from '../../store/useDriverStore';
 import { useOrderStore } from '../../store/useOrderStore';
 import { KudiIcon } from '../../components/KudiIcon';
-import { tokens } from '../../theme/tokens';
+import { DeliveryScooterIcon } from '../../components/DeliveryScooterIcon';
+import { LiveRouteMap, DEFAULT_HUB_COORDINATES, DEFAULT_DEST_COORDINATES } from './LiveRouteMap';
+import { SurgeBanner, SurgeDetailsSheet } from '../../components/SurgeBanner';
+import { useNotificationStore } from '../../store/useNotificationStore';
+import { toast } from '../../store/useToastStore';
 
-const { width } = Dimensions.get('window');
+const RadarPulse = ({ children }: { children: React.ReactNode }) => {
+  const anim1 = useRef(new Animated.Value(0)).current;
+  const anim2 = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const createLoop = (anim: Animated.Value, delay: number) => {
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(anim, {
+            toValue: 1,
+            duration: 2500,
+            useNativeDriver: true,
+          })
+        ])
+      ).start();
+    };
+    
+    createLoop(anim1, 0);
+    createLoop(anim2, 1250);
+  }, [anim1, anim2]);
+
+  const getAnimatedStyle = (anim: Animated.Value) => {
+    return {
+      transform: [
+        {
+          scale: anim.interpolate({
+            inputRange: [0, 1],
+            outputRange: [1, 2.8]
+          })
+        }
+      ],
+      opacity: anim.interpolate({
+        inputRange: [0, 0.2, 1],
+        outputRange: [0, 0.8, 0]
+      })
+    };
+  };
+
+  return (
+    <View style={styles.radarContainer}>
+      <Animated.View style={[styles.radarRing, getAnimatedStyle(anim1)]} />
+      <Animated.View style={[styles.radarRing, getAnimatedStyle(anim2)]} />
+      {children}
+    </View>
+  );
+};
 
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('en-IN', {
@@ -19,49 +68,38 @@ const formatCurrency = (amount: number) => {
 export const DashboardScreen = ({ navigation }: any) => {
   const { profile, isOnline, setIsOnline, schedule, assignedStore, workSummary, weeklyBonusProgress } = useDriverStore();
   const { activeOrders, receiveMockOrder, clearOrders } = useOrderStore();
+  const unreadNotifications = useNotificationStore((s) => s.notifications.filter((n) => !n.read).length);
+  const [bonusTab, setBonusTab] = React.useState<'daily' | 'weekly'>('daily');
+  const [oppTab, setOppTab] = React.useState<'01' | '02'>('01');
+  const [showSurgeDetails, setShowSurgeDetails] = React.useState(false);
+  const [bonusWidth, setBonusWidth] = React.useState(0);
+  const [oppSectionWidth, setOppSectionWidth] = React.useState(0);
   
-  const [bonusSlideIndex, setBonusSlideIndex] = useState(0);
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
-  const theme = isDark ? tokens.colors.dark : tokens.colors.light;
-  
+  const oppBannerWidth = 310;
+  // Calculate padding based on the exact rendered width of the Opportunities section
+  const oppSidePadding = oppSectionWidth > 0 ? (oppSectionWidth - oppBannerWidth) / 2 : 0;
+
   const activeOrder = activeOrders.length > 0 ? activeOrders[0] : null;
+  const hasActiveDelivery = isOnline && !!activeOrder && (
+    activeOrder.status === 'OUT_FOR_DELIVERY' ||
+    activeOrder.status === 'ARRIVED' ||
+    activeOrder.status === 'RETURNING' ||
+    activeOrder.status === 'PICKED_UP'
+  );
 
   const handleToggleOnline = (value: boolean) => {
+    try {
+      (LayoutAnimation as any)?.configureNext?.((LayoutAnimation as any)?.Presets?.easeInEaseOut);
+    } catch (_) {}
     setIsOnline(value);
     if (!value) {
       clearOrders();
+      toast.info('You are now offline.');
+    } else {
+      toast.success('You are online. Ready for assignments.');
     }
   };
 
-  // Radar Animation for Online State
-  const radarAnim1 = useRef(new Animated.Value(0)).current;
-  const radarAnim2 = useRef(new Animated.Value(0)).current;
-  const radarAnim3 = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (isOnline && !activeOrder) {
-      const createLoop = (anim: Animated.Value, delay: number) => {
-        return Animated.loop(
-          Animated.sequence([
-            Animated.delay(delay),
-            Animated.timing(anim, {
-              toValue: 1,
-              duration: 2400,
-              useNativeDriver: true,
-            })
-          ])
-        );
-      };
-      createLoop(radarAnim1, 0).start();
-      createLoop(radarAnim2, 800).start();
-      createLoop(radarAnim3, 1600).start();
-    } else {
-      radarAnim1.setValue(0);
-      radarAnim2.setValue(0);
-      radarAnim3.setValue(0);
-    }
-  }, [isOnline, activeOrder]);
 
   // Mock Order Timer
   useEffect(() => {
@@ -76,672 +114,1060 @@ export const DashboardScreen = ({ navigation }: any) => {
 
   const getInitials = () => {
     if (profile.avatarInitial) return profile.avatarInitial;
-    return profile.fullName.substring(0, 2).toUpperCase();
+    return profile.fullName ? profile.fullName.substring(0, 2).toUpperCase() : 'BA';
   };
 
   const isFullTimeProfile = profile.workPreference === 'FULL_TIME';
   const roleLabel = isFullTimeProfile ? 'Full-time' : 'Part-time';
-  
-  // Bonus computation
-  const weeklyBonusAmount = isFullTimeProfile ? 1100 : 500;
-  const targetOrders = isFullTimeProfile ? 119 : 75;
-  const targetDays = 6;
-  const currentOrders = weeklyBonusProgress?.eligibleOrders || (isFullTimeProfile ? 64 : 43);
-  const currentDays = weeklyBonusProgress?.workingDays || 5;
-  const ordersPercent = Math.min((currentOrders / targetOrders) * 100, 100);
-  const daysPercent = Math.min((currentDays / targetDays) * 100, 100);
-
-  const dailyBonusAmount = isFullTimeProfile ? 150 : 80;
-  const targetDailyOrders = isFullTimeProfile ? 20 : 12;
-  const currentDailyOrders = 8;
-  const dailyOrdersPercent = Math.min((currentDailyOrders / targetDailyOrders) * 100, 100);
-
-  const targetDailyHours = isFullTimeProfile ? 8 : 5;
-  const dailyHours = isFullTimeProfile ? 6.7 : 3.5;
-  const dailyHoursRemaining = isFullTimeProfile ? '1h 18m left' : '1h 30m left';
-  const dailyHoursPercent = Math.min((dailyHours / targetDailyHours) * 100, 100);
-
-  const [cardWidth, setCardWidth] = useState(width - (tokens.spacing.gutter * 2));
-  const bonusScrollRef = useRef<ScrollView>(null);
-
-  const handleBonusScroll = (event: any) => {
-    const offsetX = event.nativeEvent.contentOffset.x;
-    const slide = Math.round(offsetX / (cardWidth || 1));
-    if (slide !== bonusSlideIndex && (slide === 0 || slide === 1)) {
-      setBonusSlideIndex(slide);
-    }
-  };
-
-  const renderRadarRing = (anim: Animated.Value, index: number) => {
-    return (
-      <Animated.View
-        key={`ring-${index}`}
-        style={[
-          styles.radarRing,
-          { borderColor: theme.online },
-          {
-            transform: [
-              {
-                scale: anim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0.8, 3]
-                })
-              }
-            ],
-            opacity: anim.interpolate({
-              inputRange: [0, 0.5, 1],
-              outputRange: [0.15, 0.1, 0]
-            })
-          }
-        ]}
-      />
-    );
-  };
 
   return (
-    <View style={[styles.mainContainer, { backgroundColor: theme.canvas }]}>
-      
-      {/* A. HEADER */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <TouchableOpacity onPress={() => navigation.navigate('Profile')} style={[styles.avatar, { backgroundColor: theme.ink900 }]}>
-            <Text style={[styles.avatarText, { color: theme.brandLime }]}>{getInitials()}</Text>
-          </TouchableOpacity>
-          <View>
-            <Text style={[styles.headerName, { color: theme.ink900 }]}>{profile.name?.split(' ')[0]}</Text>
-            <Text style={[styles.headerRole, { color: theme.ink500 }]}>{roleLabel} • {profile.id}</Text>
-          </View>
-        </View>
-        <View style={styles.headerRight}>
-          <Switch
-            value={isOnline}
-            onValueChange={handleToggleOnline}
-            trackColor={{ false: theme.offlineSoft, true: theme.online }}
-            thumbColor="#FFFFFF"
-            style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
-          />
-          <TouchableOpacity style={[styles.bellBtn, { backgroundColor: theme.surface }]}>
-            <KudiIcon name="notifications" size={20} color={theme.ink900} />
-            <View style={styles.bellBadge} />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        
-        {/* C. EARNINGS HERO */}
-        <View style={[styles.heroCard, { backgroundColor: theme.ink900 }]}>
-          <View style={styles.heroHeader}>
-            <Text style={[styles.heroSub, { color: 'rgba(255,255,255,0.7)' }]}>Today's earnings</Text>
-            <View style={styles.shiftChip}>
-              <Text style={styles.shiftChipText}>Shift 9:00 AM – 6:00 PM</Text>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.mainContainer}>
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <TouchableOpacity onPress={() => navigation.navigate('Profile')} style={styles.avatar}>
+              <Text style={styles.avatarText}>{getInitials()}</Text>
+            </TouchableOpacity>
+            <View style={styles.profileTextContainer}>
+              <Text style={styles.headerName} numberOfLines={1}>{profile.name?.split(' ')[0] || 'Babajide'}</Text>
+              <Text style={styles.headerRole} numberOfLines={1}>{roleLabel} · ID: {profile.id || 'DLV-8492'}</Text>
             </View>
           </View>
-          
-          <Text style={styles.heroAmount}>
-            <Text style={{ color: 'rgba(255,255,255,0.6)' }}>₹</Text>
-            {formatCurrency(workSummary?.totalEarnings || 0).replace('₹', '').trim()}
-          </Text>
-
-          <View style={styles.shiftProgressContainer}>
-            <View style={styles.shiftProgressBarBg}>
-              <View style={[styles.shiftProgressBarFill, { width: '40%', backgroundColor: theme.online }]} />
-            </View>
-            <Text style={[styles.shiftProgressText, { color: 'rgba(255,255,255,0.7)' }]}>On shift · 2h 18m left</Text>
-          </View>
-
-          <View style={styles.heroTiles}>
-            <View style={styles.heroTile}>
-              <Text style={styles.heroTileLabel}>Online time</Text>
-              <Text style={styles.heroTileValue}>{workSummary?.loginHours || '0h'}</Text>
-            </View>
-            <View style={styles.heroTile}>
-              <Text style={styles.heroTileLabel}>Orders done</Text>
-              <Text style={styles.heroTileValue}>{workSummary?.ordersDone || 0}</Text>
-            </View>
-          </View>
-
-          {schedule?.status === 'IN_PROGRESS' && !isOnline && (
-            <View style={[styles.heroNudge, { backgroundColor: theme.warningSoft }]}>
-              <Text style={[styles.heroNudgeText, { color: theme.warning }]}>You're on shift but offline. Go online to receive orders.</Text>
-            </View>
-          )}
-        </View>
-
-        {/* D. STATE STAGE */}
-        <View style={[styles.stageCard, { backgroundColor: theme.surface, borderColor: theme.line }]}>
-          {!isOnline ? (
-            <View style={styles.stageOffline}>
-              <View style={[styles.stageIconBg, { backgroundColor: theme.offlineSoft }]}>
-                <View style={[styles.stageDot, { backgroundColor: theme.offline }]} />
-              </View>
-              <Text style={[styles.stageTitle, { color: theme.ink900 }]}>You're offline</Text>
-              <Text style={[styles.stageSub, { color: theme.ink500 }]}>Go online to start receiving delivery assignments.</Text>
-              <TouchableOpacity style={[styles.secondaryBtn, { borderColor: theme.line }]} onPress={() => navigation.navigate('StoreDetails')}>
-                <KudiIcon name="navigation" size={18} color={theme.ink900} />
-                <Text style={[styles.secondaryBtnText, { color: theme.ink900 }]}>Store details</Text>
-              </TouchableOpacity>
-            </View>
-          ) : !activeOrder ? (
-            <View style={styles.stageOnline}>
-              <View style={styles.radarContainer}>
-                {renderRadarRing(radarAnim1, 1)}
-                {renderRadarRing(radarAnim2, 2)}
-                {renderRadarRing(radarAnim3, 3)}
-                <View style={[styles.radarCenter, { backgroundColor: theme.online }]}>
-                  <KudiIcon name="package" size={24} color="#FFF" />
-                </View>
-              </View>
-              <Text style={[styles.stageTitle, { color: theme.ink900 }]}>Looking for orders</Text>
-              <Text style={[styles.stageSub, { color: theme.ink500 }]}>Stay close to your store. We'll alert you with sound and vibration.</Text>
-            </View>
-          ) : (
-            <View /> // Handled by bottom sheet
-          )}
-        </View>
-
-        {/* E. BONUS CARD (SWIPEABLE CAROUSEL) */}
-        <View 
-          style={[styles.bonusCard, { backgroundColor: theme.surface, borderColor: theme.line, padding: 0, overflow: 'hidden' }]}
-          onLayout={(e) => {
-            const w = e.nativeEvent.layout.width;
-            if (w > 0 && Math.abs(w - cardWidth) > 1) {
-              setCardWidth(w);
-            }
-          }}
-        >
-          <ScrollView 
-            ref={bonusScrollRef}
-            horizontal 
-            pagingEnabled 
-            showsHorizontalScrollIndicator={false} 
-            bounces={false}
-            onScroll={handleBonusScroll}
-            scrollEventThrottle={16}
-          >
-            {/* DAILY BONUS SLIDE */}
-            <View style={{ width: cardWidth, padding: tokens.spacing.cardPadding }}>
-              <View style={styles.bonusHeader}>
-                <View style={styles.bonusTitleRow}>
-                  <View style={[styles.bonusIconBg, { backgroundColor: theme.brandLimeSoft }]}>
-                    <KudiIcon name="clock" size={16} color={theme.ink900} />
-                  </View>
-                  <Text style={[styles.bonusTitle, { color: theme.ink900 }]}>Daily bonus</Text>
-                </View>
-                <Text style={[styles.bonusAmount, { color: theme.ink900 }]}>₹{dailyBonusAmount.toLocaleString()}</Text>
-              </View>
-              <Text style={[styles.bonusSub, { color: theme.ink500 }]}>
-                Complete both targets • Today's shift
-              </Text>
-
-              {/* Progress 1: Orders */}
-              <View style={styles.bonusProgressRow}>
-                <View style={styles.bonusProgressHeader}>
-                  <Text style={[styles.bonusProgressLabel, { color: theme.ink900 }]}>
-                    Orders {currentDailyOrders} / {targetDailyOrders}
-                  </Text>
-                  <Text style={[styles.bonusProgressHelper, { color: theme.ink500 }]}>
-                    {Math.max(0, targetDailyOrders - currentDailyOrders)} more to go
-                  </Text>
-                </View>
-                <View style={[styles.bonusProgressBarBg, { backgroundColor: theme.line }]}>
-                  <View style={[styles.bonusProgressBarFill, { width: `${dailyOrdersPercent}%`, backgroundColor: theme.online }]} />
-                  <View style={styles.bonusFlagWrapper}>
-                    <KudiIcon name="star" size={8} color={theme.ink900} />
-                  </View>
-                </View>
-              </View>
-
-              {/* Progress 2: Login Hours */}
-              <View style={styles.bonusProgressRow}>
-                <View style={styles.bonusProgressHeader}>
-                  <Text style={[styles.bonusProgressLabel, { color: theme.ink900 }]}>
-                    Login hours {dailyHours} / {targetDailyHours}h
-                  </Text>
-                  <Text style={[styles.bonusProgressHelper, { color: theme.ink500 }]}>
-                    {dailyHoursRemaining}
-                  </Text>
-                </View>
-                <View style={[styles.bonusProgressBarBg, { backgroundColor: theme.line }]}>
-                  <View style={[styles.bonusProgressBarFill, { width: `${dailyHoursPercent}%`, backgroundColor: theme.online }]} />
-                  <View style={styles.bonusFlagWrapper}>
-                    <KudiIcon name="star" size={8} color={theme.ink900} />
-                  </View>
-                </View>
-              </View>
-
-              {/* Footer */}
-              <View style={styles.bonusFooter}>
-                <View style={[styles.bonusStatusPill, { backgroundColor: theme.warningSoft }]}>
-                  <Text style={[styles.bonusStatusText, { color: theme.warning }]}>In progress</Text>
-                </View>
-                <TouchableOpacity onPress={() => navigation.navigate('History')}>
-                  <Text style={[styles.bonusFooterLink, { color: theme.ink500 }]}>View details ›</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* WEEKLY BONUS SLIDE */}
-            <View style={{ width: cardWidth, padding: tokens.spacing.cardPadding }}>
-              <View style={styles.bonusHeader}>
-                <View style={styles.bonusTitleRow}>
-                  <View style={[styles.bonusIconBg, { backgroundColor: theme.brandLimeSoft }]}>
-                    <KudiIcon name="star" size={16} color={theme.ink900} />
-                  </View>
-                  <Text style={[styles.bonusTitle, { color: theme.ink900 }]}>Weekly bonus</Text>
-                </View>
-                <Text style={[styles.bonusAmount, { color: theme.ink900 }]}>₹{weeklyBonusAmount.toLocaleString()}</Text>
-              </View>
-              <Text style={[styles.bonusSub, { color: theme.ink500 }]}>
-                Complete both targets • Mon – Sun
-              </Text>
-
-              {/* Progress 1: Orders */}
-              <View style={styles.bonusProgressRow}>
-                <View style={styles.bonusProgressHeader}>
-                  <Text style={[styles.bonusProgressLabel, { color: theme.ink900 }]}>
-                    Orders {currentOrders} / {targetOrders}
-                  </Text>
-                  <Text style={[styles.bonusProgressHelper, { color: theme.ink500 }]}>
-                    {Math.max(0, targetOrders - currentOrders)} more to go
-                  </Text>
-                </View>
-                <View style={[styles.bonusProgressBarBg, { backgroundColor: theme.line }]}>
-                  <View style={[styles.bonusProgressBarFill, { width: `${ordersPercent}%`, backgroundColor: theme.online }]} />
-                  <View style={styles.bonusFlagWrapper}>
-                    <KudiIcon name="star" size={8} color={theme.ink900} />
-                  </View>
-                </View>
-              </View>
-
-              {/* Progress 2: Working Days */}
-              <View style={styles.bonusProgressRow}>
-                <View style={styles.bonusProgressHeader}>
-                  <Text style={[styles.bonusProgressLabel, { color: theme.ink900 }]}>
-                    Working days {currentDays} / {targetDays}
-                  </Text>
-                  <Text style={[styles.bonusProgressHelper, { color: theme.ink500 }]}>
-                    {Math.max(0, targetDays - currentDays)} more day{Math.max(0, targetDays - currentDays) > 1 ? 's' : ''}
-                  </Text>
-                </View>
-                <View style={[styles.bonusProgressBarBg, { backgroundColor: theme.line }]}>
-                  <View style={[styles.bonusProgressBarFill, { width: `${daysPercent}%`, backgroundColor: theme.online }]} />
-                  <View style={styles.bonusFlagWrapper}>
-                    <KudiIcon name="star" size={8} color={theme.ink900} />
-                  </View>
-                </View>
-              </View>
-
-              {/* Footer */}
-              <View style={styles.bonusFooter}>
-                <View style={[styles.bonusStatusPill, { backgroundColor: theme.warningSoft }]}>
-                  <Text style={[styles.bonusStatusText, { color: theme.warning }]}>In progress</Text>
-                </View>
-                <TouchableOpacity onPress={() => navigation.navigate('History')}>
-                  <Text style={[styles.bonusFooterLink, { color: theme.ink500 }]}>View details ›</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </ScrollView>
-
-          {/* Pagination Indicators */}
-          <View style={styles.paginationContainer}>
+          <View style={styles.headerRight}>
             <TouchableOpacity 
-              onPress={() => {
-                bonusScrollRef.current?.scrollTo({ x: 0, animated: true });
-                setBonusSlideIndex(0);
-              }}
-              style={[
-                styles.paginationDot, 
-                bonusSlideIndex === 0 
-                  ? { backgroundColor: theme.ink900, width: 16 } 
-                  : { backgroundColor: theme.line, width: 6 }
-              ]} 
-            />
-            <TouchableOpacity 
-              onPress={() => {
-                bonusScrollRef.current?.scrollTo({ x: cardWidth, animated: true });
-                setBonusSlideIndex(1);
-              }}
-              style={[
-                styles.paginationDot, 
-                bonusSlideIndex === 1 
-                  ? { backgroundColor: theme.ink900, width: 16 } 
-                  : { backgroundColor: theme.line, width: 6 }
-              ]} 
-            />
-          </View>
-        </View>
-
-        {/* F. BANNER SECTION */}
-        <View style={styles.bannerSection}>
-          <Text style={[styles.bannerSectionTitle, { color: theme.ink900 }]}>For you</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.bannerScroll}
-          >
-            {/* Banner 1 — Earn More */}
-            <View style={[styles.bannerCard, { backgroundColor: theme.ink900 }]}>
-              <View style={styles.bannerTopRow}>
-                <View style={[styles.bannerBadge, { backgroundColor: theme.brandLime }]}>
-                  <Text style={[styles.bannerBadgeText, { color: theme.ink900 }]}>LIMITED</Text>
-                </View>
-                <KudiIcon name="wallet" size={20} color={theme.brandLime} />
-              </View>
-              <Text style={[styles.bannerHeadline, { color: '#FFFFFF' }]}>Earn ₹200 extra</Text>
-              <Text style={[styles.bannerSub, { color: 'rgba(255,255,255,0.6)' }]}>Complete 5 orders before 2 PM today</Text>
-              <View style={[styles.bannerCta, { backgroundColor: theme.brandLime }]}>
-                <Text style={[styles.bannerCtaText, { color: theme.ink900 }]}>View offer →</Text>
-              </View>
-            </View>
-
-            {/* Banner 2 — Peak Hour */}
-            <View style={[styles.bannerCard, { backgroundColor: '#2E6BFF' }]}>
-              <View style={styles.bannerTopRow}>
-                <View style={[styles.bannerBadge, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
-                  <Text style={[styles.bannerBadgeText, { color: '#FFFFFF' }]}>PEAK HOURS</Text>
-                </View>
-                <KudiIcon name="star" size={20} color="#FFFFFF" />
-              </View>
-              <Text style={[styles.bannerHeadline, { color: '#FFFFFF' }]}>2× bonus live now</Text>
-              <Text style={[styles.bannerSub, { color: 'rgba(255,255,255,0.7)' }]}>12 PM – 3 PM peak hour surge active</Text>
-              <View style={[styles.bannerCta, { backgroundColor: 'rgba(255,255,255,0.15)' }]}>
-                <Text style={[styles.bannerCtaText, { color: '#FFFFFF' }]}>See surge map →</Text>
-              </View>
-            </View>
-
-            {/* Banner 3 — Referral */}
-            <View style={[styles.bannerCard, { backgroundColor: '#12B76A' }]}>
-              <View style={styles.bannerTopRow}>
-                <View style={[styles.bannerBadge, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
-                  <Text style={[styles.bannerBadgeText, { color: '#FFFFFF' }]}>REFERRAL</Text>
-                </View>
-                <KudiIcon name="user" size={20} color="#FFFFFF" />
-              </View>
-              <Text style={[styles.bannerHeadline, { color: '#FFFFFF' }]}>{'Invite & earn ₹500'}</Text>
-              <Text style={[styles.bannerSub, { color: 'rgba(255,255,255,0.7)' }]}>For every partner you refer who completes 10 orders</Text>
-              <View style={[styles.bannerCta, { backgroundColor: 'rgba(255,255,255,0.15)' }]}>
-                <Text style={[styles.bannerCtaText, { color: '#FFFFFF' }]}>Refer now →</Text>
-              </View>
-            </View>
-          </ScrollView>
-        </View>
-
-      </ScrollView>
-
-      {/* NEW ASSIGNMENT FULLSCREEN OVERLAY — blocks all interaction, stays inside phone frame */}
-      {isOnline && activeOrder && (
-        <View style={[styles.assignmentOverlay, { backgroundColor: theme.canvas }]}>
-          {/* Top bar */}
-          <View style={[styles.assignmentTopBar, { backgroundColor: theme.surface, borderBottomColor: theme.line }]}>
-            <View style={styles.assignmentTopBarLeft}>
-              <Text style={[styles.assignmentTitle, { color: theme.ink900 }]}>ORDER ASSIGNED</Text>
-            </View>
-            <Text style={[styles.sheetOrderId, { color: theme.ink500 }]}>{activeOrder.id}</Text>
-          </View>
-
-          {/* Scrollable content */}
-          <ScrollView
-            style={{ flex: 1 }}
-            contentContainerStyle={styles.assignmentScrollContent}
-            showsVerticalScrollIndicator={false}
-          >
-            {/* Alert banner */}
-            <View style={[styles.assignmentAlertBanner, { backgroundColor: theme.brandLime }]}>
-              <KudiIcon name="alert-circle" size={16} color={theme.ink900} />
-              <Text style={[styles.assignmentAlertText, { color: theme.ink900 }]}>
-                A delivery has been assigned to this driver at the store. Review the order before pickup confirmation.
-              </Text>
-            </View>
-
-            {/* Route timeline */}
-            <View style={[styles.assignmentCard, { backgroundColor: theme.surface, borderColor: theme.line }]}>
-              <Text style={[styles.assignmentCardLabel, { color: theme.ink500 }]}>Route</Text>
-              <View style={styles.sheetTimeline}>
-                <View style={styles.sheetTimelineCol}>
-                  <View style={[styles.sheetTimelineDot, { backgroundColor: theme.ink900 }]} />
-                  <View style={[styles.sheetTimelineLine, { backgroundColor: theme.line }]} />
-                  <View style={[styles.sheetTimelineDot, { backgroundColor: theme.online }]} />
-                </View>
-                <View style={styles.sheetTimelineContent}>
-                  <View style={styles.sheetLocationRow}>
-                    <Text style={[styles.sheetLocationLabel, { color: theme.ink900 }]}>Pickup</Text>
-                    <Text style={[styles.sheetLocationValue, { color: theme.ink700 }]}>{activeOrder.pickupLocation}</Text>
-                  </View>
-                  <View style={styles.sheetLocationRow}>
-                    <Text style={[styles.sheetLocationLabel, { color: theme.online }]}>Drop</Text>
-                    <Text style={[styles.sheetLocationValue, { color: theme.ink700 }]}>{activeOrder.customerAddress}</Text>
-                  </View>
-                </View>
-              </View>
-            </View>
-
-            {/* Order meta */}
-            <View style={[styles.assignmentCard, { backgroundColor: theme.surface, borderColor: theme.line }]}>
-              <Text style={[styles.assignmentCardLabel, { color: theme.ink500 }]}>Order details</Text>
-              <View style={styles.assignmentMetaGrid}>
-                <View style={styles.assignmentMetaTile}>
-                  <KudiIcon name="package" size={20} color={theme.ink500} />
-                  <Text style={[styles.assignmentMetaValue, { color: theme.ink900 }]}>{activeOrder.itemsCount}</Text>
-                  <Text style={[styles.assignmentMetaLabel, { color: theme.ink500 }]}>Items</Text>
-                </View>
-                <View style={[styles.assignmentMetaDivider, { backgroundColor: theme.line }]} />
-                <View style={styles.assignmentMetaTile}>
-                  <KudiIcon name="navigation" size={20} color={theme.ink500} />
-                  <Text style={[styles.assignmentMetaValue, { color: theme.ink900 }]}>{activeOrder.distance}</Text>
-                  <Text style={[styles.assignmentMetaLabel, { color: theme.ink500 }]}>Distance</Text>
-                </View>
-                <View style={[styles.assignmentMetaDivider, { backgroundColor: theme.line }]} />
-                <View style={styles.assignmentMetaTile}>
-                  <KudiIcon name="clock" size={20} color={theme.ink500} />
-                  <Text style={[styles.assignmentMetaValue, { color: theme.ink900 }]}>{activeOrder.eta}</Text>
-                  <Text style={[styles.assignmentMetaLabel, { color: theme.ink500 }]}>ETA</Text>
-                </View>
-              </View>
-            </View>
-
-            {/* Customer */}
-            <View style={[styles.assignmentCard, { backgroundColor: theme.surface, borderColor: theme.line }]}>
-              <Text style={[styles.assignmentCardLabel, { color: theme.ink500 }]}>Customer</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                <View style={[styles.assignmentCustomerAvatar, { backgroundColor: theme.canvas }]}>
-                  <KudiIcon name="user" size={20} color={theme.ink700} />
-                </View>
-                <View>
-                  <Text style={[styles.assignmentCustomerName, { color: theme.ink900 }]}>{activeOrder.customerName}</Text>
-                  <Text style={[styles.assignmentMetaLabel, { color: theme.ink500 }]}>{activeOrder.date}</Text>
-                </View>
-              </View>
-            </View>
-          </ScrollView>
-
-          <View style={[styles.assignmentFooter, { backgroundColor: theme.surface, borderTopColor: theme.line }]}>
-            <TouchableOpacity
-              style={[styles.primaryBtn, { backgroundColor: theme.ink900, flex: 1 }]}
-              onPress={() => navigation.navigate('OrderDetails', { orderId: activeOrder.id })}
-              activeOpacity={0.85}
+              activeOpacity={0.8}
+              onPress={() => handleToggleOnline(!isOnline)}
+              style={[styles.customToggleTrack, { backgroundColor: isOnline ? '#16805A' : '#D3CEC7', borderColor: isOnline ? '#16805A' : '#D3CEC7' }]}
             >
-              <Text style={[styles.primaryBtnText, { color: '#FFF' }]}>Review Order</Text>
+              <View style={[styles.customToggleThumb, { transform: [{ translateX: isOnline ? 20 : 0 }] }]} />
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.bellBtn}
+              onPress={() => navigation?.navigate('Notifications')}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={`Notifications, ${unreadNotifications} unread`}
+            >
+              <KudiIcon name="notifications" size={19} color="#171716" />
+              {unreadNotifications > 0 && <View style={styles.bellBadgeDot} />}
             </TouchableOpacity>
           </View>
         </View>
-      )}
 
-    </View>
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          
+          {/* MODULE 1: EARNINGS CARD */}
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>Today's earnings</Text>
+              <View style={styles.shiftChip}>
+                <Text style={styles.shiftChipText} numberOfLines={1}>Shift 9–6</Text>
+              </View>
+            </View>
+            <View style={styles.amountContainer}>
+              <Text style={styles.amountText}>{formatCurrency(workSummary?.totalEarnings || 840.50)}</Text>
+            </View>
+            <View style={styles.progressSection}>
+              <View style={styles.progressBarBg}>
+                <View style={[styles.progressBarFill, { width: '65%' }]} />
+              </View>
+              <View style={styles.progressRow}>
+                <Text style={styles.progressLabel}>On shift · 2h 18m left</Text>
+                <Text style={styles.progressValue}>65% of goal</Text>
+              </View>
+            </View>
+            <View style={styles.statsGrid}>
+              <View style={styles.statBox}>
+                <Text style={styles.statBoxLabel}>Online time</Text>
+                <Text style={styles.statBoxValue}>{workSummary?.loginHours || '6h 42m'}</Text>
+              </View>
+              <View style={styles.statBox}>
+                <Text style={styles.statBoxLabel}>Orders</Text>
+                <Text style={styles.statBoxValue}>{workSummary?.ordersDone || 14}</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* SURGE INCENTIVES BANNER */}
+          <SurgeBanner onPressDetails={() => setShowSurgeDetails(true)} />
+
+          {/* MODULE 2: OPERATIONAL STATUS CARD / ACTIVE DELIVERY CARD */}
+          {!isOnline ? (
+            <View style={[styles.card, styles.centerCard]}>
+              <View style={styles.statusInner}>
+                <View style={styles.statusIconBgOffline}>
+                  <DeliveryScooterIcon size={24} color="#333333" />
+                </View>
+                <Text style={styles.statusHeadline}>You're offline</Text>
+                <Text style={styles.statusSub}>Go online to start receiving orders.</Text>
+                
+                <View style={styles.storeDetailsSection}>
+                  <TouchableOpacity
+                    style={[styles.storeDetailsBtn, { alignSelf: 'center', paddingVertical: 10, paddingHorizontal: 20 }]}
+                    onPress={() => navigation?.navigate('StoreDetails')}
+                    activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel="Store Details"
+                  >
+                    <KudiIcon name="navigation" size={16} color="#65635F" />
+                    <Text style={styles.storeDetailsBtnText} numberOfLines={1}>Store Details</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          ) : hasActiveDelivery && activeOrder ? (
+            <View
+              style={[styles.card, styles.activeDeliveryCard]}
+            >
+              {/* Header row: Status chip + Order ID */}
+              <View style={styles.activeDeliveryHeader}>
+                <View style={styles.activeDeliveryStatusPill}>
+                  <View style={styles.activeDeliveryPulseDot} />
+                  <Text style={styles.activeDeliveryStatusText}>
+                    {activeOrder.status === 'RETURNING'
+                      ? activeOrder.tryAndBuyStage === 'WAITING_STORE_CONFIRMATION'
+                        ? 'Waiting for confirmation'
+                        : activeOrder.tryAndBuyStage === 'STORE_RECONCILIATION'
+                        ? 'At store'
+                        : 'Returning to store'
+                      : activeOrder.status === 'ARRIVED' && activeOrder.isTryAndBuy && activeOrder.tryAndBuyStage === 'TRIAL_IN_PROGRESS'
+                      ? 'Trial in progress'
+                      : activeOrder.status === 'ARRIVED'
+                      ? 'At customer'
+                      : 'On the way'}
+                  </Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  {activeOrder.isTryAndBuy && (
+                    <View
+                      style={{
+                        backgroundColor: '#FFF0E8',
+                        paddingHorizontal: 6,
+                        paddingVertical: 2,
+                        borderRadius: 6,
+                        borderWidth: 1,
+                        borderColor: '#FFD9C7',
+                      }}
+                    >
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: '#FF5A1F' }}>TRY & BUY</Text>
+                    </View>
+                  )}
+                  <Text style={styles.activeDeliveryOrderId}>{activeOrder.id}</Text>
+                </View>
+              </View>
+
+              {/* Map Preview Container */}
+              <View style={styles.activeDeliveryMapWrap} pointerEvents="none">
+                <LiveRouteMap
+                  origin={DEFAULT_HUB_COORDINATES}
+                  destination={DEFAULT_DEST_COORDINATES}
+                  originLabel={activeOrder.pickupLocation}
+                  destinationLabel={activeOrder.customerAddress}
+                  isPreview={true}
+                />
+              </View>
+
+              {/* Compact Action at the bottom */}
+              <TouchableOpacity 
+                style={styles.continueActionBtn}
+                activeOpacity={0.92}
+                onPress={() => navigation.navigate('OrderDetails', { orderId: activeOrder.id })}
+                accessibilityRole="button"
+                accessibilityLabel={activeOrder.status === 'RETURNING' ? 'Navigate to store' : 'Continue delivery'}
+              >
+                <Text style={styles.continueActionText}>
+                  {activeOrder.status === 'RETURNING'
+                    ? activeOrder.tryAndBuyStage === 'WAITING_STORE_CONFIRMATION'
+                      ? 'View confirmation status'
+                      : activeOrder.tryAndBuyStage === 'STORE_RECONCILIATION'
+                      ? 'Reconcile return'
+                      : 'Navigate to store'
+                    : activeOrder.status === 'ARRIVED' && activeOrder.isTryAndBuy && activeOrder.tryAndBuyStage === 'TRIAL_IN_PROGRESS'
+                    ? 'View trial in progress'
+                    : 'Continue delivery'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={[styles.card, styles.centerCard]}>
+              <View style={styles.statusInner}>
+                <RadarPulse>
+                  <View style={styles.statusIconBg}>
+                    <DeliveryScooterIcon size={24} color="#333333" />
+                  </View>
+                </RadarPulse>
+                <Text style={[styles.statusHeadline, { marginBottom: 8 }]}>Looking for orders</Text>
+                <Text style={styles.statusSub}>Stay near your hub. We'll let you know when an order comes in.</Text>
+              </View>
+            </View>
+          )}
+
+          {/* MODULE 3: SWIPEABLE BONUS CARD */}
+          <View style={styles.card}>
+            <View style={styles.bonusHeader}>
+              <Text style={styles.bonusHeadline}>
+                {bonusTab === 'daily' ? 'Daily bonus' : 'Weekly bonus'}
+              </Text>
+              <Text style={styles.bonusAmount}>{bonusTab === 'daily' ? '₹10 earned' : '₹250 earned'}</Text>
+            </View>
+
+            <View 
+              style={{ flex: 1, minHeight: 120 }} 
+              onLayout={(e) => setBonusWidth(e.nativeEvent.layout.width)}
+            >
+              {bonusWidth > 0 && (
+                <ScrollView 
+                  horizontal 
+                  pagingEnabled 
+                  showsHorizontalScrollIndicator={false}
+                  onScroll={(e) => {
+                    const page = Math.round(e.nativeEvent.contentOffset.x / bonusWidth);
+                    const newTab = page === 0 ? 'daily' : 'weekly';
+                    if (bonusTab !== newTab) setBonusTab(newTab);
+                  }}
+                  scrollEventThrottle={16}
+                >
+                  {/* DAILY PAGE */}
+                  <View style={{ width: bonusWidth }}>
+                    
+                    <View style={[styles.bonusTargetRow, { marginBottom: 22 }]}>
+                      <View style={styles.bonusTargetTop}>
+                        <Text style={styles.bonusTargetTitle}>Orders 8 / 10</Text>
+                        <Text style={styles.bonusTargetReward}>Earn ₹20</Text>
+                      </View>
+                      <View style={styles.bonusTargetBarBg}>
+                        <View style={[styles.bonusTargetBarFill, { width: '80%' }]} />
+                      </View>
+                      <Text style={styles.bonusTargetMeta}>2 more orders</Text>
+                    </View>
+
+                    <View style={styles.bonusTargetRow}>
+                      <View style={styles.bonusTargetTop}>
+                        <Text style={styles.bonusTargetTitle}>Online time 6h 42m / 8h</Text>
+                        <Text style={styles.bonusTargetReward}>Earn ₹25</Text>
+                      </View>
+                      <View style={styles.bonusTargetBarBg}>
+                        <View style={[styles.bonusTargetBarFill, { width: '84%' }]} />
+                      </View>
+                      <Text style={styles.bonusTargetMeta}>1h 18m left</Text>
+                    </View>
+                  </View>
+
+                  {/* WEEKLY PAGE */}
+                  <View style={{ width: bonusWidth }}>
+                    
+                    <View style={[styles.bonusTargetRow, { marginBottom: 22 }]}>
+                      <View style={styles.bonusTargetTop}>
+                        <Text style={styles.bonusTargetTitle}>Orders 42 / 50</Text>
+                        <Text style={styles.bonusTargetReward}>Earn ₹100</Text>
+                      </View>
+                      <View style={styles.bonusTargetBarBg}>
+                        <View style={[styles.bonusTargetBarFill, { width: '84%' }]} />
+                      </View>
+                      <Text style={styles.bonusTargetMeta}>8 more orders</Text>
+                    </View>
+
+                    <View style={styles.bonusTargetRow}>
+                      <View style={styles.bonusTargetTop}>
+                        <Text style={styles.bonusTargetTitle}>Online time 32h / 40h</Text>
+                        <Text style={styles.bonusTargetReward}>Earn ₹150</Text>
+                      </View>
+                      <View style={styles.bonusTargetBarBg}>
+                        <View style={[styles.bonusTargetBarFill, { width: '80%' }]} />
+                      </View>
+                      <Text style={styles.bonusTargetMeta}>8h left</Text>
+                    </View>
+                  </View>
+                </ScrollView>
+              )}
+            </View>
+
+            <View style={styles.bonusFooter}>
+              <View style={styles.inProgressPill}>
+                <Text style={styles.inProgressText}>In progress</Text>
+              </View>
+
+              <View style={styles.pagerIndicatorContainer}>
+                <View style={[styles.pagerDot, bonusTab === 'daily' && styles.pagerDotActive]} />
+                <View style={[styles.pagerDot, bonusTab === 'weekly' && styles.pagerDotActive]} />
+              </View>
+
+              <TouchableOpacity style={styles.viewDetailsBtn}>
+                <Text style={styles.viewDetailsText}>View details →</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* MODULE 4: OPPORTUNITIES SECTION */}
+          <View 
+            style={styles.opportunitiesSection}
+            onLayout={(e) => setOppSectionWidth(e.nativeEvent.layout.width)}
+          >
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionTitle}>For you</Text>
+            </View>
+
+            {oppSectionWidth > 0 && (
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{
+                  gap: 16,
+                }}
+                snapToInterval={oppBannerWidth + 16}
+                decelerationRate="fast"
+                snapToAlignment="center"
+                onScroll={(e) => {
+                  const page = Math.round(e.nativeEvent.contentOffset.x / (oppBannerWidth + 16));
+                  const newTab = page === 0 ? '01' : '02';
+                  if (oppTab !== newTab) setOppTab(newTab);
+                }}
+                scrollEventThrottle={16}
+              >
+                <View style={{ width: Math.max(0, oppSidePadding - 16) }} />
+
+                {/* BANNER 1: Primary Opportunity */}
+                <View style={[styles.opportunityBanner, styles.bannerPrimary]}>
+                  <Text style={styles.bannerSuperTitle}>EXTRA EARNING</Text>
+                  
+                  <View style={styles.bannerMid}>
+                    <Text style={styles.bannerAmount}>₹200 <Text style={styles.bannerType}>BONUS</Text></Text>
+                  </View>
+
+                  <View style={styles.bannerBottom}>
+                    <Text style={styles.bannerDesc}>Complete 5 orders by 2 PM</Text>
+                    <TouchableOpacity style={styles.bannerAction}>
+                      <Text style={styles.bannerActionText}>View offer →</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* BANNER 2: Secondary Opportunity */}
+                <View style={[styles.opportunityBanner, styles.bannerSecondary]}>
+                  <Text style={[styles.bannerSuperTitle, { color: '#8A8781' }]}>PEAK HOURS</Text>
+                  
+                  <View style={styles.bannerMid}>
+                    <Text style={styles.bannerAmount}>₹250 <Text style={styles.bannerType}>BONUS</Text></Text>
+                  </View>
+
+                  <View style={styles.bannerBottom}>
+                    <Text style={[styles.bannerDesc, { color: '#65635F' }]}>11 AM – 3 PM · More orders expected</Text>
+                    <TouchableOpacity style={styles.bannerAction}>
+                      <Text style={[styles.bannerActionText, { color: '#171716' }]}>View details →</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                <View style={{ width: Math.max(0, oppSidePadding - 16) }} />
+              </ScrollView>
+            )}
+            
+            <View style={styles.oppPagerIndicatorContainer}>
+              <View style={[styles.pagerDot, oppTab === '01' && styles.pagerDotActive]} />
+              <View style={[styles.pagerDot, oppTab === '02' && styles.pagerDotActive]} />
+            </View>
+          </View>
+
+        </ScrollView>
+
+        {/* FULLSCREEN ORDER ASSIGNMENT OVERLAY */}
+        {isOnline && activeOrder && (!activeOrder.accepted && activeOrder.status === 'ASSIGNED') && (
+          <View style={styles.assignmentOverlay}>
+            {/* Top bar */}
+            <View style={styles.assignmentTopBar}>
+              <View style={styles.assignmentTopBarLeft}>
+                <Text style={styles.assignmentTitle}>Order assigned</Text>
+              </View>
+              <Text style={styles.sheetOrderId}>{activeOrder.id}</Text>
+            </View>
+
+            {/* Scrollable content */}
+            <ScrollView
+              style={{ flex: 1 }}
+              contentContainerStyle={styles.assignmentScrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              {/* Assignment notification */}
+              <View style={styles.assignmentAlertBanner}>
+                <KudiIcon name="alert-circle" size={16} color="#FF5A1F" />
+                <Text style={styles.assignmentAlertText}>
+                  New order assigned. Check the route and order details before confirming.
+                </Text>
+              </View>
+
+              {/* Route timeline */}
+              <View style={styles.assignmentCard}>
+                <Text style={styles.assignmentCardLabel}>Route</Text>
+                <View style={styles.sheetTimeline}>
+                  <View style={styles.sheetTimelineCol}>
+                    <View style={[styles.sheetTimelineDot, { backgroundColor: '#171716' }]} />
+                    <View style={styles.sheetTimelineLine} />
+                    <View style={[styles.sheetTimelineDot, { backgroundColor: '#FF5A1F' }]} />
+                  </View>
+                  <View style={styles.sheetTimelineContent}>
+                    <View style={styles.sheetLocationRow}>
+                      <Text style={styles.sheetLocationLabel}>Pickup</Text>
+                      <Text style={styles.sheetLocationValue}>{activeOrder.pickupLocation}</Text>
+                    </View>
+                    <View style={styles.sheetLocationRowDrop}>
+                      <Text style={[styles.sheetLocationLabel, { color: '#FF5A1F' }]}>Drop-off</Text>
+                      <Text style={styles.sheetLocationValue}>{activeOrder.customerAddress}</Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+
+              {/* Order details */}
+              <View style={styles.assignmentCard}>
+                <Text style={styles.assignmentCardLabel}>Order details</Text>
+                <View style={styles.assignmentMetaGrid}>
+                  <View style={styles.assignmentMetaTile}>
+                    <KudiIcon name="package" size={18} color="#65635F" />
+                    <Text style={styles.assignmentMetaValue}>{activeOrder.itemsCount}</Text>
+                    <Text style={styles.assignmentMetaLabel}>Items</Text>
+                  </View>
+                  <View style={styles.assignmentMetaDivider} />
+                  <View style={styles.assignmentMetaTile}>
+                    <KudiIcon name="navigation" size={18} color="#65635F" />
+                    <Text style={styles.assignmentMetaValue}>{activeOrder.distance}</Text>
+                    <Text style={styles.assignmentMetaLabel}>Distance</Text>
+                  </View>
+                  <View style={styles.assignmentMetaDivider} />
+                  <View style={styles.assignmentMetaTile}>
+                    <KudiIcon name="clock" size={18} color="#65635F" />
+                    <Text style={styles.assignmentMetaValue}>{activeOrder.eta}</Text>
+                    <Text style={styles.assignmentMetaLabel}>ETA</Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Customer */}
+              <View style={styles.assignmentCard}>
+                <Text style={styles.assignmentCardLabel}>Customer</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  <View style={styles.assignmentCustomerAvatar}>
+                    <KudiIcon name="user" size={18} color="#171716" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.assignmentCustomerName}>{activeOrder.customerName}</Text>
+                    <Text style={styles.assignmentMetaLabelSecondary}>{activeOrder.date}</Text>
+                  </View>
+                </View>
+              </View>
+            </ScrollView>
+
+            {/* Bottom action */}
+            <View style={styles.assignmentFooter}>
+              <TouchableOpacity
+                style={styles.primaryBtn}
+                onPress={() => navigation.navigate('OrderDetails', { orderId: activeOrder.id })}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.primaryBtnText}>Review order</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* Surge & Incentives Detail Bottom Sheet */}
+        <SurgeDetailsSheet
+          visible={showSurgeDetails}
+          onClose={() => setShowSurgeDetails(false)}
+        />
+      </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  mainContainer: { flex: 1 },
+  safeArea: { flex: 1, backgroundColor: '#F3F1EC' },
+  mainContainer: {
+    flex: 1,
+    backgroundColor: '#F3F1EC',
+  },
   header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
     height: 64,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: tokens.spacing.gutter,
-  },
-  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  avatar: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
-  avatarText: { ...tokens.typography.section },
-  headerName: { ...tokens.typography.section },
-  headerRole: { ...tokens.typography.minimum },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  statusPill: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6, borderRadius: tokens.radii.pill, gap: 6 },
-  statusDot: { width: 6, height: 6, borderRadius: 3 },
-  statusText: { ...tokens.typography.minimum, fontWeight: '700' },
-  bellBtn: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
-  bellBadge: { position: 'absolute', top: 10, right: 12, width: 8, height: 8, borderRadius: 4, backgroundColor: tokens.colors.light.danger, borderWidth: 1.5, borderColor: '#FFF' },
-
-  safetyBanner: {
-    height: 48,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: tokens.spacing.gutter,
-    gap: 8,
-  },
-  safetyText: { ...tokens.typography.caption, flex: 1 },
-  safetyLink: { ...tokens.typography.caption, fontWeight: '700', marginRight: 8 },
-  safetyClose: { padding: 4 },
-
-  scrollContent: {
-    padding: tokens.spacing.gutter,
-    paddingBottom: 24,
-  },
-
-  heroCard: {
-    borderRadius: tokens.radii.hero,
-    padding: tokens.spacing.cardPadding,
-    marginBottom: tokens.spacing.cardGap,
-  },
-  heroHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  heroSub: { ...tokens.typography.minimum },
-  shiftChip: { backgroundColor: 'rgba(255,255,255,0.1)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: tokens.radii.pill },
-  shiftChipText: { ...tokens.typography.minimum, color: '#FFF' },
-  heroAmount: { ...tokens.typography.hero, color: '#FFF', marginBottom: 24 },
-  shiftProgressContainer: { marginBottom: 24 },
-  shiftProgressBarBg: { height: 6, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 3, marginBottom: 8 },
-  shiftProgressBarFill: { height: '100%', borderRadius: 3 },
-  shiftProgressText: { ...tokens.typography.minimum },
-  heroTiles: { flexDirection: 'row', gap: 12 },
-  heroTile: { flex: 1, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: tokens.radii.tile, padding: 12 },
-  heroTileLabel: { ...tokens.typography.minimum, color: 'rgba(255,255,255,0.6)', marginBottom: 4 },
-  heroTileValue: { ...tokens.typography.body, color: '#FFF', fontWeight: '700' },
-  heroNudge: { marginTop: 16, padding: 12, borderRadius: 8 },
-  heroNudgeText: { ...tokens.typography.caption, fontWeight: '600' },
-
-  stageCard: {
-    borderRadius: tokens.radii.card,
-    borderWidth: 1,
-    padding: 32,
-    marginBottom: tokens.spacing.cardGap,
-    alignItems: 'center',
-  },
-  stageOffline: { alignItems: 'center' },
-  stageIconBg: { width: 64, height: 64, borderRadius: 32, justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
-  stageDot: { width: 16, height: 16, borderRadius: 8 },
-  stageTitle: { ...tokens.typography.title, marginBottom: 8, textAlign: 'center' },
-  stageSub: { ...tokens.typography.body, textAlign: 'center', marginBottom: 24 },
-  secondaryBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 20, paddingVertical: 12, borderRadius: tokens.radii.pill, borderWidth: 1 },
-  secondaryBtnText: { ...tokens.typography.body, fontWeight: '700' },
-
-  stageOnline: { alignItems: 'center' },
-  radarContainer: { width: 120, height: 120, justifyContent: 'center', alignItems: 'center', marginBottom: 16, position: 'relative' },
-  radarRing: { position: 'absolute', width: 40, height: 40, borderRadius: 20, borderWidth: 2 },
-  radarCenter: { width: 48, height: 48, borderRadius: 24, justifyContent: 'center', alignItems: 'center', zIndex: 2 },
-
-  bonusCard: {
-    borderRadius: tokens.radii.card,
-    borderWidth: 1,
-    marginBottom: tokens.spacing.cardGap,
-  },
-  paginationContainer: { flexDirection: 'row', justifyContent: 'center', gap: 6, paddingBottom: 16, paddingTop: 4 },
-  paginationDot: { width: 6, height: 6, borderRadius: 3 },
-  bonusHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-  bonusTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  bonusIconBg: { width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
-  bonusTitle: { ...tokens.typography.body, fontWeight: '600' },
-  bonusAmount: { ...tokens.typography.section },
-  bonusSub: { ...tokens.typography.caption, marginBottom: 24 },
-  bonusProgressRow: { marginBottom: 20 },
-  bonusProgressHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  bonusProgressLabel: { ...tokens.typography.caption, fontWeight: '700' },
-  bonusProgressHelper: { ...tokens.typography.minimum },
-  bonusProgressBarBg: { height: 8, borderRadius: 4, position: 'relative' },
-  bonusProgressBarFill: { height: '100%', borderRadius: 4 },
-  bonusFlagWrapper: { position: 'absolute', right: 0, top: -2, width: 12, height: 12, borderRadius: 6, backgroundColor: '#FFF', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 2, elevation: 1 },
-  bonusFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 },
-  bonusStatusPill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: tokens.radii.pill },
-  bonusStatusText: { ...tokens.typography.minimum, fontWeight: '700' },
-  bonusFooterLink: { ...tokens.typography.caption, fontWeight: '600' },
-
-  bannerSection: { marginBottom: tokens.spacing.cardGap },
-  bannerSectionTitle: { ...tokens.typography.body, fontWeight: '700', marginBottom: 12, paddingHorizontal: tokens.spacing.gutter },
-  bannerScroll: { paddingHorizontal: tokens.spacing.gutter, gap: 12 },
-  bannerCard: {
-    width: 220,
-    borderRadius: tokens.radii.card,
-    padding: 20,
-    justifyContent: 'space-between',
-  },
-  bannerTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  bannerBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: tokens.radii.pill },
-  bannerBadgeText: { ...tokens.typography.minimum, fontWeight: '800', letterSpacing: 0.5 },
-  bannerHeadline: { ...tokens.typography.body, fontWeight: '800', marginBottom: 6, lineHeight: 22 },
-  bannerSub: { ...tokens.typography.minimum, lineHeight: 17, marginBottom: 20 },
-  bannerCta: { alignSelf: 'flex-start', paddingHorizontal: 14, paddingVertical: 8, borderRadius: tokens.radii.pill },
-  bannerCtaText: { ...tokens.typography.minimum, fontWeight: '700' },
-
-  scrim: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'flex-end',
-    zIndex: 999,
-  },
-  bottomSheet: {
-    borderTopLeftRadius: tokens.radii.hero,
-    borderTopRightRadius: tokens.radii.hero,
-    padding: tokens.spacing.cardPadding,
-    paddingBottom: 40,
-  },
-  sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
-  sheetPill: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: tokens.radii.pill, gap: 6 },
-  sheetPillDot: { width: 6, height: 6, borderRadius: 3 },
-  sheetPillText: { ...tokens.typography.minimum, fontWeight: '700' },
-  sheetOrderId: { ...tokens.typography.caption, fontWeight: '600' },
-  
-  sheetTimeline: { flexDirection: 'row', marginBottom: 24 },
-  sheetTimelineCol: { width: 16, alignItems: 'center', marginRight: 16, marginTop: 6 },
-  sheetTimelineDot: { width: 8, height: 8, borderRadius: 4 },
-  sheetTimelineLine: { width: 2, flex: 1, marginVertical: 4 },
-  sheetTimelineContent: { flex: 1 },
-  sheetLocationRow: { marginBottom: 16 },
-  sheetLocationLabel: { ...tokens.typography.caption, fontWeight: '700', marginBottom: 2 },
-  sheetLocationValue: { ...tokens.typography.body, lineHeight: 24 },
-
-  sheetChips: { flexDirection: 'row', gap: 8, marginBottom: 24 },
-  sheetChip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: tokens.radii.pill },
-  sheetChipText: { ...tokens.typography.caption, fontWeight: '600' },
-
-  primaryBtn: { height: 60, borderRadius: tokens.radii.pill, justifyContent: 'center', alignItems: 'center' },
-  primaryBtnText: { ...tokens.typography.body, fontWeight: '700', fontSize: 18 },
-
-  // Fullscreen assignment overlay (inside phone frame, not escaping like Modal on web)
-  assignmentOverlay: { ...StyleSheet.absoluteFillObject, zIndex: 10 },
-  assignmentTopBar: {
-    height: 64,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: tokens.spacing.gutter,
     borderBottomWidth: 1,
+    borderBottomColor: '#E2DED7',
+    backgroundColor: '#F3F1EC',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.02,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+    paddingRight: 12,
+  },
+  profileTextContainer: {
+    flex: 1,
+    minWidth: 0,
+    justifyContent: 'center',
+  },
+  avatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#171716',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarText: {
+    color: '#F3F1EC',
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: -0.5,
+  },
+  headerName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#171716',
+    letterSpacing: -0.2,
+  },
+  headerRole: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#65635F',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexShrink: 0,
+  },
+  customToggleTrack: {
+    width: 48,
+    height: 28,
+    borderRadius: 14,
+    padding: 2,
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+  customToggleThumb: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  onlinePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  onlinePillActive: {
+    backgroundColor: '#EAF5EF',
+    borderColor: '#EAF5EF',
+  },
+  onlinePillInactive: {
+    backgroundColor: '#FFF0E8',
+    borderColor: '#F4D5C4',
+  },
+  onlineDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  onlineDotActive: {
+    backgroundColor: '#16805A',
+  },
+  onlineDotInactive: {
+    backgroundColor: '#65635F',
+  },
+  onlinePillText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  onlineTextActive: {
+    color: '#16805A',
+  },
+  onlineTextInactive: {
+    color: '#FF5A1F',
+  },
+  bellBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2DED7',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  bellBadgeDot: {
+    position: 'absolute',
+    top: 7,
+    right: 8,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#FF5A1F',
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+  },
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 24,
+    gap: 16,
+  },
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#E2DED7',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  cardTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#171716',
+    letterSpacing: -0.2,
+  },
+  shiftChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 2,
+    borderRadius: 999,
+    backgroundColor: '#F3F1EC',
+    borderWidth: 1,
+    borderColor: '#E2DED7',
+  },
+  shiftChipText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#65635F',
+    flexShrink: 0,
+  },
+  amountContainer: {
+    marginBottom: 12,
+  },
+  amountText: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#171716',
+    letterSpacing: -0.5,
+  },
+  progressSection: {
+    marginBottom: 16,
+  },
+  progressBarBg: {
+    height: 4,
+    backgroundColor: '#E2DED7',
+    borderRadius: 2,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: '#FF5A1F',
+    borderRadius: 2,
+  },
+  progressRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  progressLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#65635F',
+  },
+  progressValue: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FF5A1F',
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    gap: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#E2DED7',
+    paddingTop: 14,
+  },
+  statBox: {
+    flex: 1,
+    backgroundColor: '#F3F1EC',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E2DED7',
+  },
+  statBoxLabel: {
+    fontSize: 11,
+    color: '#65635F',
+    fontWeight: '500',
+    marginBottom: 2,
+  },
+  statBoxValue: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#171716',
+  },
+  centerCard: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 24,
+    minHeight: 290,
+  },
+  statusInner: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+  },
+  statusIconBg: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#FFF0E8',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  radarContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  radarRing: {
+    position: 'absolute',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 90, 31, 0.12)', // brand orange #FF5A1F with low opacity
+    borderWidth: 1,
+    borderColor: 'rgba(255, 90, 31, 0.2)',
+  },
+  statusIconBgOffline: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#F3F1EC',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  statusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: '#F3F1EC',
+    borderWidth: 1,
+    borderColor: '#E2DED7',
+    marginBottom: 8,
+  },
+  statusPillOffline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: '#F3F1EC',
+    borderWidth: 1,
+    borderColor: '#E2DED7',
+    marginBottom: 8,
+  },
+  statusPillDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#16805A',
+  },
+  statusPillDotOffline: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#8A8781',
+  },
+  statusPillText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#171716',
+    letterSpacing: 0.2,
+  },
+  statusPillTextOffline: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#65635F',
+    letterSpacing: 0.2,
+  },
+  statusHeadline: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#171716',
+    letterSpacing: -0.5,
+    marginBottom: 4,
+  },
+  statusSub: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#65635F',
+    textAlign: 'center',
+    lineHeight: 16,
+    maxWidth: 280,
+  },
+  storeDetailsSection: {
+    marginTop: 16,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E2DED7',
+    width: '100%',
+    alignItems: 'center',
+  },
+  storeDetailsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E2DED7',
+    backgroundColor: '#FAF9F6',
+  },
+  storeDetailsBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#171716',
+    flexShrink: 0,
+  },
+  bonusHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 18,
+  },
+  bonusHeadline: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#65635F',
+  },
+  bonusAmount: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#171716',
+  },
+  bonusTargetRow: {
+    // Margin overridden per row via inline styles
+  },
+  bonusTargetTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  bonusTargetTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#171716',
+  },
+  bonusTargetReward: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#FF5A1F',
+  },
+  bonusTargetMeta: {
+    fontSize: 12,
+    color: '#65635F',
+    marginTop: 6,
+  },
+  bonusTargetBarBg: {
+    height: 4,
+    backgroundColor: '#E2DED7',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  bonusTargetBarFill: {
+    height: '100%',
+    backgroundColor: '#FF5A1F',
+    borderRadius: 2,
+  },
+  bonusFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 18,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: '#E2DED7',
+  },
+  inProgressPill: {
+    backgroundColor: '#F3F1EC',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 999,
+  },
+  inProgressText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#333333',
+  },
+  pagerIndicatorContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 15,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 4,
+    zIndex: -1,
+  },
+  pagerDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: '#D5D1CA',
+  },
+  pagerDotActive: {
+    backgroundColor: '#65635F',
+  },
+  viewDetailsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  viewDetailsText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#171716',
+  },
+  oppPagerIndicatorContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 16,
+  },
+  opportunitiesSection: {
+    marginTop: 8,
+    marginHorizontal: -16, // Edge-to-edge scrolling area
+  },
+  sectionHeaderRow: {
+    paddingHorizontal: 16, // Re-align with cards
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#171716',
+  },
+  opportunityBanner: {
+    width: 310,
+    minWidth: 310,
+    flexShrink: 0,
+    minHeight: 184,
+    borderRadius: 16,
+    paddingHorizontal: 22,
+    paddingTop: 20,
+    paddingBottom: 18,
+    justifyContent: 'space-between',
+  },
+  bannerPrimary: {
+    backgroundColor: '#FFF0E8',
+    borderWidth: 1,
+    borderColor: '#FAD5C5',
+  },
+  bannerSecondary: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2DED7',
+  },
+  bannerSuperTitle: {
+    fontSize: 10,
+    fontWeight: '600',
+    letterSpacing: 1.2,
+    color: '#FF5A1F',
+    marginBottom: 14,
+  },
+  bannerMid: {
+    marginBottom: 16,
+  },
+  bannerAmount: {
+    fontSize: 20,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+    color: '#171716',
+  },
+  bannerType: {
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: -0.3,
+    color: '#171716',
+  },
+  bannerBottom: {
+    marginTop: 'auto',
+  },
+  bannerDesc: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#4A4845',
+    lineHeight: 20,
+    marginBottom: 14,
+  },
+  bannerAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  bannerActionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FF5A1F',
+  },
+
+  // Fullscreen assignment overlay
+  assignmentOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 999,
+    backgroundColor: '#F3F1EC',
+  },
+  assignmentTopBar: {
+    height: 56,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2DED7',
+    backgroundColor: '#FFFFFF',
   },
   assignmentTopBarLeft: { flex: 1, marginRight: 12 },
-  assignmentTitle: { ...tokens.typography.caption, fontWeight: '800', letterSpacing: 1, marginBottom: 4 },
-  assignmentSubtitle: { ...tokens.typography.minimum, lineHeight: 17 },
+  assignmentTitle: { fontSize: 17, fontWeight: '600', letterSpacing: -0.2, color: '#171716' },
+  sheetOrderId: { fontSize: 12, fontWeight: '500', color: '#65635F' },
   assignmentScrollContent: {
-    padding: tokens.spacing.gutter,
-    paddingBottom: 24,
-    gap: 12,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 14,
+    gap: 16,
   },
   assignmentAlertBanner: {
     flexDirection: 'row',
@@ -749,30 +1175,121 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderRadius: tokens.radii.tile,
-  },
-  assignmentAlertText: { ...tokens.typography.caption, fontWeight: '700', flex: 1 },
-  assignmentCard: {
-    borderRadius: tokens.radii.card,
+    borderRadius: 12,
+    backgroundColor: '#FFF0E8',
     borderWidth: 1,
-    padding: tokens.spacing.cardPadding,
+    borderColor: '#FFE2D5',
   },
-  assignmentCardLabel: { ...tokens.typography.minimum, fontWeight: '700', letterSpacing: 0.5, marginBottom: 16, textTransform: 'uppercase' },
+  assignmentAlertText: { fontSize: 13, fontWeight: '500', flex: 1, color: '#171716', lineHeight: 18 },
+  assignmentCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2DED7',
+    padding: 18,
+    backgroundColor: '#FFFFFF',
+  },
+  assignmentCardLabel: { fontSize: 12, fontWeight: '500', marginBottom: 12, color: '#65635F' },
+  sheetTimeline: { flexDirection: 'row' },
+  sheetTimelineCol: { width: 14, alignItems: 'center', marginRight: 12, paddingTop: 4, paddingBottom: 4 },
+  sheetTimelineDot: { width: 8, height: 8, borderRadius: 4 },
+  sheetTimelineLine: { width: 2, flex: 1, marginVertical: 4, backgroundColor: '#E2DED7' },
+  sheetTimelineContent: { flex: 1 },
+  sheetLocationRow: { marginBottom: 16 },
+  sheetLocationRowDrop: { marginBottom: 2 },
+  sheetLocationLabel: { fontSize: 12, fontWeight: '600', marginBottom: 3, color: '#171716' },
+  sheetLocationValue: { fontSize: 13, lineHeight: 19, color: '#171716', fontWeight: '500' },
   assignmentMetaGrid: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingVertical: 6,
   },
   assignmentMetaTile: { flex: 1, alignItems: 'center', gap: 6 },
-  assignmentMetaDivider: { width: 1, height: 48 },
-  assignmentMetaValue: { ...tokens.typography.body, fontWeight: '800' },
-  assignmentMetaLabel: { ...tokens.typography.minimum, fontWeight: '500' },
-  assignmentCustomerAvatar: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
-  assignmentCustomerName: { ...tokens.typography.body, fontWeight: '700', marginBottom: 2 },
+  assignmentMetaDivider: { width: 1, height: 40, backgroundColor: '#E2DED7' },
+  assignmentMetaValue: { fontSize: 16, fontWeight: '600', color: '#171716' },
+  assignmentMetaLabel: { fontSize: 12, fontWeight: '500', color: '#65635F' },
+  assignmentCustomerAvatar: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F3F1EC' },
+  assignmentCustomerName: { fontSize: 14, fontWeight: '600', marginBottom: 2, color: '#171716' },
+  assignmentMetaLabelSecondary: { fontSize: 12, fontWeight: '400', color: '#65635F' },
   assignmentFooter: {
-    padding: tokens.spacing.gutter,
-    paddingBottom: 32,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 16,
     borderTopWidth: 1,
+    borderTopColor: '#E2DED7',
+    backgroundColor: '#FFFFFF',
     flexDirection: 'row',
-    gap: 12,
+  },
+  primaryBtn: { height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FF5A1F', flex: 1 },
+  primaryBtnText: { fontSize: 15, fontWeight: '600', color: '#171716' },
+  activeDeliveryCard: {
+    minHeight: 290,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    justifyContent: 'space-between',
+  },
+  activeDeliveryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  activeDeliveryStatusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#FFF0E8',
+    borderColor: '#F4D5C4',
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  activeDeliveryPulseDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: '#FF5A1F',
+  },
+  activeDeliveryStatusText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FF5A1F',
+    letterSpacing: -0.1,
+  },
+  activeDeliveryOrderId: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#171716',
+    letterSpacing: -0.2,
+  },
+  activeDeliveryMapWrap: {
+    height: 162,
+    borderRadius: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#E2DED7',
+    backgroundColor: '#F3F1EC',
+    position: 'relative',
+  },
+  continueActionBtn: {
+    backgroundColor: '#FF5A1F',
+    height: 44,
+    borderRadius: 22,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+    shadowColor: '#FF5A1F',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.16,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  continueActionText: {
+    color: '#171716',
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: -0.1,
   },
 });
+

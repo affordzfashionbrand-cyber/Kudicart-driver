@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-
+import { useDriverStore } from './useDriverStore';
 
 export type KycStatus = 'NOT_SUBMITTED' | 'PENDING' | 'APPROVED' | 'REJECTED';
 
@@ -15,19 +15,17 @@ interface AuthState {
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  // --- ORIGINAL STATE (Uncomment for production/testing flow) ---
-  // isAuthenticated: false,
-  // phoneNumber: null,
-  // kycStatus: 'NOT_SUBMITTED', 
-
-  // --- TEMPORARY: Start directly on Verified/Dashboard ---
+  // Default mock state configured to land directly on Verification Approved (Success) on reload
   isAuthenticated: true,
   phoneNumber: '9876543210',
-  kycStatus: 'APPROVED', 
+  kycStatus: 'APPROVED',
   
-  initialPhone: '',
-  initialOtp: '',
-  login: (token: string, phone: string) => set({ isAuthenticated: true, kycStatus: 'NOT_SUBMITTED', phoneNumber: phone }),
-  logout: () => set({ isAuthenticated: false, kycStatus: null, phoneNumber: null }),
+  initialPhone: '9876543210',
+  initialOtp: '123456',
+  login: (token: string, phone: string) =>
+    set({ isAuthenticated: true, kycStatus: 'PENDING', phoneNumber: phone }),
+  logout: () => {
+    set({ isAuthenticated: false, kycStatus: null, phoneNumber: null });
+  },
   setKycStatus: (status) => set({ kycStatus: status }),
 }));

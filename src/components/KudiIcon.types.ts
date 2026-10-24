@@ -7,6 +7,7 @@
 
 export type IconName =
   | 'arrow-left'
+  | 'chevron-left'
   | 'chevron-right'
   | 'chevron-down'
   | 'chevron-up'
@@ -22,6 +23,7 @@ export type IconName =
   | 'lock'
   | 'help'
   | 'vehicle'
+  | 'bike'
   | 'user'
   | 'home'
   | 'history'
@@ -44,7 +46,17 @@ export type IconName =
   | 'wallet'
   | 'star'
   | 'package'
-  | 'camera';
+  | 'camera'
+  | 'crosshair'
+  | 'eye'
+  | 'eye-off'
+  | 'search'
+  | 'zap'
+  | 'cloud-rain'
+  | 'download'
+  | 'arrow-right'
+  | 'refresh'
+  | 'refresh-cw';
 
 export interface KudiIconProps {
   name: IconName;

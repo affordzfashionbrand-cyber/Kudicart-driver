@@ -115,6 +115,14 @@ export const SelfieScreen = ({ navigation }: any) => {
               title="Continue" 
               onPress={handleContinue} 
               disabled={!hasSelfie} 
+              style={[
+                styles.continueButton,
+                hasSelfie ? styles.continueButtonActive : styles.continueButtonDisabled
+              ]}
+              textStyle={[
+                styles.continueButtonText,
+                hasSelfie ? styles.continueButtonTextActive : styles.continueButtonTextDisabled
+              ]}
             />
           </View>
 
@@ -126,24 +134,43 @@ export const SelfieScreen = ({ navigation }: any) => {
 
 const styles = StyleSheet.create({
   keyboardAvoid: { flex: 1 },
-  scrollContainer: { flexGrow: 1, padding: spacing.l },
+  scrollContainer: {
+    paddingHorizontal: spacing.l,
+    paddingTop: spacing.m,
+    paddingBottom: 8,
+  },
   
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginTop: spacing.m,
-    marginBottom: spacing.l,
+    marginBottom: spacing.s,
   },
   backButton: { width: 40, height: 40, justifyContent: 'center' },
   logoContainer: { flex: 1, alignItems: 'center' },
   logo: { width: 140, height: 40 },
   backButtonPlaceholder: { width: 40 },
   
-  content: { marginTop: spacing.s, flex: 1 },
-  stepText: { ...typography.caption, letterSpacing: 1, marginBottom: spacing.s, color: colors.primary, fontWeight: '700' },
-  title: { ...typography.h1, fontWeight: '700', color: '#1A2C5B', marginBottom: spacing.xs },
-  subtitle: { ...typography.bodyMedium, color: colors.textSecondary, marginBottom: spacing.xl },
+  content: { marginTop: spacing.xs, flex: 1 },
+  stepText: {
+    ...typography.caption,
+    letterSpacing: 0.5,
+    marginBottom: 6,
+    color: colors.primary,
+    fontWeight: '700',
+  },
+  title: {
+    ...typography.h1,
+    fontWeight: '700',
+    color: '#1A2C5B',
+    marginBottom: 6,
+  },
+  subtitle: {
+    ...typography.bodyMedium,
+    color: colors.textSecondary,
+    marginBottom: 24,
+  },
 
   captureSection: {
     alignItems: 'center',
@@ -261,6 +288,31 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 
-  footer: { marginTop: spacing.xl, alignItems: 'center', marginBottom: spacing.xl },
+  footer: {
+    marginTop: 24,
+    alignItems: 'center',
+    marginBottom: 0,
+  },
+  continueButton: {
+    height: 52,
+    borderRadius: 16,
+    width: '100%',
+  },
+  continueButtonDisabled: {
+    backgroundColor: '#E2DED7',
+  },
+  continueButtonActive: {
+    backgroundColor: '#FF5A1F',
+  },
+  continueButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  continueButtonTextDisabled: {
+    color: '#65635F',
+  },
+  continueButtonTextActive: {
+    color: '#171716',
+  },
 });
 
