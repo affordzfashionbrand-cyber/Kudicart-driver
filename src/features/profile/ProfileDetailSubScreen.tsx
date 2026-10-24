@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { colors } from '../../theme/colors';
@@ -39,14 +39,20 @@ export const ProfileDetailSubScreen = ({ navigation, route }: any) => {
   const customTitle = route?.params?.title;
 
   const { profile, vehicle, kyc, assignedStore } = useDriverStore();
-  const { historicalOrders } = useOrderStore();
+  const { historicalOrders, fetchHistoricalOrdersAsync } = useOrderStore();
 
   const [selectedLanguage, setSelectedLanguage] = useState('English');
 
-  const driverFullName = profile.fullName || profile.name || 'Rahul Sharma';
+  useEffect(() => {
+    if (screenId === 'orderHistory') {
+      fetchHistoricalOrdersAsync?.();
+    }
+  }, [screenId, fetchHistoricalOrdersAsync]);
+
+  const driverFullName = profile.fullName || profile.name || 'Delivery Partner';
   const nameParts = driverFullName.trim().split(' ');
-  const firstName = nameParts[0] || 'Rahul';
-  const lastName = nameParts.slice(1).join(' ') || 'Sharma';
+  const firstName = nameParts[0] || 'Delivery';
+  const lastName = nameParts.slice(1).join(' ') || 'Partner';
   const initials = `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
 
   const documentsList: DocItem[] = [
@@ -176,7 +182,7 @@ export const ProfileDetailSubScreen = ({ navigation, route }: any) => {
       case 'documents':
         return <DocumentsSubview documentsList={documentsList} />;
       case 'about':
-        return <AboutSubview />;
+        return <AboutSubview navigation={navigation} />;
       default:
         return <DefaultFallbackSubview />;
     }

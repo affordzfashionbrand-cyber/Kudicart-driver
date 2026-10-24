@@ -9,6 +9,7 @@ import { pickFile } from '../../utils/filePicker';
 import logo from '../../assets/logo.png';
 import { KudiIcon } from '../../components/KudiIcon';
 import { toast } from '../../store/useToastStore';
+import { profileApi } from '../../api';
 import { styles } from './documentUploadDetail.styles';
 
 export const DocumentUploadDetailScreen = ({ route, navigation }: any) => {
@@ -63,23 +64,27 @@ export const DocumentUploadDetailScreen = ({ route, navigation }: any) => {
         return;
       }
 
-      // Simulate upload progression for tactile feedback
       setUploadingSide(side);
-      setUploadProgress((prev) => ({ ...prev, [side]: 30 }));
+      setUploadProgress((prev) => ({ ...prev, [side]: 40 }));
 
-      setTimeout(() => {
-        setUploadProgress((prev) => ({ ...prev, [side]: 75 }));
-        setTimeout(() => {
-          setUploadProgress((prev) => ({ ...prev, [side]: 100 }));
-          setUploadingSide(null);
-          if (side === 'front') setFrontFile(file);
-          else setBackFile(file);
-        }, 200);
-      }, 200);
-    } catch (e) {
+      // Real upload to backend
+      await profileApi.uploadDocument({
+        docType: docType as any,
+        side,
+        fileUri: file.uri,
+        fileName: file.name,
+        fileSize: file.size,
+        mimeType: file.type,
+      });
+
+      setUploadProgress((prev) => ({ ...prev, [side]: 100 }));
       setUploadingSide(null);
-      setUploadError((prev) => ({ ...prev, [side]: 'Upload failed. Tap to retry.' }));
-      toast.error('Upload failed. Tap to retry.');
+      if (side === 'front') setFrontFile(file);
+      else setBackFile(file);
+    } catch (e: any) {
+      setUploadingSide(null);
+      setUploadError((prev) => ({ ...prev, [side]: e?.message || 'Upload failed. Tap to retry.' }));
+      toast.error(e?.message || 'Upload failed. Tap to retry.');
     }
   };
 

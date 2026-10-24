@@ -22,11 +22,15 @@ const maskDl = (dl?: string) => {
 };
 
 export const DriverProfileDetailsScreen = ({ navigation }: any) => {
-  const { profile, vehicle } = useDriverStore();
+  const { profile, vehicle, fetchProfileAsync } = useDriverStore();
 
-  const driverFullName = profile.fullName || profile.name || 'Rahul Sharma';
+  React.useEffect(() => {
+    fetchProfileAsync?.();
+  }, [fetchProfileAsync]);
+
+  const driverFullName = profile.fullName || profile.name || 'Delivery Partner';
   const isPartTime = profile.workPreference !== 'FULL_TIME';
-  const partnerId = profile.id || 'KC-DRV-8492';
+  const partnerId = profile.id || 'Pending Assignment';
 
   const handleBack = () => {
     if (navigation?.canGoBack && navigation.canGoBack()) {

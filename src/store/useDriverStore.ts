@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { profileApi, ordersApi } from '../api';
 
 
 export interface DriverProfile {
@@ -86,7 +87,8 @@ interface DriverState {
     status: 'IN_PROGRESS' | 'ELIGIBLE';
   };
   
-  // Actions
+  fetchProfileAsync: () => Promise<void>;
+  fetchDashboardAsync: () => Promise<void>;
   setIsOnline: (isOnline: boolean) => void;
   setActiveSurges: (surges: SurgeIncentive[]) => void;
   updateProfile: (updates: Partial<DriverProfile>) => void;
@@ -98,98 +100,41 @@ interface DriverState {
 
 export const useDriverStore = create<DriverState>((set) => ({
   profile: {
-    id: 'KC-DRV-8492',
-    fullName: 'Rahul Sharma',
-    name: 'Rahul S.',
+    id: '',
+    fullName: '',
+    name: '',
     role: 'Delivery Partner',
     status: 'Active',
-    phone: '+91 98765 43210',
+    phone: '',
     tier: 'Silver Tier',
-    avatarInitial: 'RS',
-    aadhaarNumber: '4532 8910 2341',
-    panNumber: 'ABCDE1234F',
-    dob: '15/08/1996',
-    licenseNumber: 'KA-0120220004581',
-    workPreference: 'PART_TIME',
+    avatarInitial: 'DP',
+    aadhaarNumber: '',
+    panNumber: '',
+    dob: '',
+    licenseNumber: '',
+    workPreference: 'FULL_TIME',
   },
   vehicle: {
-    registrationNumber: 'KA 05 MJ 4821',
+    registrationNumber: '',
     vehicleType: 'Bike',
-    make: 'Honda',
-    model: 'Activa 6G',
+    make: '',
+    model: '',
     rcStatus: 'Under review',
-    rcNumber: 'KA 05 MJ 4821',
+    rcNumber: '',
   },
   documents: {
-    aadhaar: {
-      front: {
-        uri: 'file:///mock/aadhaar_front.jpg',
-        name: 'aadhaar_front.jpg',
-        size: '2.4 MB',
-        type: 'image/jpeg',
-      },
-      back: {
-        uri: 'file:///mock/aadhaar_back.jpg',
-        name: 'aadhaar_back.jpg',
-        size: '2.1 MB',
-        type: 'image/jpeg',
-      },
-    },
-    pan: {
-      front: {
-        uri: 'file:///mock/pan_card.jpg',
-        name: 'pan_card.jpg',
-        size: '1.8 MB',
-        type: 'image/jpeg',
-      },
-      back: {
-        uri: 'file:///mock/pan_back.jpg',
-        name: 'pan_back.jpg',
-        size: '1.5 MB',
-        type: 'image/jpeg',
-      },
-    },
-    drivingLicence: {
-      front: {
-        uri: 'file:///mock/driving_licence_front.jpg',
-        name: 'driving_licence_front.jpg',
-        size: '2.6 MB',
-        type: 'image/jpeg',
-      },
-      back: {
-        uri: 'file:///mock/driving_licence_back.jpg',
-        name: 'driving_licence_back.jpg',
-        size: '2.3 MB',
-        type: 'image/jpeg',
-      },
-    },
-    vehicleRc: {
-      front: {
-        uri: 'file:///mock/rc_book_front.jpg',
-        name: 'rc_book_front.jpg',
-        size: '2.8 MB',
-        type: 'image/jpeg',
-      },
-      back: {
-        uri: 'file:///mock/rc_book_back.jpg',
-        name: 'rc_book_back.jpg',
-        size: '2.5 MB',
-        type: 'image/jpeg',
-      },
-    },
-    selfie: {
-      uri: 'file:///mock/driver_selfie.jpg',
-      name: 'driver_selfie.jpg',
-      size: '1.4 MB',
-      type: 'image/jpeg',
-    },
+    aadhaar: { front: null, back: null },
+    pan: { front: null, back: null },
+    drivingLicence: { front: null, back: null },
+    vehicleRc: { front: null, back: null },
+    selfie: null,
   },
   kyc: {
     licenseStatus: 'Under review',
-    licenseNumber: 'KA-0120220004581',
+    licenseNumber: '',
     aadhaarStatus: 'Under review',
-    aadhaarNumber: '4532 8910 2341',
-    panStatus: 'Verified',
+    aadhaarNumber: '',
+    panStatus: 'Under review',
   },
   isOnline: false,
   schedule: {
@@ -201,45 +146,131 @@ export const useDriverStore = create<DriverState>((set) => ({
     address: 'HSR Sector 2, 12th Main Road, Bengaluru — 560102',
   },
   workSummary: {
-    totalEarnings: 850,
-    loginHours: '4h 15m',
-    ordersDone: 8,
-    totalSlot: '04:00 PM — 09:00 PM',
-    workingDays: '4 / 6 days',
+    totalEarnings: 0,
+    loginHours: '0h 00m',
+    ordersDone: 0,
+    totalSlot: '09:00 AM — 06:00 PM',
+    workingDays: '0 / 6 days',
   },
   weeklyBonusProgress: {
-    eligibleOrders: 8,
-    workingDays: 4,
+    eligibleOrders: 0,
+    workingDays: 0,
     status: 'IN_PROGRESS',
   },
-  activeSurges: [
-    {
-      id: 'surge-demand-1',
-      type: 'SURGE',
-      headline: 'SURGE ACTIVE',
-      amountText: '+₹25',
-      bonusAmount: 25,
-      supportingText: 'Extra earnings per eligible order',
-      timeRemaining: 'Ends in 1h 45m',
-      zone: 'HSR Darkstore & Koramangala Hub',
-      condition: 'Applies automatically to all orders completed during the peak window.',
-    },
-    {
-      id: 'surge-rain-1',
-      type: 'RAIN_SURGE',
-      headline: 'RAIN SURGE ACTIVE',
-      amountText: '+₹35',
-      bonusAmount: 35,
-      supportingText: 'Applicable weather-related incentive',
-      timeRemaining: 'Active now · Rain detected',
-      zone: 'Southeast Bengaluru Delivery Zones',
-      condition: 'Added directly to base order payout during active rain conditions.',
-    },
-  ],
-  setIsOnline: (isOnline: boolean) => set({ isOnline }),
+  activeSurges: [],
+
+  fetchProfileAsync: async () => {
+    try {
+      const res = await profileApi.getProfile();
+      if (!res) return;
+      set((state) => {
+        const fullName = res.fullName || res.name || state.profile.fullName;
+        const parts = (fullName || '').trim().split(' ');
+        const first = parts[0] || '';
+        const lastInitial = parts.length > 1 ? ` ${parts[parts.length - 1][0]}.` : '';
+        const name = res.name || (first ? `${first}${lastInitial}` : state.profile.name);
+        const avatarInitial =
+          res.avatarInitial ||
+          (parts.length > 0 && parts[0]
+            ? parts
+                .map((p: string) => p[0])
+                .slice(0, 2)
+                .join('')
+                .toUpperCase()
+            : state.profile.avatarInitial);
+
+        return {
+          profile: {
+            ...state.profile,
+            id: res.id || state.profile.id,
+            fullName,
+            name,
+            role: res.role || state.profile.role,
+            status: res.status || state.profile.status,
+            phone: res.phone || state.profile.phone,
+            tier: res.tier || state.profile.tier,
+            avatarInitial,
+            aadhaarNumber: res.aadhaarNumber || state.profile.aadhaarNumber,
+            panNumber: res.panNumber || state.profile.panNumber,
+            dob: res.dob || state.profile.dob,
+            licenseNumber: res.licenseNumber || state.profile.licenseNumber,
+            workPreference: res.workPreference || state.profile.workPreference,
+          },
+          vehicle: res.vehicle ? { ...state.vehicle, ...res.vehicle } : state.vehicle,
+          kyc: {
+            ...state.kyc,
+            status: res.kycStatus || state.kyc?.status,
+            licenseStatus: res.kycStatus || state.kyc?.licenseStatus,
+            aadhaarStatus: res.kycStatus || state.kyc?.aadhaarStatus,
+            panStatus: res.kycStatus || state.kyc?.panStatus,
+            ...(res.kyc || {}),
+          },
+          isOnline: typeof res.isOnline === 'boolean' ? res.isOnline : state.isOnline,
+          assignedStore: res.assignedStore || state.assignedStore,
+          workSummary: res.workSummary || state.workSummary,
+        };
+      });
+    } catch {
+      // Offline or unauthenticated
+    }
+  },
+
+  fetchDashboardAsync: async () => {
+    try {
+      const data = await ordersApi.getDashboard();
+      if (!data) return;
+      set((state) => {
+        const profileData = data.profile;
+        let updatedProfile = state.profile;
+        if (profileData) {
+          const fullName = profileData.fullName || profileData.name || state.profile.fullName;
+          const parts = (fullName || '').trim().split(' ');
+          const first = parts[0] || '';
+          const lastInitial = parts.length > 1 ? ` ${parts[parts.length - 1][0]}.` : '';
+          const name = profileData.name || (first ? `${first}${lastInitial}` : state.profile.name);
+          const avatarInitial =
+            profileData.avatarInitial ||
+            (parts.length > 0 && parts[0]
+              ? parts
+                  .map((p: string) => p[0])
+                  .slice(0, 2)
+                  .join('')
+                  .toUpperCase()
+              : state.profile.avatarInitial);
+
+          updatedProfile = {
+            ...state.profile,
+            id: profileData.id || state.profile.id,
+            fullName,
+            name,
+            role: profileData.role || state.profile.role,
+            phone: profileData.phone || state.profile.phone,
+            tier: profileData.tier || state.profile.tier,
+            avatarInitial,
+            workPreference: profileData.workPreference || state.profile.workPreference,
+            status: profileData.status || state.profile.status,
+          };
+        }
+
+        return {
+          profile: updatedProfile,
+          isOnline: typeof data.isOnline === 'boolean' ? data.isOnline : state.isOnline,
+          workSummary: data.workSummary || state.workSummary,
+          activeSurges: Array.isArray(data.activeSurges) ? data.activeSurges : state.activeSurges,
+        };
+      });
+    } catch {
+      // Offline fallback
+    }
+  },
+
+  setIsOnline: (isOnline: boolean) => {
+    set({ isOnline });
+    profileApi.updateAvailability(isOnline).catch(() => {});
+  },
   setActiveSurges: (activeSurges: SurgeIncentive[]) => set({ activeSurges }),
 
-  updateProfile: (updates) =>
+  updateProfile: (updates) => {
     set((state) => {
       const updatedProfile = { ...state.profile, ...updates };
       if (updates.fullName) {
@@ -250,28 +281,57 @@ export const useDriverStore = create<DriverState>((set) => ({
         updatedProfile.avatarInitial = parts.map((p) => p[0]).slice(0, 2).join('').toUpperCase() || 'DP';
       }
       return { profile: updatedProfile };
-    }),
-  setIsOnline: (isOnline: boolean) => set({ isOnline }),
-  setActiveSurges: (activeSurges: SurgeIncentive[]) => set({ activeSurges }),
-  updateVehicle: (updates) => set((state) => ({ vehicle: { ...state.vehicle, ...updates } })),
-  updateDocument: (docType, side, file) => set((state) => ({
-    documents: {
-      ...state.documents,
-      [docType]: {
-        ...(state.documents[docType] as DocumentState),
-        [side]: file
-      }
+    });
+    profileApi.updateDetails(updates).catch(() => {});
+  },
+
+  updateVehicle: (updates) => {
+    set((state) => ({ vehicle: { ...state.vehicle, ...updates } }));
+    profileApi.updateVehicle(updates).catch(() => {});
+  },
+
+  updateDocument: (docType, side, file) => {
+    set((state) => ({
+      documents: {
+        ...state.documents,
+        [docType]: {
+          ...(state.documents[docType] as DocumentState),
+          [side]: file,
+        },
+      },
+    }));
+    if (file) {
+      profileApi.uploadDocument({
+        docType: docType as any,
+        side,
+        fileUri: file.uri,
+        fileName: file.name,
+        fileSize: file.size,
+        mimeType: file.type,
+      }).catch(() => {});
     }
-  })),
-  setSelfie: (file) => set((state) => ({
-    documents: {
-      ...state.documents,
-      selfie: file
+  },
+
+  setSelfie: (file) => {
+    set((state) => ({
+      documents: {
+        ...state.documents,
+        selfie: file,
+      },
+    }));
+    if (file) {
+      profileApi.uploadDocument({
+        docType: 'selfie',
+        fileUri: file.uri,
+        fileName: file.name,
+        fileSize: file.size,
+        mimeType: file.type,
+      }).catch(() => {});
     }
-  })),
+  },
   clearKycData: () => set({
     profile: {
-      id: 'KC-DRV-8492',
+      id: '',
       fullName: '',
       aadhaarNumber: '',
       panNumber: '',

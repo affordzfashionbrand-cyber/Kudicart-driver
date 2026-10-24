@@ -1,14 +1,40 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { KudiIcon } from '../../components/KudiIcon';
-import { MOCK_WEEKS, EarningDay } from './earningsData';
+import { EarningDay } from './earningsData';
 import { styles } from './earnings.styles';
+import { earningsApi } from '../../api';
 
 export const EarningsScreen = ({ navigation }: any) => {
   const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
   const [selectedDay, setSelectedDay] = useState<EarningDay | null>(null);
+  const [weekData, setWeekData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  const currentWeek = MOCK_WEEKS[currentWeekIndex];
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchEarningsData = (weekIdx: number) => {
+    setLoading(true);
+    setError(null);
+    earningsApi
+      .getEarnings(weekIdx)
+      .then((res) => {
+        if (res && res.days) {
+          setWeekData(res);
+        }
+      })
+      .catch((err) => {
+        setError(err?.message || 'Failed to load earnings from backend');
+      })
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchEarningsData(currentWeekIndex);
+  }, [currentWeekIndex]);
+
+  const currentWeek = weekData;
+  const maxWeeks = weekData?.availableWeeks?.length || 4;
 
   const handleBack = () => {
     if (selectedDay) {
@@ -25,10 +51,60 @@ export const EarningsScreen = ({ navigation }: any) => {
   };
 
   const handlePrevWeek = () => {
-    if (currentWeekIndex < MOCK_WEEKS.length - 1) {
+    if (currentWeekIndex < maxWeeks - 1) {
       setCurrentWeekIndex(currentWeekIndex + 1);
     }
   };
+
+  if (loading && !currentWeek) {
+    return (
+      <View style={styles.main}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={handleBack}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityRole="button"
+            accessibilityLabel="Back"
+          >
+            <KudiIcon name="arrow-left" size={22} color="#171716" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Weekly earnings</Text>
+        </View>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <Text style={{ color: '#8A8781' }}>Loading earnings...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (error && !currentWeek) {
+    return (
+      <View style={styles.main}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={handleBack}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityRole="button"
+            accessibilityLabel="Back"
+          >
+            <KudiIcon name="arrow-left" size={22} color="#171716" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Weekly earnings</Text>
+        </View>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <Text style={{ color: '#D94B17', fontSize: 16, marginBottom: 8, textAlign: 'center' }}>{error}</Text>
+          <TouchableOpacity
+            onPress={() => fetchEarningsData(currentWeekIndex)}
+            style={{ backgroundColor: '#16805A', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 }}
+          >
+            <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.main}>
@@ -60,7 +136,7 @@ export const EarningsScreen = ({ navigation }: any) => {
             <View style={styles.weekSelector}>
               <TouchableOpacity
                 onPress={handlePrevWeek}
-                disabled={currentWeekIndex === MOCK_WEEKS.length - 1}
+                disabled={currentWeekIndex === maxWeeks - 1}
                 style={styles.weekArrow}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 accessibilityRole="button"
@@ -69,7 +145,7 @@ export const EarningsScreen = ({ navigation }: any) => {
                 <KudiIcon
                   name="chevron-left"
                   size={20}
-                  color={currentWeekIndex === MOCK_WEEKS.length - 1 ? '#C4C0B9' : '#65635F'}
+                  color={currentWeekIndex === maxWeeks - 1 ? '#C4C0B9' : '#65635F'}
                 />
               </TouchableOpacity>
 

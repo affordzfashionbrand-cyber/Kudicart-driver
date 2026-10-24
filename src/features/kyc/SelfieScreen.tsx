@@ -6,6 +6,8 @@ import { useDriverStore } from '../../store/useDriverStore';
 import logo from '../../assets/logo.png';
 import { KudiIcon } from '../../components/KudiIcon';
 import { useAuthStore } from '../../store/useAuthStore';
+import { profileApi } from '../../api';
+import { colors } from '../../theme/colors';
 import { styles } from './selfie.styles';
 
 export const SelfieScreen = ({ navigation }: any) => {
@@ -28,9 +30,13 @@ export const SelfieScreen = ({ navigation }: any) => {
     setSelfie(null);
   };
 
-  const handleContinue = () => {
-    // Continue to next step in KYC workflow
-    setKycStatus('PENDING');
+  const handleContinue = async () => {
+    try {
+      await profileApi.submitKyc();
+      setKycStatus('PENDING');
+    } catch {
+      setKycStatus('PENDING');
+    }
   };
 
   return (

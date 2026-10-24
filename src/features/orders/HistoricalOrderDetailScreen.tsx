@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { colors } from '../../theme/colors';
 import { useOrderStore, Order } from '../../store/useOrderStore';
 import { useDriverStore } from '../../store/useDriverStore';
+import { ordersApi } from '../../api';
 import { KudiIcon } from '../../components/KudiIcon';
 import { toast } from '../../store/useToastStore';
 import { styles } from './historicalOrderDetail.styles';
@@ -13,42 +14,23 @@ export const HistoricalOrderDetailScreen = ({ route, navigation }: any) => {
   const { historicalOrders } = useOrderStore();
   const { assignedStore } = useDriverStore();
 
-  // Find targeted historical order, fallback to first historical order if not found
-  const order: Order =
-    historicalOrders.find((o) => o.id === orderId) ||
-    historicalOrders[0] || {
-      id: orderId || '#KC10247',
-      orderType: 'STANDARD',
-      isTryAndBuy: false,
-      status: 'DELIVERED',
-      pickupLocation: 'KudiCart Darkstore Hub #04 - Indiranagar',
-      itemsCount: 3,
-      toteId: '#T-08',
-      customerName: 'Rahul V.',
-      customerAddress: 'Flat 402, Golden Estate, Koramangala 4th Block, Bengaluru',
-      customerPhone: '+91 98765 12345',
-      distance: '2.4 km',
-      date: 'Today, 09:15 AM',
-      earnings: 55,
-    };
+  const [fetchedOrder, setFetchedOrder] = useState<Order | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const orderKm = order.distance || '2.4 km';
-  const orderEarnings = order.earnings || 55;
-  const storeName =
-    order.pickupLocation ||
-    assignedStore?.name ||
-    'KudiCart Darkstore Hub #04 - Indiranagar';
-  const storeAddress =
-    assignedStore?.address ||
-    'HSR Sector 2, 12th Main Road, Bengaluru — 560102';
-  const customerName = order.customerName || 'Customer';
-  const customerAddress =
-    order.customerAddress || 'Customer Address, Bengaluru';
+  const localOrder = historicalOrders.find((o) => o.id === orderId);
 
-  // Compute breakdown approximations based on distance & earnings
-  const basePay = 35;
-  const distancePay = Math.max(0, orderEarnings - basePay - 5);
-  const incentivePay = orderEarnings - basePay - distancePay;
+  useEffect(() => {
+    if (!localOrder && orderId) {
+      setLoading(true);
+      ordersApi
+        .getOrderDetails(orderId)
+        .then((data) => setFetchedOrder(data))
+        .catch(() => {})
+        .finally(() => setLoading(false));
+    }
+  }, [orderId, localOrder]);
+
+  const order: Order | null = localOrder || fetchedOrder;
 
   const handleBack = () => {
     if (navigation?.canGoBack && navigation.canGoBack()) {
@@ -57,6 +39,61 @@ export const HistoricalOrderDetailScreen = ({ route, navigation }: any) => {
       navigation?.navigate?.('MainApp');
     }
   };
+
+  if (loading) {
+    return (
+      <ScreenContainer>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+            <KudiIcon name="arrow-left" size={22} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Order Details</Text>
+        </View>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <Text style={{ color: colors.textSecondary }}>Loading order details...</Text>
+        </View>
+      </ScreenContainer>
+    );
+  }
+
+  if (!order) {
+    return (
+      <ScreenContainer>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+            <KudiIcon name="arrow-left" size={22} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Order Details</Text>
+        </View>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+          <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600', marginBottom: 8 }}>
+            Order Not Found
+          </Text>
+          <Text style={{ color: colors.textSecondary, textAlign: 'center' }}>
+            The requested order details could not be found.
+          </Text>
+        </View>
+      </ScreenContainer>
+    );
+  }
+
+  const orderKm = order.distance || '2.4 km';
+  const orderEarnings = order.earnings || 55;
+  const storeName =
+    order.pickupLocation ||
+    assignedStore?.name ||
+    'KudiCart Darkstore Hub';
+  const storeAddress =
+    assignedStore?.address ||
+    'Darkstore Hub Address';
+  const customerName = order.customerName || 'Customer';
+  const customerAddress =
+    order.customerAddress || 'Customer Address';
+
+  // Compute breakdown approximations based on distance & earnings
+  const basePay = 35;
+  const distancePay = Math.max(0, orderEarnings - basePay - 5);
+  const incentivePay = orderEarnings - basePay - distancePay;
 
   return (
     <ScreenContainer>

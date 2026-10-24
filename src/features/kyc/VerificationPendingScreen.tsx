@@ -55,17 +55,20 @@ const RadarPulse = ({ children }: { children: React.ReactNode }) => {
 };
 
 export const VerificationPendingScreen = () => {
-  const { logout, setKycStatus } = useAuthStore();
-  const { profile, vehicle } = useDriverStore();
+  const { logout, syncStatusAsync } = useAuthStore();
+  const { profile, vehicle, fetchProfileAsync } = useDriverStore();
 
-  // Automatically transition to Verification Failed / Rejected screen after 10 seconds
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setKycStatus('REJECTED');
-    }, 10000);
+    fetchProfileAsync?.();
+    syncStatusAsync?.();
 
-    return () => clearTimeout(timer);
-  }, [setKycStatus]);
+    // Check status periodically while pending
+    const interval = setInterval(() => {
+      syncStatusAsync?.();
+    }, 15000);
+
+    return () => clearInterval(interval);
+  }, [fetchProfileAsync, syncStatusAsync]);
 
   return (
     <ScreenContainer>
@@ -104,24 +107,24 @@ export const VerificationPendingScreen = () => {
 
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Partner name</Text>
-              <Text style={styles.summaryValue}>{profile.fullName || 'Rahul Sharma'}</Text>
+              <Text style={styles.summaryValue}>{profile.fullName || profile.name || 'Submitted'}</Text>
             </View>
 
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Partner ID</Text>
-              <Text style={styles.summaryValue}>{profile.id || 'KC-DRV-8492'}</Text>
+              <Text style={styles.summaryValue}>{profile.id || 'Pending assignment'}</Text>
             </View>
 
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Vehicle</Text>
               <Text style={styles.summaryValue}>
-                {vehicle.make && vehicle.model ? `${vehicle.make} ${vehicle.model}` : 'Honda Activa 6G'}
+                {vehicle.make && vehicle.model ? `${vehicle.make} ${vehicle.model}` : vehicle.vehicleType || 'Submitted'}
               </Text>
             </View>
 
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Registration</Text>
-              <Text style={styles.summaryValue}>{vehicle.registrationNumber || 'KA 05 MJ 4821'}</Text>
+              <Text style={styles.summaryValue}>{vehicle.registrationNumber || 'Submitted'}</Text>
             </View>
           </View>
 

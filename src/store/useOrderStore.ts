@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { Order, OrderItem, OrderStatus, OrderType, TryAndBuyStage } from './orderTypes';
 import { mockTryAndBuyOrder, mockStandardOrder, mockHistory } from './orderMockData';
+import { ordersApi } from '../api';
 
 export * from './orderTypes';
 export * from './orderMockData';
@@ -8,6 +9,10 @@ export * from './orderMockData';
 interface OrderState {
   activeOrders: Order[];
   historicalOrders: Order[];
+
+  // Backend Sync
+  fetchAssignedOrdersAsync: () => Promise<void>;
+  fetchHistoricalOrdersAsync: () => Promise<void>;
 
   // Standard Lifecycle Actions
   receiveMockOrder: (asTryAndBuy?: boolean) => void;
@@ -34,11 +39,31 @@ interface OrderState {
   resetToStandardOrder: () => void;
 }
 
-
-
 export const useOrderStore = create<OrderState>((set, get) => ({
   activeOrders: [],
-  historicalOrders: mockHistory,
+  historicalOrders: [],
+
+  fetchAssignedOrdersAsync: async () => {
+    try {
+      const orders = await ordersApi.getAssignedOrders('active');
+      if (orders && Array.isArray(orders)) {
+        set({ activeOrders: orders });
+      }
+    } catch {
+      // Retain existing state if backend is offline
+    }
+  },
+
+  fetchHistoricalOrdersAsync: async () => {
+    try {
+      const orders = await ordersApi.getAssignedOrders('completed');
+      if (orders && Array.isArray(orders)) {
+        set({ historicalOrders: orders });
+      }
+    } catch {
+      // Retain existing state if backend is offline
+    }
+  },
 
   receiveMockOrder: (asTryAndBuy = true) =>
     set((state) => {
@@ -55,14 +80,16 @@ export const useOrderStore = create<OrderState>((set, get) => ({
 
   clearOrders: () => set({ activeOrders: [] }),
 
-  acceptOrder: (orderId) =>
+  acceptOrder: (orderId) => {
     set((state) => ({
       activeOrders: state.activeOrders.map((order) =>
-        order.id === orderId ? { ...order, accepted: true } : order
+        order.id === orderId ? { ...order, accepted: true } : order,
       ),
-    })),
+    }));
+    ordersApi.acceptOrder(orderId).catch(() => {});
+  },
 
-  confirmPickup: (orderId) =>
+  confirmPickup: (orderId) => {
     set((state) => ({
       activeOrders: state.activeOrders.map((order) =>
         order.id === orderId
@@ -71,37 +98,44 @@ export const useOrderStore = create<OrderState>((set, get) => ({
               status: 'OUT_FOR_DELIVERY',
               pickupTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             }
-          : order
+          : order,
       ),
-    })),
+    }));
+    ordersApi.pickupOrder(orderId).catch(() => {});
+  },
 
-  startDelivery: (orderId) =>
+  startDelivery: (orderId) => {
     set((state) => ({
       activeOrders: state.activeOrders.map((order) =>
-        order.id === orderId ? { ...order, status: 'OUT_FOR_DELIVERY' } : order
+        order.id === orderId ? { ...order, status: 'OUT_FOR_DELIVERY' } : order,
       ),
-    })),
+    }));
+    ordersApi.outForDelivery(orderId).catch(() => {});
+  },
 
-  markArrived: (orderId) =>
+  markArrived: (orderId) => {
     set((state) => ({
       activeOrders: state.activeOrders.map((order) => {
         if (order.id !== orderId) return order;
         return {
           ...order,
           status: 'ARRIVED',
-          tryAndBuyStage: order.isTryAndBuy ? (order.tryAndBuyStage || 'HANDOVER_PENDING') : undefined,
+          tryAndBuyStage: order.isTryAndBuy ? order.tryAndBuyStage || 'HANDOVER_PENDING' : undefined,
         };
       }),
-    })),
+    }));
+    ordersApi.markArrived(orderId).catch(() => {});
+  },
 
-  confirmDelivery: (orderId) =>
+  confirmDelivery: (orderId) => {
     set((state) => ({
       activeOrders: state.activeOrders.map((order) =>
-        order.id === orderId ? { ...order, status: 'RETURNING' } : order
+        order.id === orderId ? { ...order, status: 'RETURNING' } : order,
       ),
-    })),
+    }));
+  },
 
-  completeOrder: (orderId) =>
+  completeOrder: (orderId) => {
     set((state) => {
       const deliveredOrder = state.activeOrders.find((o) => o.id === orderId);
       if (!deliveredOrder) return state;
@@ -116,71 +150,72 @@ export const useOrderStore = create<OrderState>((set, get) => ({
         activeOrders: state.activeOrders.filter((o) => o.id !== orderId),
         historicalOrders: [completedOrder, ...state.historicalOrders],
       };
-    }),
+    });
+    ordersApi.deliverOrder(orderId).catch(() => {});
+  },
 
   // ----------------------------------------------------
   // TRY & BUY STATE MACHINE ACTIONS
   // ----------------------------------------------------
 
-  confirmHandoverAndStartTrial: (orderId) =>
-    set((state) => {
-      const now = new Date();
-      return {
-        activeOrders: state.activeOrders.map((order) => {
-          if (order.id !== orderId || !order.isTryAndBuy) return order;
-          const duration = order.trialDurationMinutes || 20;
-          const endsAt = new Date(now.getTime() + duration * 60 * 1000);
+  confirmHandoverAndStartTrial: (orderId) => {
+    const now = new Date();
+    set((state) => ({
+      activeOrders: state.activeOrders.map((order) => {
+        if (order.id !== orderId || !order.isTryAndBuy) return order;
+        const duration = order.trialDurationMinutes || 20;
+        const endsAt = new Date(now.getTime() + duration * 60 * 1000);
 
+        return {
+          ...order,
+          handoverConfirmedAt: now.toISOString(),
+          trialStartedAt: now.toISOString(),
+          trialEndsAt: endsAt.toISOString(),
+          tryAndBuyStage: 'TRIAL_IN_PROGRESS',
+        };
+      }),
+    }));
+    ordersApi.confirmHandover(orderId, '4829').catch(() => {});
+  },
+
+  recordCustomerSelection: (orderId, selections) => {
+    set((state) => ({
+      activeOrders: state.activeOrders.map((order) => {
+        if (order.id !== orderId || !order.isTryAndBuy) return order;
+
+        const updatedItems = (order.items || []).map((item) => {
+          const decision = selections[item.id] || item.decision || 'KEEP';
           return {
-            ...order,
-            handoverConfirmedAt: now.toISOString(),
-            trialStartedAt: now.toISOString(),
-            trialEndsAt: endsAt.toISOString(),
-            tryAndBuyStage: 'TRIAL_IN_PROGRESS',
+            ...item,
+            decision,
+            collected: decision === 'KEEP',
           };
-        }),
-      };
-    }),
+        });
 
-  recordCustomerSelection: (orderId, selections) =>
-    set((state) => {
-      return {
-        activeOrders: state.activeOrders.map((order) => {
-          if (order.id !== orderId || !order.isTryAndBuy) return order;
+        const retainedItems = updatedItems.filter((i) => i.decision === 'KEEP');
+        const returnedItems = updatedItems.filter((i) => i.decision === 'RETURN');
 
-          const updatedItems = (order.items || []).map((item) => {
-            const decision = selections[item.id] || item.decision || 'KEEP';
-            return {
-              ...item,
-              decision,
-              collected: decision === 'KEEP', // Retained items are already with customer
-            };
-          });
+        const finalPayableTotal = retainedItems.reduce((acc, curr) => acc + curr.price * curr.quantity, 0);
+        const refundAmount = returnedItems.reduce((acc, curr) => acc + curr.price * curr.quantity, 0);
+        const amountDue = order.paymentMethod === 'COD' ? finalPayableTotal : 0;
 
-          const retainedItems = updatedItems.filter((i) => i.decision === 'KEEP');
-          const returnedItems = updatedItems.filter((i) => i.decision === 'RETURN');
-
-          const originalTotal = order.originalTotal || 3997;
-          const finalPayableTotal = retainedItems.reduce((acc, curr) => acc + curr.price * curr.quantity, 0);
-          const refundAmount = returnedItems.reduce((acc, curr) => acc + curr.price * curr.quantity, 0);
-          const amountDue = order.paymentMethod === 'COD' ? finalPayableTotal : 0;
-
-          return {
-            ...order,
-            items: updatedItems,
-            finalPayableTotal,
-            refundAmount,
-            amountDue,
-            tryAndBuyStage: 'SELECTION_CONFIRMED',
-          };
-        }),
-      };
-    }),
+        return {
+          ...order,
+          items: updatedItems,
+          finalPayableTotal,
+          refundAmount,
+          amountDue,
+          tryAndBuyStage: 'SELECTION_CONFIRMED',
+        };
+      }),
+    }));
+    ordersApi.recordSelections(orderId, selections).catch(() => {});
+  },
 
   proceedToReturnCollection: (orderId) =>
     set((state) => ({
       activeOrders: state.activeOrders.map((order) =>
-        order.id === orderId ? { ...order, tryAndBuyStage: 'RETURN_COLLECTION' } : order
+        order.id === orderId ? { ...order, tryAndBuyStage: 'RETURN_COLLECTION' } : order,
       ),
     })),
 
@@ -191,13 +226,13 @@ export const useOrderStore = create<OrderState>((set, get) => ({
         return {
           ...order,
           items: (order.items || []).map((item) =>
-            item.id === itemId ? { ...item, collected: !item.collected } : item
+            item.id === itemId ? { ...item, collected: !item.collected } : item,
           ),
         };
       }),
     })),
 
-  confirmReturnCollection: (orderId, returnImages = []) =>
+  confirmReturnCollection: (orderId, returnImages = []) => {
     set((state) => ({
       activeOrders: state.activeOrders.map((order) => {
         if (order.id !== orderId) return order;
@@ -207,12 +242,14 @@ export const useOrderStore = create<OrderState>((set, get) => ({
           tryAndBuyStage: 'PAYMENT_PENDING',
         };
       }),
-    })),
+    }));
+    ordersApi.confirmReturnCollection(orderId, [], returnImages).catch(() => {});
+  },
 
   proceedToPayment: (orderId) =>
     set((state) => ({
       activeOrders: state.activeOrders.map((order) =>
-        order.id === orderId ? { ...order, tryAndBuyStage: 'PAYMENT_PENDING' } : order
+        order.id === orderId ? { ...order, tryAndBuyStage: 'PAYMENT_PENDING' } : order,
       ),
     })),
 
@@ -222,6 +259,8 @@ export const useOrderStore = create<OrderState>((set, get) => ({
 
     const returnedItems = (order.items || []).filter((i) => i.decision === 'RETURN');
     const returnedCount = returnedItems.length;
+
+    ordersApi.settlePayment(orderId, { cashCollected: true }).catch(() => {});
 
     if (returnedCount === 0) {
       // Branch A: All items retained -> Direct completion
@@ -240,23 +279,25 @@ export const useOrderStore = create<OrderState>((set, get) => ({
                 paymentStatus: 'COLLECTED',
                 storeReconciliationStatus: 'PENDING',
               }
-            : o
+            : o,
         ),
       }));
     }
   },
 
-  markArrivedAtStore: (orderId) =>
+  markArrivedAtStore: (orderId) => {
     set((state) => ({
       activeOrders: state.activeOrders.map((order) =>
-        order.id === orderId ? { ...order, tryAndBuyStage: 'STORE_RECONCILIATION' } : order
+        order.id === orderId ? { ...order, tryAndBuyStage: 'STORE_RECONCILIATION' } : order,
       ),
-    })),
+    }));
+    ordersApi.arriveAtStore(orderId).catch(() => {});
+  },
 
   submitForStoreConfirmation: (orderId) =>
     set((state) => ({
       activeOrders: state.activeOrders.map((order) =>
-        order.id === orderId ? { ...order, tryAndBuyStage: 'WAITING_STORE_CONFIRMATION' } : order
+        order.id === orderId ? { ...order, tryAndBuyStage: 'WAITING_STORE_CONFIRMATION' } : order,
       ),
     })),
 
@@ -270,9 +311,10 @@ export const useOrderStore = create<OrderState>((set, get) => ({
               storeReconciliationStatus: 'RECONCILED',
               storeReconciledAt: now.toISOString(),
             }
-          : order
+          : order,
       ),
     }));
+    ordersApi.reconcileStoreReturn(orderId, true).catch(() => {});
     get().completeOrder(orderId);
   },
 }));

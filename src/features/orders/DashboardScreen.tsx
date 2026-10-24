@@ -21,13 +21,37 @@ import { DashboardOpportunitiesSection } from './dashboard/DashboardOpportunitie
 import { DashboardAssignmentOverlay } from './dashboard/DashboardAssignmentOverlay';
 
 export const DashboardScreen = ({ navigation }: any) => {
-  const { profile, isOnline = false, setIsOnline, workSummary } = useDriverStore();
-  const { activeOrders, receiveMockOrder, clearOrders } = useOrderStore();
+  const {
+    profile,
+    isOnline = false,
+    setIsOnline,
+    workSummary,
+    fetchProfileAsync,
+    fetchDashboardAsync,
+  } = useDriverStore();
+  const { activeOrders, fetchAssignedOrdersAsync, clearOrders } = useOrderStore();
+  const fetchNotificationsAsync = useNotificationStore((s) => s.fetchNotificationsAsync);
   const unreadNotifications = useNotificationStore(
     (s) => s.notifications.filter((n) => !n.read).length
   );
 
   const [showSurgeDetails, setShowSurgeDetails] = useState(false);
+
+  // Authoritative data fetch on screen mount
+  useEffect(() => {
+    fetchProfileAsync?.();
+    fetchDashboardAsync?.();
+    fetchAssignedOrdersAsync();
+    fetchNotificationsAsync?.();
+  }, [fetchProfileAsync, fetchDashboardAsync, fetchAssignedOrdersAsync, fetchNotificationsAsync]);
+
+  // Periodic/online sync of active assignments
+  useEffect(() => {
+    if (isOnline) {
+      fetchAssignedOrdersAsync();
+      fetchDashboardAsync?.();
+    }
+  }, [isOnline, fetchAssignedOrdersAsync, fetchDashboardAsync]);
 
   const activeOrder = activeOrders.length > 0 ? activeOrders[0] : null;
   const hasActiveDelivery =
@@ -49,24 +73,14 @@ export const DashboardScreen = ({ navigation }: any) => {
       clearOrders();
       toast.info('You are now offline.');
     } else {
+      fetchAssignedOrdersAsync();
       toast.success('You are online. Ready for assignments.');
     }
   };
 
-  // Mock Order Timer when online
-  useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (isOnline && !activeOrder) {
-      timer = setTimeout(() => {
-        receiveMockOrder();
-      }, 10000);
-    }
-    return () => clearTimeout(timer);
-  }, [isOnline, activeOrder, receiveMockOrder]);
-
   const getInitials = () => {
     if (profile.avatarInitial) return profile.avatarInitial;
-    return profile.fullName ? profile.fullName.substring(0, 2).toUpperCase() : 'BA';
+    return profile.fullName ? profile.fullName.substring(0, 2).toUpperCase() : 'DP';
   };
 
   const isFullTimeProfile = profile.workPreference === 'FULL_TIME';
@@ -83,10 +97,10 @@ export const DashboardScreen = ({ navigation }: any) => {
             </TouchableOpacity>
             <View style={styles.profileTextContainer}>
               <Text style={styles.headerName} numberOfLines={1}>
-                {profile.name?.split(' ')[0] || 'Babajide'}
+                {profile.name?.split(' ')[0] || (profile.fullName ? profile.fullName.split(' ')[0] : 'Partner')}
               </Text>
               <Text style={styles.headerRole} numberOfLines={1}>
-                {roleLabel} · ID: {profile.id || 'DLV-8492'}
+                {roleLabel} · ID: {profile.id || 'Pending'}
               </Text>
             </View>
           </View>

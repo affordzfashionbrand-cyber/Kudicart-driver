@@ -6,6 +6,8 @@ import { SplashScreen } from '../features/auth/SplashScreen';
 import { PhoneLoginScreen } from '../features/auth/PhoneLoginScreen';
 import { OtpVerificationScreen } from '../features/auth/OtpVerificationScreen';
 import { LegalScreen } from '../features/auth/LegalScreen';
+import { TermsAndConditionsScreen } from '../features/auth/TermsAndConditionsScreen';
+import { PrivacyPolicyScreen } from '../features/auth/PrivacyPolicyScreen';
 import { MainNavigator } from './MainNavigator';
 import { KycNavigator } from './KycNavigator';
 import { StoreDetailsScreen } from '../features/store/StoreDetailsScreen';
@@ -22,7 +24,9 @@ export type RootStackParamList = {
   Splash: undefined;
   PhoneLogin: undefined;
   OtpVerification: { phoneNumber: string };
-  Legal: undefined;
+  TermsAndConditions: undefined;
+  PrivacyPolicy: undefined;
+  Legal: { initialTab?: 'terms' | 'privacy' } | undefined;
   VerificationApproved: undefined;
   MainApp: undefined;
   KycFlow: undefined;
@@ -37,15 +41,22 @@ export type RootStackParamList = {
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
+import { getAuthToken } from '../api';
+
 export const RootNavigator = () => {
-  const { isAuthenticated, kycStatus } = useAuthStore();
-  const [isLoading, setIsLoading] = useState(false);
+  const { isAuthenticated, kycStatus, syncStatusAsync } = useAuthStore();
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Quick session check simulation
-    const timer = setTimeout(() => setIsLoading(false), 200);
-    return () => clearTimeout(timer);
-  }, []);
+    const token = getAuthToken();
+    if (token) {
+      syncStatusAsync()
+        .catch(() => {})
+        .finally(() => setIsLoading(false));
+    } else {
+      setIsLoading(false);
+    }
+  }, [syncStatusAsync]);
 
   if (isLoading) {
     return <SplashScreen />;
@@ -58,12 +69,14 @@ export const RootNavigator = () => {
           <>
             <Stack.Screen name="PhoneLogin" component={PhoneLoginScreen} />
             <Stack.Screen name="OtpVerification" component={OtpVerificationScreen} />
-            <Stack.Screen name="Legal" component={LegalScreen} options={{ presentation: 'modal' }} />
+            <Stack.Screen name="TermsAndConditions" component={TermsAndConditionsScreen} />
+            <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
+            <Stack.Screen name="Legal" component={LegalScreen} />
           </>
         ) : kycStatus === 'APPROVED' ? (
           <>
-            <Stack.Screen name="VerificationApproved" component={VerificationApprovedScreen} />
             <Stack.Screen name="MainApp" component={MainNavigator} />
+            <Stack.Screen name="VerificationApproved" component={VerificationApprovedScreen} />
             <Stack.Screen name="StoreDetails" component={StoreDetailsScreen} />
             <Stack.Screen name="OrderDetails" component={OrderDetailsScreen} />
             <Stack.Screen name="HistoricalOrderDetail" component={HistoricalOrderDetailScreen} />
@@ -71,6 +84,8 @@ export const RootNavigator = () => {
             <Stack.Screen name="Notifications" component={NotificationsScreen} />
             <Stack.Screen name="DriverProfileDetails" component={DriverProfileDetailsScreen} />
             <Stack.Screen name="ProfileDetailSub" component={ProfileDetailSubScreen} />
+            <Stack.Screen name="TermsAndConditions" component={TermsAndConditionsScreen} />
+            <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
           </>
         ) : (
           <Stack.Screen name="KycFlow" component={KycNavigator} />

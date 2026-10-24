@@ -1,6 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, SafeAreaView, useColorScheme } from 'react-native';
 import { useOrderStore } from '../../store/useOrderStore';
+import { ordersApi } from '../../api';
 import { tokens } from '../../theme/tokens';
 import { KudiIcon } from '../../components/KudiIcon';
 import { LiveRouteMapRef, DEFAULT_HUB_COORDINATES, DEFAULT_DEST_COORDINATES } from './LiveRouteMap';
@@ -21,11 +22,6 @@ import { OrderPickupReviewView } from './details/OrderPickupReviewView';
 const HUB_COORDINATES = DEFAULT_HUB_COORDINATES;
 const DEST_COORDINATES = DEFAULT_DEST_COORDINATES;
 
-const MOCK_PACKAGE_IMAGES = [
-  'https://images.unsplash.com/photo-1587293852726-70cdb56c2866?w=400&q=80',
-  'https://images.unsplash.com/photo-1622560480654-d96214fdc887?w=400&q=80',
-  'https://images.unsplash.com/photo-1577705998148-6da4f3963bc8?w=400&q=80',
-];
 
 const DEFAULT_PRODUCT_THUMBNAILS = [
   'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=120&q=80',
@@ -55,7 +51,19 @@ export const OrderDetailsScreen = ({ route, navigation }: any) => {
   const isDark = useColorScheme() === 'dark';
   const theme = isDark ? tokens.colors.dark : tokens.colors.light;
 
-  const order = activeOrders.find((o) => o.id === orderId);
+  const [fetchedOrder, setFetchedOrder] = useState<any>(null);
+  const localOrder = activeOrders.find((o) => o.id === orderId) || (activeOrders.length > 0 && !orderId ? activeOrders[0] : null);
+
+  useEffect(() => {
+    if (!localOrder && orderId) {
+      ordersApi
+        .getOrderDetails(orderId)
+        .then((data) => setFetchedOrder(data))
+        .catch(() => {});
+    }
+  }, [orderId, localOrder]);
+
+  const order = localOrder || fetchedOrder;
   const mapRef = useRef<LiveRouteMapRef>(null);
   const [showCamera, setShowCamera] = useState<CameraTarget | false>(false);
   const [pickupImages, setPickupImages] = useState<string[]>([]);
@@ -95,18 +103,15 @@ export const OrderDetailsScreen = ({ route, navigation }: any) => {
         target={showCamera}
         onClose={() => setShowCamera(false)}
         onCapture={() => {
+          const capturedUri = `file:///photos/${showCamera}_${Date.now()}.jpg`;
           if (showCamera === 'pickup') {
-            const nextImg = MOCK_PACKAGE_IMAGES[pickupImages.length % MOCK_PACKAGE_IMAGES.length];
-            setPickupImages([...pickupImages, nextImg]);
+            setPickupImages([...pickupImages, capturedUri]);
           } else if (showCamera === 'delivery') {
-            const nextImg = MOCK_PACKAGE_IMAGES[deliveryImages.length % MOCK_PACKAGE_IMAGES.length];
-            setDeliveryImages([...deliveryImages, nextImg]);
+            setDeliveryImages([...deliveryImages, capturedUri]);
           } else if (showCamera === 'handover') {
-            const nextImg = MOCK_PACKAGE_IMAGES[handoverImages.length % MOCK_PACKAGE_IMAGES.length];
-            setHandoverImages([...handoverImages, nextImg]);
+            setHandoverImages([...handoverImages, capturedUri]);
           } else if (showCamera === 'return') {
-            const nextImg = MOCK_PACKAGE_IMAGES[returnImages.length % MOCK_PACKAGE_IMAGES.length];
-            setReturnImages([...returnImages, nextImg]);
+            setReturnImages([...returnImages, capturedUri]);
           }
           setShowCamera(false);
         }}

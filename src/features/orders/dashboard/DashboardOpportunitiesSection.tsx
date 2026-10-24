@@ -1,13 +1,30 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { dashboardStyles as styles } from './dashboard.styles';
+import { earningsApi } from '../../../api';
 
 export const DashboardOpportunitiesSection: React.FC = () => {
-  const [oppTab, setOppTab] = useState<'01' | '02'>('01');
+  const [oppIndex, setOppIndex] = useState(0);
   const [oppSectionWidth, setOppSectionWidth] = useState(0);
+  const [opportunities, setOpportunities] = useState<any[]>([]);
+
+  useEffect(() => {
+    earningsApi
+      .getOpportunities()
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setOpportunities(data);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const oppBannerWidth = 310;
   const oppSidePadding = oppSectionWidth > 0 ? (oppSectionWidth - oppBannerWidth) / 2 : 0;
+
+  if (opportunities.length === 0) {
+    return null;
+  }
 
   return (
     <View
@@ -30,53 +47,76 @@ export const DashboardOpportunitiesSection: React.FC = () => {
           snapToAlignment="center"
           onScroll={(e) => {
             const page = Math.round(e.nativeEvent.contentOffset.x / (oppBannerWidth + 16));
-            const newTab = page === 0 ? '01' : '02';
-            if (oppTab !== newTab) setOppTab(newTab);
+            if (oppIndex !== page) setOppIndex(page);
           }}
           scrollEventThrottle={16}
         >
           <View style={{ width: Math.max(0, oppSidePadding - 16) }} />
 
-          {/* BANNER 1: Primary Opportunity */}
-          <View style={[styles.opportunityBanner, styles.bannerPrimary]}>
-            <Text style={styles.bannerSuperTitle}>EXTRA EARNING</Text>
+          {opportunities.map((opp, idx) => {
+            const isPrimary = idx % 2 === 0;
+            return (
+              <View
+                key={opp.id || idx}
+                style={[
+                  styles.opportunityBanner,
+                  isPrimary ? styles.bannerPrimary : styles.bannerSecondary,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.bannerSuperTitle,
+                    !isPrimary && { color: '#8A8781' },
+                  ]}
+                >
+                  {opp.urgency || 'EXTRA EARNING'}
+                </Text>
 
-            <View style={styles.bannerMid}>
-              <Text style={styles.bannerAmount}>₹200 <Text style={styles.bannerType}>BONUS</Text></Text>
-            </View>
+                <View style={styles.bannerMid}>
+                  <Text style={styles.bannerAmount}>
+                    {opp.bonusText?.split(' ')[0] || '₹100'}{' '}
+                    <Text style={styles.bannerType}>INCENTIVE</Text>
+                  </Text>
+                </View>
 
-            <View style={styles.bannerBottom}>
-              <Text style={styles.bannerDesc}>Complete 5 orders by 2 PM</Text>
-              <TouchableOpacity style={styles.bannerAction}>
-                <Text style={styles.bannerActionText}>View offer →</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* BANNER 2: Secondary Opportunity */}
-          <View style={[styles.opportunityBanner, styles.bannerSecondary]}>
-            <Text style={[styles.bannerSuperTitle, { color: '#8A8781' }]}>PEAK HOURS</Text>
-
-            <View style={styles.bannerMid}>
-              <Text style={styles.bannerAmount}>₹250 <Text style={styles.bannerType}>BONUS</Text></Text>
-            </View>
-
-            <View style={styles.bannerBottom}>
-              <Text style={[styles.bannerDesc, { color: '#65635F' }]}>11 AM – 3 PM · More orders expected</Text>
-              <TouchableOpacity style={styles.bannerAction}>
-                <Text style={[styles.bannerActionText, { color: '#171716' }]}>View details →</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+                <View style={styles.bannerBottom}>
+                  <Text
+                    style={[
+                      styles.bannerDesc,
+                      !isPrimary && { color: '#65635F' },
+                    ]}
+                  >
+                    {opp.title}: {opp.timeWindow}
+                  </Text>
+                  <TouchableOpacity style={styles.bannerAction}>
+                    <Text
+                      style={[
+                        styles.bannerActionText,
+                        !isPrimary && { color: '#171716' },
+                      ]}
+                    >
+                      View offer →
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            );
+          })}
 
           <View style={{ width: Math.max(0, oppSidePadding - 16) }} />
         </ScrollView>
       )}
 
-      <View style={styles.oppPagerIndicatorContainer}>
-        <View style={[styles.pagerDot, oppTab === '01' && styles.pagerDotActive]} />
-        <View style={[styles.pagerDot, oppTab === '02' && styles.pagerDotActive]} />
-      </View>
+      {opportunities.length > 1 && (
+        <View style={styles.oppPagerIndicatorContainer}>
+          {opportunities.map((_, i) => (
+            <View
+              key={i}
+              style={[styles.pagerDot, oppIndex === i && styles.pagerDotActive]}
+            />
+          ))}
+        </View>
+      )}
     </View>
   );
 };

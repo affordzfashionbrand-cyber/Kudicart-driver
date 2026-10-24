@@ -1,14 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { KudiIcon } from '../../components/KudiIcon';
 import { toast } from '../../store/useToastStore';
+import { shiftsApi } from '../../api';
 import {
   SlotStatus,
   SlotFilter,
   SlotItem,
   DaySlotSchedule,
-  THIS_WEEK_SCHEDULE,
-  NEXT_WEEK_SCHEDULE,
 } from './slotsData';
 import { styles } from './slots.styles';
 import { SlotCard } from './SlotCard';
@@ -17,24 +16,53 @@ export type { SlotStatus, SlotFilter, SlotItem, DaySlotSchedule };
 
 export const SlotsScreen = ({ navigation }: any) => {
   const [selectedWeek, setSelectedWeek] = useState<'THIS_WEEK' | 'NEXT_WEEK'>('THIS_WEEK');
-  const [thisWeekSchedule, setThisWeekSchedule] = useState<DaySlotSchedule[]>(THIS_WEEK_SCHEDULE);
-  const [selectedDateKey, setSelectedDateKey] = useState<string>('2026-10-14'); // Wednesday (Today)
+  const [schedule, setSchedule] = useState<DaySlotSchedule[]>([]);
+  const [selectedDateKey, setSelectedDateKey] = useState<string>('');
   const [activeFilter, setActiveFilter] = useState<SlotFilter>('ALL');
+  const [isLocked, setIsLocked] = useState(false);
+  const [lockMessage, setLockMessage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const fetchSchedule = (week: 'THIS_WEEK' | 'NEXT_WEEK') => {
+    setLoading(true);
+    shiftsApi
+      .getSlots(week)
+      .then((res) => {
+        if (res && Array.isArray(res.schedule)) {
+          setSchedule(res.schedule as any);
+          setIsLocked(Boolean(res.isLocked));
+          setLockMessage(res.lockMessage || null);
+          if (res.schedule.length > 0) {
+            const todayItem = res.schedule.find((d: any) => d.isToday);
+            setSelectedDateKey(todayItem ? todayItem.dateKey : res.schedule[0].dateKey);
+          }
+        }
+      })
+      .catch((err) => {
+        toast.error(err?.message || 'Failed to load shift slots');
+      })
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchSchedule(selectedWeek);
+  }, [selectedWeek]);
 
   const isNextWeek = selectedWeek === 'NEXT_WEEK';
-  const currentSchedule = isNextWeek ? NEXT_WEEK_SCHEDULE : thisWeekSchedule;
 
   // Active selected day
   const selectedDay =
-    currentSchedule.find((d) => d.dateKey === selectedDateKey) || currentSchedule[0];
+    schedule.find((d) => d.dateKey === selectedDateKey) || schedule[0] || null;
 
   // Filter slots based on active filter
-  const filteredSlots = selectedDay.slots.filter((slot) => {
-    if (activeFilter === 'ALL') return true;
-    if (activeFilter === 'AVAILABLE') return slot.status === 'AVAILABLE';
-    if (activeFilter === 'BOOKED') return slot.status === 'BOOKED';
-    return true;
-  });
+  const filteredSlots = selectedDay
+    ? selectedDay.slots.filter((slot) => {
+        if (activeFilter === 'ALL') return true;
+        if (activeFilter === 'AVAILABLE') return slot.status === 'AVAILABLE';
+        if (activeFilter === 'BOOKED') return slot.status === 'BOOKED';
+        return true;
+      })
+    : [];
 
   const handleBack = () => {
     if (navigation?.canGoBack && navigation.canGoBack()) {
@@ -46,43 +74,37 @@ export const SlotsScreen = ({ navigation }: any) => {
 
   const handleSelectWeek = (week: 'THIS_WEEK' | 'NEXT_WEEK') => {
     setSelectedWeek(week);
-    if (week === 'THIS_WEEK') {
-      setSelectedDateKey('2026-10-14'); // Reset to Today
-    } else {
-      setSelectedDateKey('2026-10-18'); // Reset to start of next week (Sunday)
-      toast.info('Next week schedule is locked until Friday 6:00 PM.');
-    }
   };
 
-  const handleToggleBooking = (slotId: string) => {
-    if (isNextWeek) {
-      toast.warning('Next week slots cannot be booked yet.');
+  const handleToggleBooking = async (slotId: string) => {
+    if (isNextWeek && isLocked) {
+      toast.warning(lockMessage || 'Next week slots cannot be booked yet.');
       return;
     }
 
-    setThisWeekSchedule((prev) =>
-      prev.map((day) => {
-        if (day.dateKey !== selectedDateKey) return day;
-        return {
-          ...day,
-          slots: day.slots.map((slot) => {
-            if (slot.id !== slotId) return slot;
-            if (slot.status === 'AVAILABLE') {
-              toast.success(`Slot booked for ${slot.timeRange}`);
-              return { ...slot, status: 'BOOKED' };
-            }
-            if (slot.status === 'BOOKED') {
-              toast.info(`Slot booking cancelled for ${slot.timeRange}`);
-              return { ...slot, status: 'AVAILABLE' };
-            }
-            return slot;
-          }),
-        };
-      })
-    );
+    const slot = selectedDay?.slots.find((s) => s.id === slotId);
+    if (!slot) return;
+
+    if (slot.status === 'AVAILABLE') {
+      try {
+        await shiftsApi.bookSlot(slotId);
+        toast.success(`Slot booked for ${slot.timeRange}`);
+        fetchSchedule(selectedWeek);
+      } catch (err: any) {
+        toast.error(err?.message || 'Could not book slot');
+      }
+    } else if (slot.status === 'BOOKED') {
+      try {
+        await shiftsApi.cancelSlot(slotId);
+        toast.info(`Slot booking cancelled for ${slot.timeRange}`);
+        fetchSchedule(selectedWeek);
+      } catch (err: any) {
+        toast.error(err?.message || 'Could not cancel slot');
+      }
+    }
   };
 
-  const sectionTitle = `${selectedDay.dayName}'s slots`;
+  const sectionTitle = selectedDay ? `${selectedDay.dayName}'s slots` : 'Slots';
 
   return (
     <View style={styles.main}>
@@ -139,7 +161,7 @@ export const SlotsScreen = ({ navigation }: any) => {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.dateStripScroll}
           >
-            {currentSchedule.map((day) => {
+            {schedule.map((day) => {
               const isSelected = day.dateKey === selectedDateKey;
 
               return (
@@ -252,7 +274,7 @@ export const SlotsScreen = ({ navigation }: any) => {
         {/* Section Header */}
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>{sectionTitle}</Text>
-          <Text style={styles.sectionDateSub}>{selectedDay.dateLabel}</Text>
+          <Text style={styles.sectionDateSub}>{selectedDay?.dateLabel || ''}</Text>
         </View>
 
         {/* Slots List or Empty State */}

@@ -10,25 +10,44 @@ import { toast } from '../../store/useToastStore';
 import logo from '../../assets/logo.png';
 
 export const PhoneLoginScreen = ({ navigation }: any) => {
-  const { initialPhone } = useAuthStore();
-  const [phone, setPhone] = useState(initialPhone || '');
+  const [phone, setPhone] = useState('');
   const [isFocused, setIsFocused] = useState(false);
   const [isTouched, setIsTouched] = useState(false);
   const [isTermsAccepted, setIsTermsAccepted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const isValidPhone = /^[0-9]{10}$/.test(phone);
-  const showError = isTouched && !isFocused && phone.length > 0 && !isValidPhone;
+  // Validation rules for Indian mobile numbers:
+  // 1. Must start with 6, 7, 8, or 9 (National Numbering Plan of India)
+  // 2. Exactly 10 digits
+  // 3. Reject all identical digits (e.g. 9999999999, 8888888888)
+  // 4. Reject dummy sequential sequences (e.g. 1234567890, 0123456789)
+  const isStartsWithValid = phone.length === 0 || /^[6-9]/.test(phone);
+  const isTenDigits = phone.length === 10;
+  const isAllSameDigits = /^([0-9])\1{9}$/.test(phone);
+  const isDummySeq = phone === '1234567890' || phone === '0123456789';
+
+  const isValidPhone =
+    isTenDigits &&
+    /^[6-9]\d{9}$/.test(phone) &&
+    !isAllSameDigits &&
+    !isDummySeq;
+
+  const showError = Boolean(
+    phone.length > 0 &&
+      !isValidPhone &&
+      (isTouched || !isStartsWithValid || isTenDigits),
+  );
 
   const handlePhoneChange = (text: string) => {
     // Only accept numeric digits, max 10
     const digitsOnly = text.replace(/[^0-9]/g, '').slice(0, 10);
     setPhone(digitsOnly);
+    setIsTouched(true);
   };
 
-  const handleGetOtp = () => {
+  const handleGetOtp = async () => {
     if (!isValidPhone) {
-      toast.error('Please enter a valid 10-digit mobile number.');
+      toast.error('Enter a valid mobile number');
       return;
     }
     if (!isTermsAccepted) {
@@ -37,12 +56,25 @@ export const PhoneLoginScreen = ({ navigation }: any) => {
     }
 
     setIsLoading(true);
-    // Simulate network request for 1s
-    setTimeout(() => {
+    try {
+      const fullPhone = `+91${phone}`;
+      const res = await useAuthStore.getState().sendOtpAsync(fullPhone);
       setIsLoading(false);
-      toast.success(`OTP sent to +91 ${phone}`);
-      navigation.navigate('OtpVerification', { phoneNumber: phone });
-    }, 1000);
+      const code = (res as any)?.mockOtp;
+      toast.success(res.message || `OTP sent to +91 ${phone}`);
+      if (code) {
+        toast.info(`Your verification OTP is: ${code}`);
+      }
+      navigation.navigate('OtpVerification', {
+        phoneNumber: fullPhone,
+        mockOtp: code,
+      });
+    } catch (err: any) {
+      setIsLoading(false);
+      toast.error(
+        err?.message || 'Failed to dispatch OTP. Please check your network.',
+      );
+    }
   };
 
 
@@ -89,7 +121,7 @@ export const PhoneLoginScreen = ({ navigation }: any) => {
 
             {showError && (
               <Text style={styles.validationError}>
-                Please enter a valid 10-digit mobile number
+                Enter a valid mobile number
               </Text>
             )}
 
@@ -109,7 +141,7 @@ export const PhoneLoginScreen = ({ navigation }: any) => {
                   onPress={(e) => {
                     // @ts-ignore
                     if (e && e.stopPropagation) e.stopPropagation();
-                    navigation.navigate('Legal');
+                    navigation.navigate('TermsAndConditions');
                   }}
                 >
                   Terms and Conditions
@@ -120,7 +152,7 @@ export const PhoneLoginScreen = ({ navigation }: any) => {
                   onPress={(e) => {
                     // @ts-ignore
                     if (e && e.stopPropagation) e.stopPropagation();
-                    navigation.navigate('Legal');
+                    navigation.navigate('PrivacyPolicy');
                   }}
                 >
                   Privacy Policy

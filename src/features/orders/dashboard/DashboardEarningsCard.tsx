@@ -19,34 +19,42 @@ interface DashboardEarningsCardProps {
 }
 
 export const DashboardEarningsCard: React.FC<DashboardEarningsCardProps> = ({ workSummary }) => {
+  const earnings = workSummary?.totalEarnings ?? 0;
+  const loginHours = workSummary?.loginHours || '0h 00m';
+  const ordersDone = workSummary?.ordersDone ?? 0;
+
+  // Real goal calculation
+  const targetOrders = 10;
+  const progressPercent = Math.min(100, Math.round((ordersDone / targetOrders) * 100));
+
   return (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <Text style={styles.cardTitle}>Today's earnings</Text>
         <View style={styles.shiftChip}>
-          <Text style={styles.shiftChipText} numberOfLines={1}>Shift 9–6</Text>
+          <Text style={styles.shiftChipText} numberOfLines={1}>Active shift</Text>
         </View>
       </View>
       <View style={styles.amountContainer}>
-        <Text style={styles.amountText}>{formatCurrency(workSummary?.totalEarnings || 840.50)}</Text>
+        <Text style={styles.amountText}>{formatCurrency(earnings)}</Text>
       </View>
       <View style={styles.progressSection}>
         <View style={styles.progressBarBg}>
-          <View style={[styles.progressBarFill, { width: '65%' }]} />
+          <View style={[styles.progressBarFill, { width: `${progressPercent}%` }]} />
         </View>
         <View style={styles.progressRow}>
-          <Text style={styles.progressLabel}>On shift · 2h 18m left</Text>
-          <Text style={styles.progressValue}>65% of goal</Text>
+          <Text style={styles.progressLabel}>Target: {ordersDone} / {targetOrders} orders</Text>
+          <Text style={styles.progressValue}>{progressPercent}% of goal</Text>
         </View>
       </View>
       <View style={styles.statsGrid}>
         <View style={styles.statBox}>
           <Text style={styles.statBoxLabel}>Online time</Text>
-          <Text style={styles.statBoxValue}>{workSummary?.loginHours || '6h 42m'}</Text>
+          <Text style={styles.statBoxValue}>{loginHours}</Text>
         </View>
         <View style={styles.statBox}>
           <Text style={styles.statBoxLabel}>Orders</Text>
-          <Text style={styles.statBoxValue}>{workSummary?.ordersDone || 14}</Text>
+          <Text style={styles.statBoxValue}>{ordersDone}</Text>
         </View>
       </View>
     </View>

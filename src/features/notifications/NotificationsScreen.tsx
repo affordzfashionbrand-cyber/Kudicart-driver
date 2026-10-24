@@ -7,6 +7,7 @@ import {
   NotificationCategory,
   NotificationItem,
 } from '../../store/useNotificationStore';
+import { useOrderStore } from '../../store/useOrderStore';
 import { KudiIcon } from '../../components/KudiIcon';
 import { toast } from '../../store/useToastStore';
 import { styles } from './notifications.styles';
@@ -14,8 +15,12 @@ import { styles } from './notifications.styles';
 type FilterType = 'ALL' | NotificationCategory;
 
 export const NotificationsScreen = ({ navigation }: any) => {
-  const { notifications, markAsRead, markAllAsRead } = useNotificationStore();
+  const { notifications, markAsRead, markAllAsRead, fetchNotificationsAsync } = useNotificationStore();
   const [activeFilter, setActiveFilter] = useState<FilterType>('ALL');
+
+  React.useEffect(() => {
+    fetchNotificationsAsync?.();
+  }, [fetchNotificationsAsync]);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -38,7 +43,8 @@ export const NotificationsScreen = ({ navigation }: any) => {
     }
     if (item.actionRoute) {
       if (item.actionRoute === 'OrderDetails') {
-        navigation?.navigate('OrderDetails', { orderId: 'KC-ORD-8492' });
+        const targetOrderId = item.orderId || useOrderStore.getState().activeOrders[0]?.id;
+        navigation?.navigate('OrderDetails', { orderId: targetOrderId });
       } else if (item.actionRoute === 'Slots') {
         navigation?.navigate('Slots');
       } else if (item.actionRoute === 'Earnings') {

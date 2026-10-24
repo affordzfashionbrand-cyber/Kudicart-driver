@@ -20,12 +20,6 @@ const DEFAULT_THUMBNAILS = [
   'https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=120&q=80',
 ];
 
-const MOCK_CAPTURE_IMAGES = [
-  'https://images.unsplash.com/photo-1587293852726-70cdb56c2866?w=400&q=80',
-  'https://images.unsplash.com/photo-1622560480654-d96214fdc887?w=400&q=80',
-  'https://images.unsplash.com/photo-1577705998148-6da4f3963bc8?w=400&q=80',
-];
-
 export const TryAndBuyHandoverView: React.FC<TryAndBuyHandoverViewProps> = ({
   order,
   onConfirmHandover,
@@ -42,7 +36,7 @@ export const TryAndBuyHandoverView: React.FC<TryAndBuyHandoverViewProps> = ({
     if (onOpenCamera) {
       onOpenCamera();
     } else {
-      const nextImg = MOCK_CAPTURE_IMAGES[internalImages.length % MOCK_CAPTURE_IMAGES.length];
+      const nextImg = `file:///photos/handover_${Date.now()}.jpg`;
       setInternalImages([...internalImages, nextImg]);
     }
   };

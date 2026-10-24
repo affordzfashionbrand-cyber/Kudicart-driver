@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { Order } from '../../../store/useOrderStore';
+import { ordersApi } from '../../../api';
 import { KudiIcon } from '../../../components/KudiIcon';
 
 interface TryAndBuyWaitingConfirmationViewProps {
@@ -64,14 +65,21 @@ export const TryAndBuyWaitingConfirmationView: React.FC<TryAndBuyWaitingConfirma
   const [devConfirmed, setDevConfirmed] = useState(false);
   const isSupervisorConfirmed = order.storeReconciliationStatus === 'RECONCILED' || (__DEV__ && devConfirmed);
 
-  // Development stage: Automatically complete reconciliation after 10 seconds
+  // Real periodic poll of server confirmation status
   useEffect(() => {
-    const timer = setTimeout(() => {
-      onCompleteReconciliation();
-    }, 10000);
+    if (isSupervisorConfirmed) return;
 
-    return () => clearTimeout(timer);
-  }, [onCompleteReconciliation]);
+    const interval = setInterval(async () => {
+      try {
+        const details = await ordersApi.getOrderDetails(order.id);
+        if (details.storeReconciliationStatus === 'RECONCILED' || details.status === 'DELIVERED') {
+          onCompleteReconciliation();
+        }
+      } catch {}
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [order.id, isSupervisorConfirmed, onCompleteReconciliation]);
 
   const formattedOrderId = order.id ? (order.id.startsWith('#') ? order.id : `#${order.id}`) : '';
 

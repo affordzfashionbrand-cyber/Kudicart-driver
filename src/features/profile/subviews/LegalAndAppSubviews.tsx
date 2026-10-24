@@ -72,7 +72,7 @@ export const CardSubview: React.FC<CardSubviewProps> = ({
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.digitalCardName}>{driverFullName}</Text>
-            <Text style={styles.digitalCardId}>ID: {driverId || 'KC-DRV-8492'}</Text>
+            <Text style={styles.digitalCardId}>ID: {driverId || 'Pending'}</Text>
             <Text style={styles.digitalCardHub}>Hub: HSR Darkstore</Text>
           </View>
         </View>
@@ -95,7 +95,7 @@ export const CardSubview: React.FC<CardSubviewProps> = ({
   );
 };
 
-export const AboutSubview: React.FC = () => {
+export const AboutSubview: React.FC<{ navigation?: any }> = ({ navigation }) => {
   return (
     <View style={styles.card}>
       <Text style={styles.cardSectionTitle}>Application Details</Text>
@@ -117,7 +117,13 @@ export const AboutSubview: React.FC = () => {
 
       <TouchableOpacity
         style={styles.row}
-        onPress={() => toast.info('Opening Terms of Service...')}
+        onPress={() => {
+          if (navigation?.navigate) {
+            navigation.navigate('TermsAndConditions');
+          } else {
+            toast.info('Opening Terms of Service...');
+          }
+        }}
       >
         <Text style={styles.rowLabel}>Terms of Service</Text>
         <Text style={[styles.rowValue, { color: colors.primary }]}>View Agreement ›</Text>
@@ -125,7 +131,13 @@ export const AboutSubview: React.FC = () => {
 
       <TouchableOpacity
         style={[styles.row, styles.rowLast]}
-        onPress={() => toast.info('Opening Privacy Policy...')}
+        onPress={() => {
+          if (navigation?.navigate) {
+            navigation.navigate('PrivacyPolicy');
+          } else {
+            toast.info('Opening Privacy Policy...');
+          }
+        }}
       >
         <Text style={styles.rowLabel}>Privacy Policy</Text>
         <Text style={[styles.rowValue, { color: colors.primary }]}>View Policy ›</Text>
