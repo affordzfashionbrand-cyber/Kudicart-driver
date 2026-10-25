@@ -57,18 +57,6 @@ export const PolicyDocView: React.FC<PolicyDocViewProps> = ({ document }) => {
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
     >
-      {/* Policy Meta Card */}
-      <View style={styles.metaCard}>
-        <View style={styles.metaBadge}>
-          <Text style={styles.metaBadgeText}>{document.version}</Text>
-        </View>
-        <Text style={styles.metaTitle}>{document.title}</Text>
-        <View style={styles.metaRow}>
-          <Text style={styles.metaLocation}>📍 {document.location}</Text>
-          <Text style={styles.metaDate}>🗓️ {document.lastUpdated}</Text>
-        </View>
-      </View>
-
       {/* Policy Sections */}
       {document.sections.map((sec, idx) => (
         <View key={idx} style={styles.sectionCard}>
@@ -120,53 +108,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: spacing.m,
     paddingBottom: spacing.xl * 2,
-  },
-  metaCard: {
-    backgroundColor: colors.white,
-    borderRadius: 14,
-    padding: spacing.m,
-    marginBottom: spacing.m,
-    borderWidth: 1,
-    borderColor: '#E2DED7',
-  },
-  metaBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#FFF0E8',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    marginBottom: spacing.s,
-    borderWidth: 1,
-    borderColor: '#FFD6C5',
-  },
-  metaBadgeText: {
-    ...typography.caption,
-    color: colors.primary,
-    fontWeight: '700',
-    fontSize: 11,
-    textTransform: 'uppercase',
-  },
-  metaTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: spacing.s,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    flexWrap: 'wrap',
-    gap: spacing.s,
-  },
-  metaLocation: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    fontWeight: '500',
-  },
-  metaDate: {
-    fontSize: 12,
-    color: colors.textMuted,
-    fontWeight: '500',
   },
   sectionCard: {
     backgroundColor: colors.white,

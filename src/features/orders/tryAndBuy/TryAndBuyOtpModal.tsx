@@ -15,7 +15,7 @@ interface TryAndBuyOtpModalProps {
   onKeyPress: (e: any, index: number) => void;
   onFocus: (index: number) => void;
   onBlur: () => void;
-  onAutofill: () => void;
+  onAutofill?: () => void;
   onVerifyOtp: () => void;
 }
 
@@ -31,7 +31,6 @@ export const TryAndBuyOtpModal: React.FC<TryAndBuyOtpModalProps> = ({
   onKeyPress,
   onFocus,
   onBlur,
-  onAutofill,
   onVerifyOtp,
 }) => {
   if (!visible) return null;
@@ -67,16 +66,6 @@ export const TryAndBuyOtpModal: React.FC<TryAndBuyOtpModalProps> = ({
         <Text style={styles.otpSubtitle}>
           Ask {customerName} for the 4-digit handover code shown on their KudiCart app.
         </Text>
-
-        {/* Quick Demo Autofill Hint */}
-        <TouchableOpacity
-          style={styles.demoOtpChip}
-          onPress={onAutofill}
-          activeOpacity={0.8}
-        >
-          <KudiIcon name="check" size={13} color="#FF5A1F" />
-          <Text style={styles.demoOtpText}>Demo OTP: 4829 • Tap to auto-fill</Text>
-        </TouchableOpacity>
 
         {/* OTP 4-Box Input */}
         <View style={styles.otpBoxesRow}>
@@ -128,10 +117,7 @@ export const TryAndBuyOtpModal: React.FC<TryAndBuyOtpModalProps> = ({
 
         {/* Resend Helper */}
         <View style={styles.resendOtpRow}>
-          <Text style={styles.resendOtpLabel}>Didn't receive the OTP? </Text>
-          <TouchableOpacity onPress={onAutofill}>
-            <Text style={styles.resendOtpLink}>Resend OTP</Text>
-          </TouchableOpacity>
+          <Text style={styles.resendOtpLabel}>Ask customer to check the active handover code on their KudiCart app.</Text>
         </View>
       </View>
     </View>

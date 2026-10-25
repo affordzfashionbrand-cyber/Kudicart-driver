@@ -37,12 +37,7 @@ export const pickFile = async (): Promise<DocumentFile | null> => {
       }, 1000);
     });
   } else {
-    // Safely mock for native to prevent breaking without a native dependency
-    return Promise.resolve({
-      uri: 'file:///mock/path/to/mock_document.pdf',
-      name: 'mock_document_' + Math.floor(Math.random() * 1000) + '.pdf',
-      size: (Math.random() * 5).toFixed(1) + 'MB',
-      type: 'application/pdf',
-    });
+    // On Native without a third-party picker library, resolve null to prevent fabricated mock files
+    return Promise.resolve(null);
   }
 };

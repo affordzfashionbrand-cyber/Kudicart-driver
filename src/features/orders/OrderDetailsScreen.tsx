@@ -18,6 +18,7 @@ import { OrderCameraModal, CameraTarget } from './details/OrderCameraModal';
 import { OrderMapNavigationMode } from './details/OrderMapNavigationMode';
 import { OrderDeliveryReviewView } from './details/OrderDeliveryReviewView';
 import { OrderPickupReviewView } from './details/OrderPickupReviewView';
+import { permissionService } from '../../services/permissionService';
 
 const HUB_COORDINATES = DEFAULT_HUB_COORDINATES;
 const DEST_COORDINATES = DEFAULT_DEST_COORDINATES;
@@ -71,6 +72,21 @@ export const OrderDetailsScreen = ({ route, navigation }: any) => {
   const [handoverImages, setHandoverImages] = useState<string[]>([]);
   const [returnImages, setReturnImages] = useState<string[]>([]);
   const [fullScreenMap, setFullScreenMap] = useState(false);
+
+  const handleOpenCamera = async (target: CameraTarget) => {
+    const status = await permissionService.check('camera');
+    if (status !== 'granted') {
+      const res = await permissionService.request('camera');
+      if (res !== 'granted') {
+        toast.show({
+          type: 'error',
+          message: 'Camera permission is required to capture parcel proof.',
+        });
+        return;
+      }
+    }
+    setShowCamera(target);
+  };
 
   if (!order) {
     return (
@@ -203,10 +219,10 @@ export const OrderDetailsScreen = ({ route, navigation }: any) => {
         <SafeAreaView style={[styles.main, { backgroundColor: '#F3F1EC' }]}>
           <TryAndBuyHandoverView
             order={order}
-            onConfirmHandover={() => confirmHandoverAndStartTrial(order.id)}
+            onConfirmHandover={(code) => confirmHandoverAndStartTrial(order.id, code)}
             onOpenMap={() => setFullScreenMap(true)}
             handoverImages={handoverImages}
-            onOpenCamera={() => setShowCamera('handover')}
+            onOpenCamera={() => handleOpenCamera('handover')}
             onRemoveImage={(idx) => setHandoverImages(handoverImages.filter((_, i) => i !== idx))}
           />
         </SafeAreaView>
@@ -244,7 +260,7 @@ export const OrderDetailsScreen = ({ route, navigation }: any) => {
           <TryAndBuyReturnCollectionView
             order={order}
             onToggleCollected={(itemId) => toggleItemCollected(order.id, itemId)}
-            onOpenCamera={() => setShowCamera('return')}
+            onOpenCamera={() => handleOpenCamera('return')}
             returnImages={returnImages}
             onRemoveImage={(idx) => setReturnImages(returnImages.filter((_, i) => i !== idx))}
             onConfirmCollection={(images) => confirmReturnCollection(order.id, images)}
@@ -280,7 +296,7 @@ export const OrderDetailsScreen = ({ route, navigation }: any) => {
         order={order}
         deliveryImages={deliveryImages}
         setDeliveryImages={setDeliveryImages}
-        onOpenCamera={() => setShowCamera('delivery')}
+        onOpenCamera={() => handleOpenCamera('delivery')}
         onOpenMap={() => setFullScreenMap(true)}
         onConfirmDelivery={() => {
           confirmDelivery(order.id);
@@ -299,7 +315,7 @@ export const OrderDetailsScreen = ({ route, navigation }: any) => {
       order={order}
       pickupImages={pickupImages}
       setPickupImages={setPickupImages}
-      onOpenCamera={() => setShowCamera('pickup')}
+      onOpenCamera={() => handleOpenCamera('pickup')}
       onConfirmPickup={() => {
         confirmPickup(order.id);
         toast.success('Pickup verified. Starting delivery.');

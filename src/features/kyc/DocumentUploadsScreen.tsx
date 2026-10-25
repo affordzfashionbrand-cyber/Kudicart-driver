@@ -21,8 +21,9 @@ const DocumentRow = ({ title, docType, onPress, isReviewMode }: DocumentRowProps
   const { documents } = useDriverStore();
   const doc = documents[docType];
   
-  const isComplete = Boolean(doc?.front && doc?.back);
-  const isIncomplete = Boolean((doc?.front && !doc?.back) || (!doc?.front && doc?.back));
+  const isPan = docType === 'pan';
+  const isComplete = isPan ? Boolean(doc?.front) : Boolean(doc?.front && doc?.back);
+  const isIncomplete = isPan ? false : Boolean((doc?.front && !doc?.back) || (!doc?.front && doc?.back));
 
   // Highlighting specific verification issues for review mode
   const isRejected = isReviewMode && (docType === 'drivingLicence' || docType === 'vehicleRc');
@@ -30,7 +31,7 @@ const DocumentRow = ({ title, docType, onPress, isReviewMode }: DocumentRowProps
 
   let statusText = 'Not uploaded';
   let statusColor = '#65635F';
-  let subtitleText = 'Front & Back';
+  let subtitleText = isPan ? 'Front Side' : 'Front & Back';
   
   if (isRejected) {
     statusText = 'Needs attention';
@@ -41,7 +42,7 @@ const DocumentRow = ({ title, docType, onPress, isReviewMode }: DocumentRowProps
   } else if (isVerified) {
     statusText = 'Verified';
     statusColor = colors.success;
-    subtitleText = 'Front & Back · Verified';
+    subtitleText = isPan ? 'Front Side · Verified' : 'Front & Back · Verified';
   } else if (isComplete) {
     statusText = 'Uploaded';
     statusColor = colors.success;
@@ -92,7 +93,7 @@ export const DocumentUploadsScreen = ({ navigation }: any) => {
 
   const isAllComplete = Boolean(
     documents.aadhaar.front && documents.aadhaar.back &&
-    documents.pan.front && documents.pan.back &&
+    documents.pan.front &&
     documents.drivingLicence.front && documents.drivingLicence.back &&
     documents.vehicleRc.front && documents.vehicleRc.back
   );
@@ -141,7 +142,7 @@ export const DocumentUploadsScreen = ({ navigation }: any) => {
             <Text style={styles.subtitle}>
               {isReviewMode
                 ? 'We could not verify 2 documents. Please review and re-upload the flagged documents below.'
-                : 'Please provide clear photos of the front and back of the following documents.'}
+                : 'Please provide clear photos of your documents (front and back where applicable).'}
             </Text>
 
             {isReviewMode && (

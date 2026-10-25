@@ -1,0 +1,303 @@
+import { StyleSheet, Platform } from 'react-native';
+import { colors } from '../../theme/colors';
+import { spacing } from '../../theme/spacing';
+
+export const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  header: {
+    height: 56,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.m,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerPlaceholder: {
+    width: 40,
+  },
+  scrollContent: {
+    paddingHorizontal: spacing.m,
+    paddingTop: spacing.m,
+    paddingBottom: Platform.OS === 'web' ? 40 : 32,
+  },
+  introCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    padding: spacing.m,
+    marginBottom: spacing.m,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  introTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 6,
+  },
+  introText: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: colors.textSecondary,
+    marginBottom: 12,
+  },
+  progressContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FAF8F5',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  progressText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  refreshBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  refreshBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.primary,
+    marginLeft: 4,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 10,
+    marginTop: 4,
+  },
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    padding: spacing.m,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  cardTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 8,
+  },
+  iconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: colors.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  cardTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  essentialBadge: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.primary,
+    backgroundColor: '#FFF0E8',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginTop: 2,
+    alignSelf: 'flex-start',
+  },
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  badgeGranted: {
+    backgroundColor: '#EDFDF5',
+  },
+  badgeRequired: {
+    backgroundColor: '#FFF0E8',
+  },
+  badgeDenied: {
+    backgroundColor: '#FDECEC',
+  },
+  badgeSettings: {
+    backgroundColor: '#EDF5FD',
+  },
+  badgeUnavailable: {
+    backgroundColor: '#F0EFEA',
+  },
+  badgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  badgeTextGranted: {
+    color: colors.success,
+  },
+  badgeTextRequired: {
+    color: colors.primary,
+  },
+  badgeTextDenied: {
+    color: colors.danger,
+  },
+  badgeTextSettings: {
+    color: colors.info,
+  },
+  badgeTextUnavailable: {
+    color: colors.textSecondary,
+  },
+  cardDescription: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.textSecondary,
+    marginBottom: 8,
+  },
+  whyBox: {
+    backgroundColor: '#FAF8F5',
+    padding: 8,
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  whyText: {
+    fontSize: 11,
+    lineHeight: 16,
+    color: colors.textSecondary,
+  },
+  platformNote: {
+    fontSize: 11,
+    lineHeight: 15,
+    color: '#8A8883',
+    fontStyle: 'italic',
+    marginBottom: 10,
+  },
+  cardActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  allowBtn: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  allowBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.white,
+  },
+  settingsBtn: {
+    backgroundColor: '#0043CE',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  settingsBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.white,
+  },
+  footer: {
+    padding: spacing.m,
+    backgroundColor: colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  continueBtn: {
+    height: 50,
+    borderRadius: 14,
+  },
+  continueBtnText: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 420,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 12,
+  },
+  modalMessage: {
+    fontSize: 14,
+    lineHeight: 21,
+    color: colors.textSecondary,
+    marginBottom: 20,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  modalBtnSecondary: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    marginRight: 8,
+  },
+  modalBtnSecondaryText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  modalBtnPrimary: {
+    backgroundColor: colors.primary,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: 10,
+  },
+  modalBtnPrimaryText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.white,
+  },
+});

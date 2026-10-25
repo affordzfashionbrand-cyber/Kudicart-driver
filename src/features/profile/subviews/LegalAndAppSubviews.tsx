@@ -119,6 +119,20 @@ export const AboutSubview: React.FC<{ navigation?: any }> = ({ navigation }) => 
         style={styles.row}
         onPress={() => {
           if (navigation?.navigate) {
+            navigation.navigate('DevicePermissionSetup', { returnTo: 'Profile' });
+          } else {
+            toast.info('Opening Device Permissions...');
+          }
+        }}
+      >
+        <Text style={styles.rowLabel}>Device & App Permissions</Text>
+        <Text style={[styles.rowValue, { color: colors.primary }]}>Configure ›</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.row}
+        onPress={() => {
+          if (navigation?.navigate) {
             navigation.navigate('TermsAndConditions');
           } else {
             toast.info('Opening Terms of Service...');

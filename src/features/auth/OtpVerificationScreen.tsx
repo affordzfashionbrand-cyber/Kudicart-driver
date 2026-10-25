@@ -126,11 +126,7 @@ export const OtpVerificationScreen = ({ navigation, route }: any) => {
         setResendTimer(30);
         setOtpArray(['', '', '', '', '', '']);
         const res = await useAuthStore.getState().sendOtpAsync(phoneNumber);
-        const code = (res as any)?.mockOtp;
         toast.success(res.message || 'A new OTP has been sent.');
-        if (code) {
-          toast.info(`Your verification OTP is: ${code}`);
-        }
         setTimeout(() => {
           inputs.current[0]?.focus();
         }, 100);

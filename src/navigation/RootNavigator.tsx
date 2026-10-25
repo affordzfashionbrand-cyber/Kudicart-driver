@@ -19,6 +19,8 @@ import { NotificationsScreen } from '../features/notifications/NotificationsScre
 import { DriverProfileDetailsScreen } from '../features/profile/DriverProfileDetailsScreen';
 import { ProfileDetailSubScreen } from '../features/profile/ProfileDetailSubScreen';
 import { HistoricalOrderDetailScreen } from '../features/orders/HistoricalOrderDetailScreen';
+import { DevicePermissionSetupScreen } from '../features/permissions/DevicePermissionSetupScreen';
+import { usePermissionStore } from '../store/usePermissionStore';
 
 export type RootStackParamList = {
   Splash: undefined;
@@ -28,6 +30,7 @@ export type RootStackParamList = {
   PrivacyPolicy: undefined;
   Legal: { initialTab?: 'terms' | 'privacy' } | undefined;
   VerificationApproved: undefined;
+  DevicePermissionSetup: { returnTo?: 'MainApp' | 'VerificationApproved' | 'Profile' } | undefined;
   MainApp: undefined;
   KycFlow: undefined;
   StoreDetails: undefined;
@@ -45,6 +48,7 @@ import { getAuthToken } from '../api';
 
 export const RootNavigator = () => {
   const { isAuthenticated, kycStatus, syncStatusAsync } = useAuthStore();
+  const hasCompletedDeviceSetup = usePermissionStore((s) => s.hasCompletedDeviceSetup);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -69,13 +73,24 @@ export const RootNavigator = () => {
           <>
             <Stack.Screen name="PhoneLogin" component={PhoneLoginScreen} />
             <Stack.Screen name="OtpVerification" component={OtpVerificationScreen} />
+            <Stack.Screen name="DevicePermissionSetup" component={DevicePermissionSetupScreen} />
             <Stack.Screen name="TermsAndConditions" component={TermsAndConditionsScreen} />
             <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
             <Stack.Screen name="Legal" component={LegalScreen} />
           </>
         ) : kycStatus === 'APPROVED' ? (
           <>
-            <Stack.Screen name="MainApp" component={MainNavigator} />
+            {!hasCompletedDeviceSetup ? (
+              <>
+                <Stack.Screen name="DevicePermissionSetup" component={DevicePermissionSetupScreen} />
+                <Stack.Screen name="MainApp" component={MainNavigator} />
+              </>
+            ) : (
+              <>
+                <Stack.Screen name="MainApp" component={MainNavigator} />
+                <Stack.Screen name="DevicePermissionSetup" component={DevicePermissionSetupScreen} />
+              </>
+            )}
             <Stack.Screen name="VerificationApproved" component={VerificationApprovedScreen} />
             <Stack.Screen name="StoreDetails" component={StoreDetailsScreen} />
             <Stack.Screen name="OrderDetails" component={OrderDetailsScreen} />

@@ -7,7 +7,7 @@ import { TryAndBuyOtpModal } from './TryAndBuyOtpModal';
 
 interface TryAndBuyHandoverViewProps {
   order: Order;
-  onConfirmHandover: () => void;
+  onConfirmHandover: (otp: string) => void;
   onOpenMap?: () => void;
   handoverImages?: string[];
   onOpenCamera?: () => void;
@@ -87,12 +87,6 @@ export const TryAndBuyHandoverView: React.FC<TryAndBuyHandoverViewProps> = ({
     }
   };
 
-  const handleAutofill = () => {
-    setOtpArray(['4', '8', '2', '9']);
-    setOtpError('');
-    inputs.current[3]?.focus();
-  };
-
   const handleVerifyOtp = () => {
     const code = otpArray.join('');
     if (code.length < 4) {
@@ -100,7 +94,7 @@ export const TryAndBuyHandoverView: React.FC<TryAndBuyHandoverViewProps> = ({
       return;
     }
     setShowOtpModal(false);
-    onConfirmHandover();
+    onConfirmHandover(code);
   };
 
   const hasPhotos = images.length > 0;
@@ -314,7 +308,6 @@ export const TryAndBuyHandoverView: React.FC<TryAndBuyHandoverViewProps> = ({
         onKeyPress={handleKeyPress}
         onFocus={(idx) => setFocusedIndex(idx)}
         onBlur={() => setFocusedIndex(null)}
-        onAutofill={handleAutofill}
         onVerifyOtp={handleVerifyOtp}
       />
     </View>

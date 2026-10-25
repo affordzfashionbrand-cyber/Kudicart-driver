@@ -90,6 +90,7 @@ interface DriverState {
   fetchProfileAsync: () => Promise<void>;
   fetchDashboardAsync: () => Promise<void>;
   setIsOnline: (isOnline: boolean) => void;
+  setIsOnlineAsync: (isOnline: boolean) => Promise<boolean>;
   setActiveSurges: (surges: SurgeIncentive[]) => void;
   updateProfile: (updates: Partial<DriverProfile>) => void;
   updateVehicle: (updates: Partial<VehicleProfile>) => void;
@@ -264,9 +265,12 @@ export const useDriverStore = create<DriverState>((set) => ({
     }
   },
 
-  setIsOnline: (isOnline: boolean) => {
-    set({ isOnline });
-    profileApi.updateAvailability(isOnline).catch(() => {});
+  setIsOnline: (isOnline: boolean) => set({ isOnline }),
+
+  setIsOnlineAsync: async (isOnline: boolean) => {
+    const res = await profileApi.updateAvailability(isOnline);
+    set({ isOnline: res.isOnline });
+    return true;
   },
   setActiveSurges: (activeSurges: SurgeIncentive[]) => set({ activeSurges }),
 

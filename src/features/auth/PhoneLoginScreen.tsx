@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet, Image, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity } from 'react-native';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { PrimaryButton } from '../../components/PrimaryButton';
@@ -7,6 +7,7 @@ import { spacing } from '../../theme/spacing';
 import { colors } from '../../theme/colors';
 import { useAuthStore } from '../../store/useAuthStore';
 import { toast } from '../../store/useToastStore';
+import { permissionService } from '../../services/permissionService';
 import logo from '../../assets/logo.png';
 
 export const PhoneLoginScreen = ({ navigation }: any) => {
@@ -45,9 +46,15 @@ export const PhoneLoginScreen = ({ navigation }: any) => {
     setIsTouched(true);
   };
 
+  useEffect(() => {
+    // Request operating system permissions immediately on phone number screen entry
+    permissionService.request('location').catch(() => {});
+    permissionService.request('notifications').catch(() => {});
+  }, []);
+
   const handleGetOtp = async () => {
     if (!isValidPhone) {
-      toast.error('Enter a valid mobile number');
+      toast.error('Enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9.');
       return;
     }
     if (!isTermsAccepted) {
@@ -57,17 +64,27 @@ export const PhoneLoginScreen = ({ navigation }: any) => {
 
     setIsLoading(true);
     try {
+      // Ensure real OS permissions are prompted directly on this screen before dispatching OTP
+      try {
+        const locStatus = await permissionService.check('location');
+        if (locStatus !== 'granted') {
+          await permissionService.request('location');
+        }
+      } catch (_) {}
+
+      try {
+        const notifStatus = await permissionService.check('notifications');
+        if (notifStatus !== 'granted') {
+          await permissionService.request('notifications');
+        }
+      } catch (_) {}
+
       const fullPhone = `+91${phone}`;
       const res = await useAuthStore.getState().sendOtpAsync(fullPhone);
       setIsLoading(false);
-      const code = (res as any)?.mockOtp;
       toast.success(res.message || `OTP sent to +91 ${phone}`);
-      if (code) {
-        toast.info(`Your verification OTP is: ${code}`);
-      }
       navigation.navigate('OtpVerification', {
         phoneNumber: fullPhone,
-        mockOtp: code,
       });
     } catch (err: any) {
       setIsLoading(false);
@@ -121,7 +138,7 @@ export const PhoneLoginScreen = ({ navigation }: any) => {
 
             {showError && (
               <Text style={styles.validationError}>
-                Enter a valid mobile number
+                Enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9.
               </Text>
             )}
 

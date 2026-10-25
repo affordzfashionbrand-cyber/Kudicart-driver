@@ -9,14 +9,21 @@ import logo from '../../assets/logo.png';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useDriverStore } from '../../store/useDriverStore';
 
+import { usePermissionStore } from '../../store/usePermissionStore';
+
 export const VerificationApprovedScreen = ({ navigation }: any) => {
   const { logout } = useAuthStore();
   const { updateProfile } = useDriverStore();
 
   const handleStartEarning = () => {
-    // Preserve active approved status and take partner into approved Home dashboard
+    // Preserve active approved status and take partner into setup or approved Home dashboard
     updateProfile({ status: 'Active' });
-    navigation.replace('MainApp');
+    const hasCompleted = usePermissionStore.getState().hasCompletedDeviceSetup;
+    if (!hasCompleted) {
+      navigation.replace('DevicePermissionSetup');
+    } else {
+      navigation.replace('MainApp');
+    }
   };
 
   return (

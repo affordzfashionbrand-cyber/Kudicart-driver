@@ -25,7 +25,7 @@ interface OrderState {
   completeOrder: (orderId: string) => void;
 
   // Try & Buy Specific Lifecycle Actions
-  confirmHandoverAndStartTrial: (orderId: string) => void;
+  confirmHandoverAndStartTrial: (orderId: string, otp?: string) => Promise<void>;
   recordCustomerSelection: (orderId: string, selections: { [itemId: string]: 'KEEP' | 'RETURN' }) => void;
   proceedToReturnCollection: (orderId: string) => void;
   toggleItemCollected: (orderId: string, itemId: string) => void;
@@ -158,24 +158,28 @@ export const useOrderStore = create<OrderState>((set, get) => ({
   // TRY & BUY STATE MACHINE ACTIONS
   // ----------------------------------------------------
 
-  confirmHandoverAndStartTrial: (orderId) => {
+  confirmHandoverAndStartTrial: async (orderId, otp = '4829') => {
     const now = new Date();
-    set((state) => ({
-      activeOrders: state.activeOrders.map((order) => {
-        if (order.id !== orderId || !order.isTryAndBuy) return order;
-        const duration = order.trialDurationMinutes || 20;
-        const endsAt = new Date(now.getTime() + duration * 60 * 1000);
+    try {
+      await ordersApi.confirmHandover(orderId, otp);
+      set((state) => ({
+        activeOrders: state.activeOrders.map((order) => {
+          if (order.id !== orderId || !order.isTryAndBuy) return order;
+          const duration = order.trialDurationMinutes || 20;
+          const endsAt = new Date(now.getTime() + duration * 60 * 1000);
 
-        return {
-          ...order,
-          handoverConfirmedAt: now.toISOString(),
-          trialStartedAt: now.toISOString(),
-          trialEndsAt: endsAt.toISOString(),
-          tryAndBuyStage: 'TRIAL_IN_PROGRESS',
-        };
-      }),
-    }));
-    ordersApi.confirmHandover(orderId, '4829').catch(() => {});
+          return {
+            ...order,
+            handoverConfirmedAt: now.toISOString(),
+            trialStartedAt: now.toISOString(),
+            trialEndsAt: endsAt.toISOString(),
+            tryAndBuyStage: 'TRIAL_IN_PROGRESS',
+          };
+        }),
+      }));
+    } catch (err: any) {
+      throw err;
+    }
   },
 
   recordCustomerSelection: (orderId, selections) => {

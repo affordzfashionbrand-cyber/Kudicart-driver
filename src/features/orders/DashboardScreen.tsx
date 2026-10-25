@@ -19,6 +19,7 @@ import { DashboardOperationalStatus } from './dashboard/DashboardOperationalStat
 import { DashboardBonusCard } from './dashboard/DashboardBonusCard';
 import { DashboardOpportunitiesSection } from './dashboard/DashboardOpportunitiesSection';
 import { DashboardAssignmentOverlay } from './dashboard/DashboardAssignmentOverlay';
+import { permissionService } from '../../services/permissionService';
 
 export const DashboardScreen = ({ navigation }: any) => {
   const {
@@ -62,19 +63,41 @@ export const DashboardScreen = ({ navigation }: any) => {
       activeOrder.status === 'RETURNING' ||
       activeOrder.status === 'PICKED_UP');
 
-  const handleToggleOnline = (value: boolean) => {
+  const handleToggleOnline = async (value: boolean) => {
+    if (value) {
+      const locStatus = await permissionService.check('location');
+      if (locStatus !== 'granted') {
+        const req = await permissionService.request('location');
+        if (req !== 'granted') {
+          toast.show({
+            type: 'error',
+            message: 'Location access is required to receive nearby delivery dispatches.',
+          });
+          return;
+        }
+      }
+    }
+
     try {
-      (LayoutAnimation as any)?.configureNext?.(
-        (LayoutAnimation as any)?.Presets?.easeInEaseOut
+      await useDriverStore.getState().setIsOnlineAsync(value);
+      try {
+        (LayoutAnimation as any)?.configureNext?.(
+          (LayoutAnimation as any)?.Presets?.easeInEaseOut
+        );
+      } catch (_) {}
+
+      if (!value) {
+        clearOrders();
+        permissionService.stopNativeTracking().catch(() => {});
+        toast.info('You are now offline.');
+      } else {
+        fetchAssignedOrdersAsync();
+        toast.success('You are online. Ready for assignments.');
+      }
+    } catch (err: any) {
+      toast.error(
+        err?.message || 'Driver account cannot go Online until KYC verification is APPROVED.',
       );
-    } catch (_) {}
-    setIsOnline(value);
-    if (!value) {
-      clearOrders();
-      toast.info('You are now offline.');
-    } else {
-      fetchAssignedOrdersAsync();
-      toast.success('You are online. Ready for assignments.');
     }
   };
 

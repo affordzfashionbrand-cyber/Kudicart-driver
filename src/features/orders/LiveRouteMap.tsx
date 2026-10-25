@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import { MAPS_CONFIG } from '../../config/maps';
 import { fetchRoadRoute } from '../../services/routingService';
+import { KudiIcon } from '../../components/KudiIcon';
 
 export interface LiveRouteMapRef {
   recenter: () => void;
@@ -303,13 +304,23 @@ export const LiveRouteMap = forwardRef<LiveRouteMapRef, LiveRouteMapProps>(({
 
   return (
     <View style={styles.container}>
-      <View
-        ref={containerRef}
-        style={[
-          styles.mapSurface,
-          Platform.OS === 'web' ? ({ outline: 'none' } as any) : null,
-        ]}
-      />
+      {Platform.OS === 'web' ? (
+        <View
+          ref={containerRef}
+          style={[
+            styles.mapSurface,
+            { outline: 'none' } as any,
+          ]}
+        />
+      ) : (
+        <View style={styles.nativeNoticeCard}>
+          <KudiIcon name="map-pin" size={28} color="#8A8781" />
+          <Text style={styles.nativeNoticeTitle}>Live Route Navigation</Text>
+          <Text style={styles.nativeNoticeSubtitle}>
+            Native map rendering (react-native-maps) is not linked in this device build. OpenStreetMap live route tracking is active on Web.
+          </Text>
+        </View>
+      )}
     </View>
   );
 });
@@ -325,5 +336,26 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     backgroundColor: '#F3F1EC',
+  },
+  nativeNoticeCard: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+    backgroundColor: '#F3F1EC',
+  },
+  nativeNoticeTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#171716',
+    marginTop: 12,
+    marginBottom: 6,
+  },
+  nativeNoticeSubtitle: {
+    fontSize: 13,
+    color: '#65635F',
+    textAlign: 'center',
+    lineHeight: 18,
+    maxWidth: 280,
   },
 });

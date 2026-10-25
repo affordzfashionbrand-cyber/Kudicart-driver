@@ -32,11 +32,11 @@ export const TERMS_AND_CONDITIONS: LegalDocument = {
   lastUpdated: 'Effective October 2026',
   sections: [
     {
-      title: '1. Purpose & Pilot Scope',
+      title: '1. Purpose',
       content: [
-        'This Delivery Partner Policy defines the working structure, delivery payouts, incentives, attendance requirements, performance targets, and operational rules for Affordz Delivery Partners during the Chennai pilot.',
+        'This Delivery Partner Policy defines the working structure, delivery payouts, incentives, attendance requirements, performance targets, and operational rules for Affordz Delivery Partners.',
         'The policy is designed to provide delivery partners with a reasonable earning opportunity while maintaining sustainable delivery economics for Affordz.',
-        'This is a pilot policy and may be reviewed and modified based on actual operational data, delivery demand, partner feedback, and business requirements.',
+        'This policy may be reviewed and modified based on actual operational data, delivery demand, partner feedback, and business requirements.',
       ],
     },
     {
@@ -97,7 +97,7 @@ export const TERMS_AND_CONDITIONS: LegalDocument = {
           ['Above 2 km — 3 km', '₹30 / order'],
         ],
       },
-      callout: 'Maximum standard delivery radius during the pilot is 3.0 km. Deliveries beyond 3 km are assigned only when specifically approved.',
+      callout: 'Maximum standard delivery radius is 3.0 km. Deliveries beyond 3 km are assigned only when specifically approved.',
     },
     {
       title: '5. Daily Performance Incentives',

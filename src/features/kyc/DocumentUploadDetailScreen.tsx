@@ -50,12 +50,19 @@ export const DocumentUploadDetailScreen = ({ route, navigation }: any) => {
     return null;
   };
 
+  const isPan = docType === 'pan';
+
   const handleSelectFile = async (side: 'front' | 'back') => {
     setUploadError((prev) => ({ ...prev, [side]: null }));
 
     try {
       const file = await pickFile();
-      if (!file) return;
+      if (!file) {
+        if (Platform.OS !== 'web') {
+          toast.warning('Document picker native module is not yet linked on this device build.');
+        }
+        return;
+      }
 
       const error = validateFile(file);
       if (error) {
@@ -95,15 +102,21 @@ export const DocumentUploadDetailScreen = ({ route, navigation }: any) => {
   };
 
   const handleSave = () => {
-    // Both front and back are required to save
-    if (!frontFile || !backFile) {
-      toast.warning('Both front and back images are required.');
-      return;
+    if (isPan) {
+      if (!frontFile) {
+        toast.warning('PAN card image is required.');
+        return;
+      }
+    } else {
+      if (!frontFile || !backFile) {
+        toast.warning('Both front and back images are required.');
+        return;
+      }
     }
 
     updateDocument(docType, {
       front: frontFile,
-      back: backFile,
+      back: isPan ? null : backFile,
       status: 'UPLOADED',
     });
 
@@ -182,7 +195,7 @@ export const DocumentUploadDetailScreen = ({ route, navigation }: any) => {
     );
   };
 
-  const isBothUploaded = Boolean(frontFile && backFile);
+  const isDocUploaded = isPan ? Boolean(frontFile) : Boolean(frontFile && backFile);
 
   return (
     <ScreenContainer>
@@ -218,7 +231,9 @@ export const DocumentUploadDetailScreen = ({ route, navigation }: any) => {
             <Text style={styles.stepText}>Partner KYC · Verification</Text>
             <Text style={styles.title}>{title}</Text>
             <Text style={styles.subtitle}>
-              Upload clear photographs of both sides of your official document.
+              {isPan
+                ? 'Upload a clear photograph of your official PAN card.'
+                : 'Upload clear photographs of both sides of your official document.'}
             </Text>
 
             {/* Rejection / Resubmission notice banner */}
@@ -242,40 +257,44 @@ export const DocumentUploadDetailScreen = ({ route, navigation }: any) => {
               
               <View style={styles.sidesStatusItem}>
                 <View style={[styles.statusDot, frontFile ? styles.dotSuccess : styles.dotPending]} />
-                <Text style={styles.sidesStatusLabel}>Front Side</Text>
+                <Text style={styles.sidesStatusLabel}>{isPan ? 'Front (Details)' : 'Front Side'}</Text>
                 <Text style={[styles.sidesStatusValue, frontFile ? styles.textSuccess : styles.textPending]}>
                   {frontFile ? 'Ready' : 'Missing'}
                 </Text>
               </View>
 
-              <View style={styles.sidesStatusDivider} />
+              {!isPan && (
+                <>
+                  <View style={styles.sidesStatusDivider} />
 
-              <View style={styles.sidesStatusItem}>
-                <View style={[styles.statusDot, backFile ? styles.dotSuccess : styles.dotPending]} />
-                <Text style={styles.sidesStatusLabel}>Back Side</Text>
-                <Text style={[styles.sidesStatusValue, backFile ? styles.textSuccess : styles.textPending]}>
-                  {backFile ? 'Ready' : 'Missing'}
-                </Text>
-              </View>
+                  <View style={styles.sidesStatusItem}>
+                    <View style={[styles.statusDot, backFile ? styles.dotSuccess : styles.dotPending]} />
+                    <Text style={styles.sidesStatusLabel}>Back Side</Text>
+                    <Text style={[styles.sidesStatusValue, backFile ? styles.textSuccess : styles.textPending]}>
+                      {backFile ? 'Ready' : 'Missing'}
+                    </Text>
+                  </View>
+                </>
+              )}
             </View>
 
             {/* Upload Sections for Front & Back */}
-            {renderSideUploadSection('front', 'Front Side')}
-            {renderSideUploadSection('back', 'Back Side')}
+            {renderSideUploadSection('front', isPan ? 'PAN Card' : 'Front Side')}
+            {!isPan && renderSideUploadSection('back', 'Back Side')}
           </View>
 
           <View style={styles.footer}>
             <PrimaryButton 
               title="Save & Continue" 
               onPress={handleSave} 
-              disabled={!isBothUploaded} 
+              disabled={!isDocUploaded} 
               style={[
                 styles.continueButton,
-                isBothUploaded ? styles.continueButtonActive : styles.continueButtonDisabled
+                isDocUploaded ? styles.continueButtonActive : styles.continueButtonDisabled
               ]}
               textStyle={[
                 styles.continueButtonText,
-                isBothUploaded ? styles.continueButtonTextActive : styles.continueButtonTextDisabled
+                isDocUploaded ? styles.continueButtonTextActive : styles.continueButtonTextDisabled
               ]}
             />
           </View>

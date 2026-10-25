@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { authApi } from '../api';
-import { getAuthToken, setAuthToken } from '../api/client';
+import { getAuthToken, setAuthToken, loadStoredAuthToken } from '../api/client';
 
 export type KycStatus = 'NOT_SUBMITTED' | 'PENDING' | 'APPROVED' | 'REJECTED';
 
@@ -16,9 +16,10 @@ interface AuthState {
   login: (token: string, phone: string) => void;
   logout: () => Promise<void>;
   setKycStatus: (status: KycStatus) => void;
-  sendOtpAsync: (phone: string) => Promise<{ success: boolean; message: string; mockOtp?: string }>;
+  sendOtpAsync: (phone: string) => Promise<{ success: boolean; message: string }>;
   verifyOtpAsync: (phone: string, otp: string) => Promise<boolean>;
   syncStatusAsync: () => Promise<void>;
+  restoreSessionAsync: () => Promise<void>;
 }
 
 // Restore genuine existing token from client storage
@@ -62,7 +63,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const res = await authApi.sendOtp(phone);
       set({ isLoading: false });
-      return { success: res.success, message: res.message, mockOtp: res.mockOtp };
+      return { success: res.success, message: res.message };
     } catch (err: any) {
       const message = err.message || 'Failed to dispatch OTP';
       set({ isLoading: false, error: message });
@@ -108,4 +109,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
     }
   },
+
+  restoreSessionAsync: async () => {
+    try {
+      const token = await loadStoredAuthToken();
+      if (token) {
+        set({
+          token,
+          isAuthenticated: true,
+          kycStatus: get().kycStatus || 'PENDING',
+        });
+        get().syncStatusAsync().catch(() => {});
+      }
+    } catch {}
+  },
 }));
+
+// Automatically trigger session restoration from native storage / localStorage
+useAuthStore.getState().restoreSessionAsync();
+
