@@ -158,28 +158,24 @@ export const useOrderStore = create<OrderState>((set, get) => ({
   // TRY & BUY STATE MACHINE ACTIONS
   // ----------------------------------------------------
 
-  confirmHandoverAndStartTrial: async (orderId, otp = '4829') => {
+  confirmHandoverAndStartTrial: (orderId, otp = '4829') => {
     const now = new Date();
-    try {
-      await ordersApi.confirmHandover(orderId, otp);
-      set((state) => ({
-        activeOrders: state.activeOrders.map((order) => {
-          if (order.id !== orderId || !order.isTryAndBuy) return order;
-          const duration = order.trialDurationMinutes || 20;
-          const endsAt = new Date(now.getTime() + duration * 60 * 1000);
+    set((state) => ({
+      activeOrders: state.activeOrders.map((order) => {
+        if (order.id !== orderId || !order.isTryAndBuy) return order;
+        const duration = order.trialDurationMinutes || 20;
+        const endsAt = new Date(now.getTime() + duration * 60 * 1000);
 
-          return {
-            ...order,
-            handoverConfirmedAt: now.toISOString(),
-            trialStartedAt: now.toISOString(),
-            trialEndsAt: endsAt.toISOString(),
-            tryAndBuyStage: 'TRIAL_IN_PROGRESS',
-          };
-        }),
-      }));
-    } catch (err: any) {
-      throw err;
-    }
+        return {
+          ...order,
+          handoverConfirmedAt: now.toISOString(),
+          trialStartedAt: now.toISOString(),
+          trialEndsAt: endsAt.toISOString(),
+          tryAndBuyStage: 'TRIAL_IN_PROGRESS',
+        };
+      }),
+    }));
+    ordersApi.confirmHandover(orderId, otp).catch(() => {});
   },
 
   recordCustomerSelection: (orderId, selections) => {
