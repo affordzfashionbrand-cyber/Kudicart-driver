@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { Order, OrderItem, OrderStatus, OrderType, TryAndBuyStage } from './orderTypes';
 import { mockTryAndBuyOrder, mockStandardOrder, mockHistory } from './orderMockData';
 import { ordersApi } from '../api';
+import { locationTrackingService } from '../services/locationTrackingService';
 
 export * from './orderTypes';
 export * from './orderMockData';
@@ -90,6 +91,7 @@ export const useOrderStore = create<OrderState>((set, get) => ({
   },
 
   confirmPickup: (orderId) => {
+    locationTrackingService.startTracking(orderId);
     set((state) => ({
       activeOrders: state.activeOrders.map((order) =>
         order.id === orderId
@@ -105,6 +107,7 @@ export const useOrderStore = create<OrderState>((set, get) => ({
   },
 
   startDelivery: (orderId) => {
+    locationTrackingService.startTracking(orderId);
     set((state) => ({
       activeOrders: state.activeOrders.map((order) =>
         order.id === orderId ? { ...order, status: 'OUT_FOR_DELIVERY' } : order,
@@ -136,6 +139,7 @@ export const useOrderStore = create<OrderState>((set, get) => ({
   },
 
   completeOrder: (orderId) => {
+    locationTrackingService.stopTracking();
     set((state) => {
       const deliveredOrder = state.activeOrders.find((o) => o.id === orderId);
       if (!deliveredOrder) return state;
