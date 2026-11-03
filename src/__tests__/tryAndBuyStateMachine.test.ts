@@ -55,7 +55,7 @@ describe('Try & Buy End-to-End Lifecycle State Machine', () => {
     const startTime = new Date(inProgressOrder.trialStartedAt!).getTime();
     const endTime = new Date(inProgressOrder.trialEndsAt!).getTime();
     const diffMinutes = Math.round((endTime - startTime) / (60 * 1000));
-    expect(diffMinutes).toBe(20);
+    expect(diffMinutes).toBe(10);
   });
 
   test('4. Customer item selections update retained totals, refund amounts and state', () => {

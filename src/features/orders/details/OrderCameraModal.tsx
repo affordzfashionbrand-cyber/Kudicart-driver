@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, SafeAreaView } from 'react-native';
+import { View, Text, TouchableOpacity, SafeAreaView, Platform } from 'react-native';
 import { KudiIcon } from '../../../components/KudiIcon';
 import { styles } from './orderDetails.styles';
 
@@ -8,7 +8,7 @@ export type CameraTarget = 'pickup' | 'delivery' | 'return' | 'handover';
 interface OrderCameraModalProps {
   target: CameraTarget;
   onClose: () => void;
-  onCapture: () => void;
+  onCapture: (photoUri?: string) => void;
 }
 
 export const OrderCameraModal: React.FC<OrderCameraModalProps> = ({
@@ -16,6 +16,34 @@ export const OrderCameraModal: React.FC<OrderCameraModalProps> = ({
   onClose,
   onCapture,
 }) => {
+  const handleShutterPress = () => {
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.setAttribute('capture', 'environment');
+      input.onchange = (e: any) => {
+        const file = e.target.files?.[0];
+        if (file) {
+          const objectUrl = URL.createObjectURL(file);
+          onCapture(objectUrl);
+        } else {
+          onCapture();
+        }
+      };
+      input.style.display = 'none';
+      document.body.appendChild(input);
+      input.click();
+      setTimeout(() => {
+        if (document.body.contains(input)) {
+          document.body.removeChild(input);
+        }
+      }, 1000);
+    } else {
+      onCapture();
+    }
+  };
+
   return (
     <View style={styles.cameraContainer}>
       <SafeAreaView style={styles.cameraSafe}>
@@ -52,7 +80,7 @@ export const OrderCameraModal: React.FC<OrderCameraModalProps> = ({
 
         {/* Capture Controls */}
         <View style={styles.cameraControls}>
-          <TouchableOpacity style={styles.captureBtnOuter} onPress={onCapture}>
+          <TouchableOpacity style={styles.captureBtnOuter} onPress={handleShutterPress}>
             <View style={styles.captureBtnInner} />
           </TouchableOpacity>
 

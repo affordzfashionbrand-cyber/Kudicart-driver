@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { authApi } from '../api';
 import { getAuthToken, setAuthToken, loadStoredAuthToken } from '../api/client';
+import { notificationService } from '../services/notificationService';
 
 export type KycStatus = 'NOT_SUBMITTED' | 'PENDING' | 'APPROVED' | 'REJECTED';
 
@@ -18,6 +19,7 @@ interface AuthState {
   setKycStatus: (status: KycStatus) => void;
   sendOtpAsync: (phone: string) => Promise<{ success: boolean; message: string }>;
   verifyOtpAsync: (phone: string, otp: string) => Promise<boolean>;
+  loginWithFirebaseAsync: (idToken: string) => Promise<boolean>;
   syncStatusAsync: () => Promise<void>;
   restoreSessionAsync: () => Promise<void>;
 }
@@ -36,7 +38,7 @@ const initialSession = getInitialSession();
 export const useAuthStore = create<AuthState>((set, get) => ({
   isAuthenticated: initialSession.isAuthenticated,
   phoneNumber: null,
-  kycStatus: initialSession.isAuthenticated ? 'APPROVED' : null,
+  kycStatus: null,
   token: initialSession.token,
   isLoading: false,
   error: null,
@@ -48,6 +50,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   logout: async () => {
     try {
+      await notificationService.unregisterDeviceToken().catch(() => {});
+      notificationService.teardownListeners();
       await authApi.logout();
     } catch {
       // Local fallback
@@ -85,9 +89,35 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         token: res.token,
         isLoading: false,
       });
+      notificationService.registerDeviceToken().catch(() => {});
+      notificationService.setupNotificationListeners();
       return true;
     } catch (err: any) {
       const message = err.message || 'Invalid verification OTP';
+      set({ isLoading: false, error: message });
+      throw err;
+    }
+  },
+
+  loginWithFirebaseAsync: async (idToken: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      const res = await authApi.loginFirebase(idToken);
+      if (res.token) {
+        setAuthToken(res.token);
+      }
+      set({
+        isAuthenticated: true,
+        phoneNumber: res.user?.phone || null,
+        kycStatus: (res.kycStatus as KycStatus) || 'PENDING',
+        token: res.token,
+        isLoading: false,
+      });
+      notificationService.registerDeviceToken().catch(() => {});
+      notificationService.setupNotificationListeners();
+      return true;
+    } catch (err: any) {
+      const message = err.message || 'Firebase driver login failed';
       set({ isLoading: false, error: message });
       throw err;
     }
@@ -120,6 +150,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           kycStatus: get().kycStatus || 'PENDING',
         });
         get().syncStatusAsync().catch(() => {});
+        notificationService.registerDeviceToken().catch(() => {});
+        notificationService.setupNotificationListeners();
       }
     } catch {}
   },

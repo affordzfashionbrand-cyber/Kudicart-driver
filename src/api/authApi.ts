@@ -54,6 +54,17 @@ export const authApi = {
     return res;
   },
 
+  loginFirebase: async (idToken: string): Promise<VerifyOtpResponse> => {
+    const res = await request<VerifyOtpResponse>('/driver/auth/firebase/login', {
+      method: 'POST',
+      body: JSON.stringify({ idToken }),
+    });
+    if (res.token) {
+      setAuthToken(res.token);
+    }
+    return res;
+  },
+
   getStatus: async (): Promise<AccountStatusResponse> => {
     return request<AccountStatusResponse>('/driver/auth/status', {
       method: 'GET',
@@ -67,9 +78,9 @@ export const authApi = {
       });
       setAuthToken(null);
       return res;
-    } catch (e) {
+    } catch (e: any) {
       setAuthToken(null);
-      return { success: true, message: 'Logged out locally' };
+      throw new Error(e?.message || 'Server logout failed. Local session cleared.');
     }
   },
 };

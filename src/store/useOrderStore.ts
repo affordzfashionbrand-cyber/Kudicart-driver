@@ -26,7 +26,7 @@ interface OrderState {
   completeOrder: (orderId: string) => void;
 
   // Try & Buy Specific Lifecycle Actions
-  confirmHandoverAndStartTrial: (orderId: string, otp?: string) => Promise<void>;
+  confirmHandoverAndStartTrial: (orderId: string, otp?: string) => void;
   recordCustomerSelection: (orderId: string, selections: { [itemId: string]: 'KEEP' | 'RETURN' }) => void;
   proceedToReturnCollection: (orderId: string) => void;
   toggleItemCollected: (orderId: string, itemId: string) => void;
@@ -162,12 +162,12 @@ export const useOrderStore = create<OrderState>((set, get) => ({
   // TRY & BUY STATE MACHINE ACTIONS
   // ----------------------------------------------------
 
-  confirmHandoverAndStartTrial: (orderId, otp = '4829') => {
+  confirmHandoverAndStartTrial: (orderId, otp) => {
     const now = new Date();
     set((state) => ({
       activeOrders: state.activeOrders.map((order) => {
         if (order.id !== orderId || !order.isTryAndBuy) return order;
-        const duration = order.trialDurationMinutes || 20;
+        const duration = order.trialDurationMinutes || 10;
         const endsAt = new Date(now.getTime() + duration * 60 * 1000);
 
         return {
@@ -179,7 +179,21 @@ export const useOrderStore = create<OrderState>((set, get) => ({
         };
       }),
     }));
-    ordersApi.confirmHandover(orderId, otp).catch(() => {});
+
+    if (otp) {
+      ordersApi
+        .confirmHandover(orderId, otp)
+        .then((res) => {
+          if (res && res.order) {
+            set((state) => ({
+              activeOrders: state.activeOrders.map((o) =>
+                o.id === orderId ? { ...o, ...res.order } : o,
+              ),
+            }));
+          }
+        })
+        .catch(() => {});
+    }
   },
 
   recordCustomerSelection: (orderId, selections) => {

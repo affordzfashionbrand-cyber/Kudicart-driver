@@ -118,8 +118,10 @@ export const OrderDetailsScreen = ({ route, navigation }: any) => {
       <OrderCameraModal
         target={showCamera}
         onClose={() => setShowCamera(false)}
-        onCapture={() => {
-          const capturedUri = `file:///photos/${showCamera}_${Date.now()}.jpg`;
+        onCapture={(photoUri) => {
+          const capturedUri =
+            photoUri ||
+            `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="200" height="200" fill="%23eee"/><text x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" fill="%23555">${showCamera}_proof</text></svg>`;
           if (showCamera === 'pickup') {
             setPickupImages([...pickupImages, capturedUri]);
           } else if (showCamera === 'delivery') {

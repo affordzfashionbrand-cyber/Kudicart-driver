@@ -23,30 +23,44 @@ export const TryAndBuyTrialProgressView: React.FC<TryAndBuyTrialProgressViewProp
   onContactCustomer,
   onBack,
 }) => {
-  const [secondsRemaining, setSecondsRemaining] = useState<number>(() => {
-    if (!order.trialEndsAt) return 20 * 60;
+  const [secondsRemaining, setSecondsRemaining] = useState<number | null>(() => {
+    if (!order.trialEndsAt) return null;
     const diff = Math.floor((new Date(order.trialEndsAt).getTime() - Date.now()) / 1000);
     return Math.max(0, diff);
   });
 
-  const totalDurationSeconds = (order.trialDurationMinutes || 20) * 60;
+  const totalDurationSeconds = (order.trialDurationMinutes || 10) * 60;
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      if (!order.trialEndsAt) return;
-      const diff = Math.floor((new Date(order.trialEndsAt).getTime() - Date.now()) / 1000);
+    if (!order.trialEndsAt) {
+      setSecondsRemaining(null);
+      return;
+    }
+    const updateCountdown = () => {
+      const diff = Math.floor((new Date(order.trialEndsAt!).getTime() - Date.now()) / 1000);
       setSecondsRemaining(Math.max(0, diff));
-    }, 1000);
+    };
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
 
     return () => clearInterval(interval);
   }, [order.trialEndsAt]);
 
-  const minutes = Math.floor(secondsRemaining / 60);
-  const seconds = secondsRemaining % 60;
-  const formattedTime = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-  const progressPercent = Math.min(100, Math.max(0, ((totalDurationSeconds - secondsRemaining) / totalDurationSeconds) * 100));
-
+  const isAwaitingServer = secondsRemaining === null;
   const isExpired = secondsRemaining === 0;
+
+  let formattedTime = 'Syncing...';
+  let progressPercent = 0;
+
+  if (secondsRemaining !== null) {
+    const minutes = Math.floor(secondsRemaining / 60);
+    const seconds = secondsRemaining % 60;
+    formattedTime = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    progressPercent = Math.min(
+      100,
+      Math.max(0, ((totalDurationSeconds - secondsRemaining) / totalDurationSeconds) * 100),
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -74,8 +88,18 @@ export const TryAndBuyTrialProgressView: React.FC<TryAndBuyTrialProgressViewProp
         {/* TIMER CARD */}
         <View style={styles.timerCard}>
           <Text style={styles.timerSuper}>TIME REMAINING</Text>
-          <Text style={[styles.timerDisplay, isExpired && { color: '#DA1E28' }]}>
-            {isExpired ? '00:00 (Expired)' : formattedTime}
+          <Text
+            style={[
+              styles.timerDisplay,
+              isExpired && { color: '#DA1E28' },
+              isAwaitingServer && { fontSize: 20, color: '#6F6F6F' },
+            ]}
+          >
+            {isAwaitingServer
+              ? 'Awaiting server session...'
+              : isExpired
+              ? '00:00 (Expired)'
+              : formattedTime}
           </Text>
 
           {/* Progress bar */}

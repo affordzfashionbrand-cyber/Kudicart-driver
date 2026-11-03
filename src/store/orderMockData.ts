@@ -16,7 +16,7 @@ export const mockTryAndBuyOrder: Order = {
   eta: '10:35 AM',
   date: 'Today, 10:14 AM',
   accepted: false,
-  trialDurationMinutes: 20,
+  trialDurationMinutes: 10,
   tryAndBuyStage: 'HANDOVER_PENDING',
   paymentMethod: 'COD',
   originalTotal: 3997,

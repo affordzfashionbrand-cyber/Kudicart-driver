@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { KudiIcon } from '../../components/KudiIcon';
 import {
@@ -6,14 +6,33 @@ import {
   FULL_TIME_WEEK_SCHEDULE,
   getStatusBadgeStyle,
 } from './shiftsData';
+import { shiftsApi } from '../../api';
 import { styles } from './shifts.styles';
 import { ShiftDetailsModal } from './ShiftDetailsModal';
 
 export const ShiftsScreen = ({ navigation }: any) => {
   const [selectedShift, setSelectedShift] = useState<FullTimeShift | null>(null);
+  const [schedule, setSchedule] = useState<FullTimeShift[]>(FULL_TIME_WEEK_SCHEDULE);
+  const [todayShift, setTodayShift] = useState<FullTimeShift>(
+    FULL_TIME_WEEK_SCHEDULE.find((s) => s.isToday) || FULL_TIME_WEEK_SCHEDULE[0],
+  );
 
-  const todayShift =
-    FULL_TIME_WEEK_SCHEDULE.find((s) => s.isToday) || FULL_TIME_WEEK_SCHEDULE[0];
+  useEffect(() => {
+    shiftsApi
+      .getShifts()
+      .then((res) => {
+        if (res && res.weekSchedule && res.weekSchedule.length > 0) {
+          setSchedule(res.weekSchedule);
+          if (res.todayShift) {
+            setTodayShift(res.todayShift);
+          }
+        }
+      })
+      .catch(() => {
+        // Fallback to local default schedule if network offline
+      });
+  }, []);
+
   const todayBadge = getStatusBadgeStyle(todayShift.status);
 
   const handleBack = () => {
@@ -110,8 +129,8 @@ export const ShiftsScreen = ({ navigation }: any) => {
         {/* This Week's Schedule Section */}
         <Text style={styles.sectionTitle}>This week's schedule</Text>
 
-        {FULL_TIME_WEEK_SCHEDULE.map((shift, index) => {
-          const isLast = index === FULL_TIME_WEEK_SCHEDULE.length - 1;
+        {schedule.map((shift, index) => {
+          const isLast = index === schedule.length - 1;
           const isDayOff = shift.status === 'DAY_OFF';
           const badgeStyle = getStatusBadgeStyle(shift.status);
 

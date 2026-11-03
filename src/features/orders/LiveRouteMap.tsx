@@ -37,7 +37,10 @@ export const LiveRouteMap = forwardRef<LiveRouteMapRef, LiveRouteMapProps>(({
   const mapInstanceRef = useRef<any>(null);
   const polylineRef = useRef<any>(null);
 
-  const waypoints = MAPS_CONFIG.defaultRouteWaypoints;
+  const initialWaypoints =
+    origin && destination && (origin.lat !== destination.lat || origin.lng !== destination.lng)
+      ? [[origin.lat, origin.lng], [destination.lat, destination.lng]]
+      : MAPS_CONFIG.defaultRouteWaypoints;
 
   // Fits complete road-following route into visible viewport,
   // strictly accounting for:
@@ -128,7 +131,7 @@ export const LiveRouteMap = forwardRef<LiveRouteMapRef, LiveRouteMapProps>(({
         });
 
         // Brand Signal Orange (#FF5A1F) route line corresponding to actual road coordinates
-        const polyline = L.polyline(waypoints, {
+        const polyline = L.polyline(initialWaypoints, {
           color: MAPS_CONFIG.routeColor,
           weight: MAPS_CONFIG.routeWidth,
           opacity: 0.95,
@@ -137,6 +140,15 @@ export const LiveRouteMap = forwardRef<LiveRouteMapRef, LiveRouteMapProps>(({
         }).addTo(map);
 
         polylineRef.current = polyline;
+
+        if (origin && destination) {
+          fetchRoadRoute(origin, destination).then((coords) => {
+            if (coords && coords.length > 0 && polylineRef.current) {
+              polylineRef.current.setLatLngs(coords);
+              fitRouteBounds(false);
+            }
+          });
+        }
 
         // 1. Delivery Partner (Driver) Navigation Marker ("You" in full, minimal puck in preview)
         const bikeIcon = L.divIcon({

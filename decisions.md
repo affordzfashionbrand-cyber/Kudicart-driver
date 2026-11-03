@@ -40,13 +40,9 @@ The Driver App communicates with the **common KudiCart NestJS Backend** via REST
 
 # 2. Scope Decisions
 
-## D-DRIVER-08 — Manual Assignment Only
-**Status:** `LOCKED`
-Delivery-partner assignment is **manual and admin-driven**. The Driver App does NOT implement:
-- Nearest-rider selection.
-- Automatic rider dispatch.
-- Automatic rider-to-order matching.
-- Automated geographical rider allocation.
+## D-DRIVER-08 — Automated FIFO Dispatch with Manual Admin Override
+**Status:** `LOCKED` (Amended via DCR-003, Superseding legacy manual-only assignment)
+Delivery-partner assignment is managed by the backend using an automated transactional FIFO queue upon orders reaching `READY_FOR_PICKUP`. Manual Admin reassignment remains supported as an override. The Driver App receives and presents assigned orders and push updates.
 
 ## D-DRIVER-09 — No Route Optimization
 **Status:** `LOCKED`
