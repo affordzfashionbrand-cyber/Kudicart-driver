@@ -192,8 +192,8 @@ export const OrderDetailsScreen = ({ route, navigation }: any) => {
         }}
         isReturning={isReturning}
         theme={theme}
-        hubCoordinates={HUB_COORDINATES}
-        destCoordinates={DEST_COORDINATES}
+        hubCoordinates={order.pickupCoordinates || { latitude: DEFAULT_HUB_COORDINATES.lat, longitude: DEFAULT_HUB_COORDINATES.lng }}
+        destCoordinates={order.deliveryCoordinates || { latitude: DEFAULT_DEST_COORDINATES.lat, longitude: DEFAULT_DEST_COORDINATES.lng }}
         onMarkArrived={() => {
           if (isReturning) {
             if (order.isTryAndBuy) {

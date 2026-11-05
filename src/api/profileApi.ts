@@ -51,10 +51,18 @@ export const profileApi = {
     });
   },
 
-  updateLocation: async (coords: { latitude: number; longitude: number; heading?: number }) => {
-    return request<any>('/driver/profile/location', {
+  updateLocation: async (data: {
+    latitude: number;
+    longitude: number;
+    heading?: number;
+    accuracy?: number;
+    speed?: number;
+    timestamp?: number;
+    orderId?: string;
+  }) => {
+    return request<any>('/driver/location', {
       method: 'POST',
-      body: JSON.stringify(coords),
+      body: JSON.stringify(data),
     });
   },
 };

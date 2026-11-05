@@ -68,6 +68,13 @@ def enableProguardInReleaseBuilds = false
  */
 def jscFlavor = 'org.webkit:android-jsc:+'
 
+Properties localProps = new Properties()
+def localPropsFile = project.rootProject.file('local.properties')
+if (localPropsFile.exists()) {
+    localProps.load(localPropsFile.newDataInputStream())
+}
+def googleMapsApiKey = localProps.getProperty('DRIVER_GOOGLE_MAPS_ANDROID_API_KEY') ?: localProps.getProperty('GOOGLE_MAPS_API_KEY') ?: System.getenv('DRIVER_GOOGLE_MAPS_ANDROID_API_KEY') ?: System.getenv('GOOGLE_MAPS_API_KEY') ?: ""
+
 android {
     ndkVersion rootProject.ext.ndkVersion
 
@@ -80,6 +87,7 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
+        manifestPlaceholders = [googleMapsApiKey: googleMapsApiKey]
     }
     signingConfigs {
         debug {
