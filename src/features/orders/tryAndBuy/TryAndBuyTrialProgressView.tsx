@@ -6,7 +6,7 @@ import { styles } from './trialProgress.styles';
 
 interface TryAndBuyTrialProgressViewProps {
   order: Order;
-  onSimulateSelection: (selections: { [itemId: string]: 'KEEP' | 'RETURN' }) => void;
+  onRefreshSelection?: () => void;
   onContactCustomer?: () => void;
   onBack?: () => void;
 }
@@ -19,7 +19,7 @@ const defaultThumbnails = [
 
 export const TryAndBuyTrialProgressView: React.FC<TryAndBuyTrialProgressViewProps> = ({
   order,
-  onSimulateSelection,
+  onRefreshSelection,
   onContactCustomer,
   onBack,
 }) => {
@@ -171,62 +171,28 @@ export const TryAndBuyTrialProgressView: React.FC<TryAndBuyTrialProgressViewProp
           })}
         </View>
 
-        {/* SIMULATE CUSTOMER DECISION (NO BACKEND ENABLER) */}
+        {/* LIVE CUSTOMER SELECTION STATUS (CUSTOMER APP SYNC) */}
         <View style={[styles.card, styles.simulationCard]}>
           <View style={styles.simulationHeader}>
             <KudiIcon name="clipboard-list" size={16} color="#FF5A1F" />
-            <Text style={styles.simulationTitle}>Simulate Customer Selection</Text>
+            <Text style={styles.simulationTitle}>Awaiting Customer Selection</Text>
           </View>
           <Text style={styles.simulationSub}>
-            (No backend available: Tap a scenario below to test customer confirmation)
+            Customer submits Keep / Return item choices directly in their KudiCart app. This screen updates automatically once confirmed.
           </Text>
 
-          <View style={styles.simulationBtnGrid}>
-            <TouchableOpacity
-              style={[styles.simBtn, styles.simBtnPrimary]}
-              onPress={() =>
-                onSimulateSelection({
-                  item_1: 'KEEP',
-                  item_2: 'RETURN',
-                  item_3: 'KEEP',
-                })
-              }
-              activeOpacity={0.85}
-            >
-              <Text style={styles.simBtnTitle}>Keep 2, Return 1</Text>
-              <Text style={styles.simBtnDetail}>T-Shirt & Pants Kept • Jacket Returned</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.simBtn}
-              onPress={() =>
-                onSimulateSelection({
-                  item_1: 'KEEP',
-                  item_2: 'KEEP',
-                  item_3: 'KEEP',
-                })
-              }
-              activeOpacity={0.85}
-            >
-              <Text style={styles.simBtnTitle}>Keep All (3 items)</Text>
-              <Text style={styles.simBtnDetail}>Branch A: Complete delivery directly</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.simBtn}
-              onPress={() =>
-                onSimulateSelection({
-                  item_1: 'RETURN',
-                  item_2: 'RETURN',
-                  item_3: 'RETURN',
-                })
-              }
-              activeOpacity={0.85}
-            >
-              <Text style={styles.simBtnTitle}>Return All (3 items)</Text>
-              <Text style={styles.simBtnDetail}>Branch C: Customer returns full order</Text>
-            </TouchableOpacity>
-          </View>
+          {onRefreshSelection && (
+            <View style={styles.simulationBtnGrid}>
+              <TouchableOpacity
+                style={[styles.simBtn, styles.simBtnPrimary]}
+                onPress={onRefreshSelection}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.simBtnTitle}>Check Selection Status</Text>
+                <Text style={styles.simBtnDetail}>Sync latest Try & Buy decisions from server</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       </ScrollView>
     </View>

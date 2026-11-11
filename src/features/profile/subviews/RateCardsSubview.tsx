@@ -31,15 +31,15 @@ export const RateCardsSubview: React.FC = () => {
 
   return (
     <>
-      {/* Affordz Pilot Policy Header Card */}
+      {/* KudiCart Partner Policy Header Card */}
       <View style={styles.policyHeaderCard}>
         <View style={styles.policyHeaderRow}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.policyTitle}>Affordz Delivery Partner Policy</Text>
-            <Text style={styles.policySubtitle}>Pilot Version • Chennai Launch</Text>
+            <Text style={styles.policyTitle}>KudiCart Delivery Partner Policy</Text>
+            <Text style={styles.policySubtitle}>Standard Rate Card • Active</Text>
           </View>
           <View style={styles.pilotBadge}>
-            <Text style={styles.pilotBadgeText}>Pilot v1.0</Text>
+            <Text style={styles.pilotBadgeText}>Active v1.0</Text>
           </View>
         </View>
       </View>
@@ -66,8 +66,8 @@ export const RateCardsSubview: React.FC = () => {
 
         <View style={styles.row}>
           <View>
-            <Text style={styles.rowLabelBold}>Above 2 km – 3 km</Text>
-            <Text style={styles.smallSubtext}>Outer radius delivery</Text>
+            <Text style={styles.rowLabelBold}>Above 2 km</Text>
+            <Text style={styles.smallSubtext}>Extended distance slab</Text>
           </View>
           <Text style={styles.highlightValue}>₹30 / order</Text>
         </View>
@@ -75,7 +75,7 @@ export const RateCardsSubview: React.FC = () => {
         <View style={styles.radiusNoteBox}>
           <KudiIcon name="info-circle" size={15} color="#65635F" />
           <Text style={styles.radiusNoteText}>
-            Maximum standard delivery radius during the pilot is 3 km. Distances are calculated via GPS verification.
+            Payouts are calculated on actual pickup-to-drop distance verified via GPS.
           </Text>
         </View>
       </View>
@@ -271,7 +271,7 @@ export const RateCardsSubview: React.FC = () => {
         <View style={[styles.row, styles.rowLast]}>
           <View style={{ flex: 1, paddingRight: 8 }}>
             <Text style={styles.rowLabelBold}>Customer Tips</Text>
-            <Text style={styles.smallSubtext}>100% to partner — Affordz retains 0%</Text>
+            <Text style={styles.smallSubtext}>100% to partner — KudiCart retains 0%</Text>
           </View>
           <Text style={[styles.highlightValue, { color: '#16805A' }]}>100% Partner</Text>
         </View>

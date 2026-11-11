@@ -1,9 +1,13 @@
 import { profileApi } from '../api/profileApi';
+import { driverSocket } from './driverSocket';
 
 interface Coordinates {
   latitude: number;
   longitude: number;
   heading?: number;
+  speed?: number;
+  accuracy?: number;
+  timestamp?: number;
 }
 
 function calculateDisplacementMeters(
@@ -125,7 +129,7 @@ class LocationTrackingService {
             heading: heading !== null && !isNaN(heading) ? heading : undefined,
           });
         },
-        (error) => {
+        (_error) => {
           // If native GPS read fails, preserve existing position
         },
         { enableHighAccuracy: true, timeout: 8000, maximumAge: 10000 },
@@ -161,10 +165,15 @@ class LocationTrackingService {
 
     this.isPublishing = true;
     try {
+      driverSocket.sendLocation(this.activeOrderId, coords);
       await profileApi.updateLocation({
+        orderId: this.activeOrderId,
         latitude: coords.latitude,
         longitude: coords.longitude,
         heading: coords.heading || 0,
+        speed: coords.speed,
+        accuracy: coords.accuracy,
+        timestamp: coords.timestamp,
       });
       this.lastBroadcastCoords = coords;
       this.lastBroadcastTimestamp = now;

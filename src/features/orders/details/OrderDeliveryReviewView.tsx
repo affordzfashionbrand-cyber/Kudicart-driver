@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, SafeAreaView, Image } from 'react-native';
 import { Order } from '../../../store/useOrderStore';
 import { KudiIcon } from '../../../components/KudiIcon';
@@ -10,7 +10,7 @@ interface OrderDeliveryReviewViewProps {
   setDeliveryImages: (images: string[]) => void;
   onOpenCamera: () => void;
   onOpenMap: () => void;
-  onConfirmDelivery: () => void;
+  onConfirmDelivery: (cashCollected?: boolean) => void;
   defaultProductThumbnails: string[];
 }
 
@@ -23,6 +23,10 @@ export const OrderDeliveryReviewView: React.FC<OrderDeliveryReviewViewProps> = (
   onConfirmDelivery,
   defaultProductThumbnails,
 }) => {
+  const isCodPending = order.paymentMethod === 'COD' && order.paymentStatus !== 'COMPLETED';
+  const [cashCollected, setCashCollected] = useState(!isCodPending);
+  const dueAmount = Number(order.amountDue ?? order.finalPayableTotal ?? order.originalTotal ?? 0);
+  const canConfirm = deliveryImages.length > 0 && (!isCodPending || dueAmount <= 0 || cashCollected);
   return (
     <SafeAreaView style={[styles.main, { backgroundColor: '#F3F1EC' }]}>
       {/* 1. TOP NAVIGATION BAR */}
@@ -174,6 +178,37 @@ export const OrderDeliveryReviewView: React.FC<OrderDeliveryReviewViewProps> = (
               </TouchableOpacity>
             )}
           </View>
+
+          {isCodPending && dueAmount > 0 && (
+            <View style={styles.reviewCard}>
+              <Text style={styles.reviewSectionLabel}>Cash / UPI-on-Delivery collection</Text>
+              <TouchableOpacity
+                style={[
+                  styles.photoCaptureCard,
+                  {
+                    borderColor: cashCollected ? '#16805A' : '#E2DED7',
+                    backgroundColor: cashCollected ? '#EEF9F4' : '#FFFFFF',
+                  },
+                ]}
+                onPress={() => setCashCollected((v) => !v)}
+                activeOpacity={0.85}
+              >
+                <View style={styles.photoCaptureTextWrap}>
+                  <Text style={styles.photoCaptureTitle}>
+                    Collected ₹{dueAmount.toLocaleString('en-IN')} from {order.customerName}
+                  </Text>
+                  <Text style={styles.photoCaptureSub}>
+                    {cashCollected ? 'Confirmed collected' : 'Tap to confirm COD payment collected'}
+                  </Text>
+                </View>
+                <KudiIcon
+                  name={cashCollected ? 'check-circle' : 'alert-circle'}
+                  size={20}
+                  color={cashCollected ? '#16805A' : '#FF5A1F'}
+                />
+              </TouchableOpacity>
+            </View>
+          )}
         </ScrollView>
       </View>
 
@@ -182,16 +217,16 @@ export const OrderDeliveryReviewView: React.FC<OrderDeliveryReviewViewProps> = (
         <TouchableOpacity
           style={[
             styles.confirmPickupBtn,
-            deliveryImages.length > 0 ? styles.confirmPickupBtnActive : styles.confirmPickupBtnDisabled,
+            canConfirm ? styles.confirmPickupBtnActive : styles.confirmPickupBtnDisabled,
           ]}
-          onPress={onConfirmDelivery}
-          disabled={deliveryImages.length === 0}
+          onPress={() => onConfirmDelivery(cashCollected)}
+          disabled={!canConfirm}
           activeOpacity={0.85}
         >
           <Text
             style={[
               styles.confirmPickupBtnText,
-              deliveryImages.length > 0 ? styles.confirmPickupBtnTextActive : styles.confirmPickupBtnTextDisabled,
+              canConfirm ? styles.confirmPickupBtnTextActive : styles.confirmPickupBtnTextDisabled,
             ]}
           >
             Mark Delivered

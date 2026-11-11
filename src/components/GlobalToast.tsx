@@ -62,6 +62,7 @@ export const GlobalToast: React.FC = () => {
   const hideToast = useToastStore((state) => state.hideToast);
 
   const [activeToast, setActiveToast] = useState<ToastPayload | null>(null);
+  const activeToastRef = useRef<ToastPayload | null>(null);
 
   const translateY = useRef(new Animated.Value(-10)).current;
   const opacity = useRef(new Animated.Value(0)).current;
@@ -71,6 +72,7 @@ export const GlobalToast: React.FC = () => {
 
   useEffect(() => {
     if (currentToast) {
+      activeToastRef.current = currentToast;
       setActiveToast(currentToast);
 
       isAnimatingRef.current = true;
@@ -89,7 +91,7 @@ export const GlobalToast: React.FC = () => {
       ]).start(() => {
         isAnimatingRef.current = false;
       });
-    } else if (activeToast) {
+    } else if (activeToastRef.current) {
       isAnimatingRef.current = true;
       Animated.parallel([
         Animated.timing(translateY, {
@@ -105,10 +107,11 @@ export const GlobalToast: React.FC = () => {
         }),
       ]).start(() => {
         isAnimatingRef.current = false;
+        activeToastRef.current = null;
         setActiveToast(null);
       });
     }
-  }, [currentToast]);
+  }, [currentToast, opacity, translateY]);
 
   if (!activeToast) {
     return null;

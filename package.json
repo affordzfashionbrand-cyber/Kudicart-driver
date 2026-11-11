@@ -4,7 +4,6 @@
   "private": true,
   "scripts": {
     "android": "react-native run-android",
-    "ios": "react-native run-ios",
     "lint": "eslint .",
     "start": "react-native start",
     "web": "vite --host --port 3000 --open",
@@ -19,6 +18,7 @@
     "@react-navigation/native": "^6.1.0",
     "@react-navigation/native-stack": "^6.9.0",
     "@sentry/react-native": "^5.0.0",
+    "@tanstack/react-query": "^5.107.1",
     "lucide-react": "0.460.0",
     "lucide-react-native": "1.47.0",
     "react": "18.2.0",

@@ -1,172 +1,212 @@
-import { useOrderStore, Order } from '../store/useOrderStore';
+import { ordersApi } from '../api';
+import { locationTrackingService } from '../services/locationTrackingService';
+import { Order } from '../store/orderTypes';
+import { useOrderStore } from '../store/useOrderStore';
 
-describe('Try & Buy End-to-End Lifecycle State Machine', () => {
+const makeOrderFixture = (isTryAndBuy: boolean): Order => ({
+  id: isTryAndBuy ? 'ORD-TNB-1' : 'ORD-STD-1',
+  orderNumber: isTryAndBuy ? 'TNB-1001' : 'STD-1001',
+  status: 'ACCEPTED',
+  orderType: isTryAndBuy ? 'TRY_AND_BUY' : 'STANDARD',
+  isTryAndBuy,
+  accepted: true,
+  customerName: 'Test Customer',
+  customerPhone: '+91 9000000000',
+  customerAddress: '12th Main Rd, Bengaluru',
+  pickupLocation: 'Affordz Fashion Store',
+  pickupAddress: 'HSR Sector 2, Bengaluru',
+  pickupTime: null,
+  toteId: 'TOTE-101',
+  date: 'Today',
+  pickupCoordinates: { latitude: 12.9719, longitude: 77.6412 },
+  deliveryCoordinates: { latitude: 12.9658, longitude: 77.6464 },
+  paymentMethod: 'COD',
+  paymentStatus: 'PENDING',
+  trialDurationMinutes: isTryAndBuy ? 10 : undefined,
+  distance: '2.4 km',
+  eta: '12 mins',
+  earnings: 65,
+  itemsCount: 2,
+  items: [
+    {
+      id: 'item-1',
+      name: 'Classic Cotton Shirt',
+      price: 999,
+      quantity: 1,
+      image: 'https://example.com/shirt.jpg',
+    },
+    {
+      id: 'item-2',
+      name: 'Slim Chino Trousers',
+      price: 1499,
+      quantity: 2,
+      image: 'https://example.com/chino.jpg',
+    },
+  ],
+});
+
+describe('Order & Try & Buy State Machine Flows', () => {
   beforeEach(() => {
-    useOrderStore.getState().clearOrders();
+    jest.restoreAllMocks();
+    useOrderStore.setState({
+      activeOrders: [],
+      historicalOrders: [],
+      pendingSyncQueue: [],
+      lastSyncError: null,
+    });
+
+    jest.spyOn(locationTrackingService, 'startTracking').mockImplementation(() => {});
+    jest.spyOn(locationTrackingService, 'stopTracking').mockImplementation(() => {});
+    jest.spyOn(ordersApi, 'pickupOrder').mockResolvedValue({ success: true } as any);
+    jest.spyOn(ordersApi, 'outForDelivery').mockResolvedValue({ success: true } as any);
+    jest.spyOn(ordersApi, 'markArrived').mockResolvedValue({ success: true } as any);
+    jest.spyOn(ordersApi, 'deliverOrder').mockResolvedValue({ success: true } as any);
+    jest.spyOn(ordersApi, 'confirmHandover').mockResolvedValue({ success: true } as any);
+    jest.spyOn(ordersApi, 'recordSelections').mockResolvedValue({ success: true } as any);
+    jest.spyOn(ordersApi, 'confirmReturnCollection').mockResolvedValue({ success: true } as any);
+    jest.spyOn(ordersApi, 'settlePayment').mockResolvedValue({ success: true } as any);
+    jest.spyOn(ordersApi, 'arriveAtStore').mockResolvedValue({ success: true } as any);
+    jest.spyOn(ordersApi, 'reconcileStoreReturn').mockResolvedValue({ success: true } as any);
   });
 
-  test('1. Standard delivery orders retain their existing behaviour', () => {
-    useOrderStore.getState().receiveMockOrder(false); // standard order
-    const order = useOrderStore.getState().activeOrders[0];
-    expect(order.isTryAndBuy).toBe(false);
-    expect(order.orderType).toBe('STANDARD');
+  test('Standard Order Lifecycle: ACCEPTED -> PICKED_UP (tracks) -> OUT_FOR_DELIVERY -> ARRIVED -> DELIVERED', () => {
+    const baseOrder = makeOrderFixture(false);
+    useOrderStore.setState({ activeOrders: [baseOrder] });
 
-    useOrderStore.getState().confirmPickup(order.id);
+    useOrderStore.getState().confirmPickup(baseOrder.id, ['pickup_img.jpg']);
+    expect(useOrderStore.getState().activeOrders[0].status).toBe('PICKED_UP');
+    expect(locationTrackingService.startTracking).toHaveBeenCalledWith(baseOrder.id);
+
+    useOrderStore.getState().startDelivery(baseOrder.id);
     expect(useOrderStore.getState().activeOrders[0].status).toBe('OUT_FOR_DELIVERY');
+    expect(locationTrackingService.startTracking).toHaveBeenCalledWith(baseOrder.id);
 
-    useOrderStore.getState().markArrived(order.id);
-    expect(useOrderStore.getState().activeOrders[0].status).toBe('ARRIVED');
-    expect(useOrderStore.getState().activeOrders[0].tryAndBuyStage).toBeUndefined();
+    useOrderStore.getState().markArrived(baseOrder.id);
+    expect(useOrderStore.getState().activeOrders[0].status).toBe('OUT_FOR_DELIVERY');
+    expect(useOrderStore.getState().activeOrders[0].isArrived).toBe(true);
 
-    useOrderStore.getState().confirmDelivery(order.id);
-    expect(useOrderStore.getState().activeOrders[0].status).toBe('RETURNING');
+    useOrderStore.getState().completeOrder(baseOrder.id, ['deliv_img.jpg'], true);
+    expect(useOrderStore.getState().activeOrders).toHaveLength(0);
+    expect(useOrderStore.getState().historicalOrders).toHaveLength(1);
+    expect(useOrderStore.getState().historicalOrders[0].status).toBe('DELIVERED');
+    expect(locationTrackingService.stopTracking).toHaveBeenCalled();
   });
 
-  test('2. Try & Buy order initializes with HANDOVER_PENDING and trial cannot start before confirmation', () => {
-    useOrderStore.getState().receiveMockOrder(true); // Try & Buy order
-    const order = useOrderStore.getState().activeOrders[0];
-    expect(order.isTryAndBuy).toBe(true);
-    expect(order.status).toBe('ASSIGNED');
-    expect(order.tryAndBuyStage).toBe('HANDOVER_PENDING');
-    expect(order.trialStartedAt).toBeFalsy();
-    expect(order.trialEndsAt).toBeFalsy();
+  test('Try & Buy requires customer OTP before starting trial and finishes 100% Keep with PAID status', async () => {
+    const tnbOrder = makeOrderFixture(true);
+    useOrderStore.setState({ activeOrders: [tnbOrder] });
 
-    // Confirm pickup & mark arrived
-    useOrderStore.getState().confirmPickup(order.id);
-    useOrderStore.getState().markArrived(order.id);
+    useOrderStore.getState().confirmPickup(tnbOrder.id);
+    useOrderStore.getState().startDelivery(tnbOrder.id);
+    useOrderStore.getState().markArrived(tnbOrder.id);
 
-    const arrivedOrder = useOrderStore.getState().activeOrders[0];
-    expect(arrivedOrder.status).toBe('ARRIVED');
-    expect(arrivedOrder.tryAndBuyStage).toBe('HANDOVER_PENDING');
-  });
+    expect(useOrderStore.getState().activeOrders[0].status).toBe('OUT_FOR_DELIVERY');
+    expect(useOrderStore.getState().activeOrders[0].tryAndBuyStage).toBe('HANDOVER_PENDING');
 
-  test('3. Handover confirmation starts the authoritative trial timer', () => {
-    useOrderStore.getState().receiveMockOrder(true);
-    const order = useOrderStore.getState().activeOrders[0];
+    useOrderStore.getState().confirmHandoverAndStartTrial(tnbOrder.id, '');
+    expect(ordersApi.confirmHandover).not.toHaveBeenCalled();
+    expect(useOrderStore.getState().activeOrders[0].tryAndBuyStage).toBe('HANDOVER_PENDING');
+    expect(useOrderStore.getState().lastSyncError).toMatch(/OTP/i);
 
-    useOrderStore.getState().confirmHandoverAndStartTrial(order.id);
-    const inProgressOrder = useOrderStore.getState().activeOrders[0];
+    useOrderStore.getState().confirmHandoverAndStartTrial(tnbOrder.id, '1234', ['handover.jpg']);
+    expect(ordersApi.confirmHandover).toHaveBeenCalledWith(
+      tnbOrder.id,
+      '1234',
+      ['handover.jpg'],
+      expect.any(String),
+    );
+    expect(useOrderStore.getState().activeOrders[0].tryAndBuyStage).toBe('TRIAL_IN_PROGRESS');
 
-    expect(inProgressOrder.tryAndBuyStage).toBe('TRIAL_IN_PROGRESS');
-    expect(inProgressOrder.trialStartedAt).toBeTruthy();
-    expect(inProgressOrder.trialEndsAt).toBeTruthy();
-    expect(inProgressOrder.handoverConfirmedAt).toBeTruthy();
-
-    const startTime = new Date(inProgressOrder.trialStartedAt!).getTime();
-    const endTime = new Date(inProgressOrder.trialEndsAt!).getTime();
-    const diffMinutes = Math.round((endTime - startTime) / (60 * 1000));
-    expect(diffMinutes).toBe(10);
-  });
-
-  test('4. Customer item selections update retained totals, refund amounts and state', () => {
-    useOrderStore.getState().receiveMockOrder(true);
-    const order = useOrderStore.getState().activeOrders[0];
-    useOrderStore.getState().confirmHandoverAndStartTrial(order.id);
-
-    // Customer keeps item 1 (₹799) and item 3 (₹1,299), returns item 2 (₹1,899)
-    useOrderStore.getState().recordCustomerSelection(order.id, {
-      item_1: 'KEEP',
-      item_2: 'RETURN',
-      item_3: 'KEEP',
+    useOrderStore.getState().recordCustomerSelection(tnbOrder.id, {
+      'item-1': 'KEEP',
+      'item-2': 'KEEP',
     });
 
-    const confirmedOrder = useOrderStore.getState().activeOrders[0];
-    expect(confirmedOrder.tryAndBuyStage).toBe('SELECTION_CONFIRMED');
+    const updated = useOrderStore.getState().activeOrders[0];
+    expect(updated.tryAndBuyStage).toBe('SELECTION_CONFIRMED');
+    expect(updated.finalPayableTotal).toBe(3997);
+    expect(updated.refundAmount).toBe(0);
+    expect(updated.amountDue).toBe(3997);
 
-    // Total: 799 + 1299 = 2098
-    expect(confirmedOrder.finalPayableTotal).toBe(2098);
-    expect(confirmedOrder.refundAmount).toBe(1899);
-    expect(confirmedOrder.amountDue).toBe(2098);
+    useOrderStore.getState().proceedToPayment(tnbOrder.id);
+    expect(useOrderStore.getState().activeOrders[0].tryAndBuyStage).toBe('PAYMENT_PENDING');
 
-    const item2 = confirmedOrder.items?.find((i) => i.id === 'item_2');
-    expect(item2?.decision).toBe('RETURN');
-    expect(item2?.collected).toBe(false);
+    await useOrderStore.getState().confirmPaymentAndBranch(tnbOrder.id, true);
+    expect(useOrderStore.getState().activeOrders).toHaveLength(0);
+    expect(useOrderStore.getState().historicalOrders).toHaveLength(1);
+    expect(useOrderStore.getState().historicalOrders[0].status).toBe('DELIVERED');
+    expect(useOrderStore.getState().historicalOrders[0].paymentStatus).toBe('PAID');
   });
 
-  test('5. Physical return collection tracks collected status', () => {
-    useOrderStore.getState().receiveMockOrder(true);
-    const order = useOrderStore.getState().activeOrders[0];
-    useOrderStore.getState().confirmHandoverAndStartTrial(order.id);
-    useOrderStore.getState().recordCustomerSelection(order.id, {
-      item_1: 'KEEP',
-      item_2: 'RETURN',
-      item_3: 'KEEP',
+  test('Try & Buy Partial Return returns to store and completes reconciliation without self-confirm override', async () => {
+    const tnbOrder = makeOrderFixture(true);
+    useOrderStore.setState({ activeOrders: [tnbOrder] });
+
+    useOrderStore.getState().markArrived(tnbOrder.id);
+    useOrderStore.getState().confirmHandoverAndStartTrial(tnbOrder.id, '5678');
+
+    useOrderStore.getState().recordCustomerSelection(tnbOrder.id, {
+      'item-1': 'KEEP',
+      'item-2': 'RETURN',
     });
 
-    useOrderStore.getState().proceedToReturnCollection(order.id);
+    const updated = useOrderStore.getState().activeOrders[0];
+    expect(updated.finalPayableTotal).toBe(999);
+    expect(updated.refundAmount).toBe(2998);
+
+    useOrderStore.getState().proceedToReturnCollection(tnbOrder.id);
     expect(useOrderStore.getState().activeOrders[0].tryAndBuyStage).toBe('RETURN_COLLECTION');
 
-    // Toggle collected for item_2
-    useOrderStore.getState().toggleItemCollected(order.id, 'item_2');
-    const updatedItem2 = useOrderStore.getState().activeOrders[0].items?.find((i) => i.id === 'item_2');
-    expect(updatedItem2?.collected).toBe(true);
+    useOrderStore.getState().toggleItemCollected(tnbOrder.id, 'item-2');
+    useOrderStore.getState().confirmReturnCollection(tnbOrder.id, ['return_img.jpg']);
+    expect(useOrderStore.getState().activeOrders[0].tryAndBuyStage).toBe('PAYMENT_PENDING');
 
-    // Confirm collection
-    useOrderStore.getState().confirmReturnCollection(order.id, ['mock_return_photo.jpg']);
-    const paymentStageOrder = useOrderStore.getState().activeOrders[0];
-    expect(paymentStageOrder.tryAndBuyStage).toBe('PAYMENT_PENDING');
-    expect(paymentStageOrder.returnImages).toEqual(['mock_return_photo.jpg']);
-  });
+    await useOrderStore.getState().confirmPaymentAndBranch(tnbOrder.id, true);
+    const branchOrder = useOrderStore.getState().activeOrders[0];
+    expect(branchOrder.status).toBe('RETURNING');
+    expect(branchOrder.tryAndBuyStage).toBe('RETURNING_TO_STORE');
+    expect(branchOrder.paymentStatus).toBe('PAID');
+    expect(branchOrder.returnManifestId).toBeUndefined();
+    expect(branchOrder.storeReconciliationStatus).toBe('PENDING');
 
-  test('6. Branch A: All items retained completes delivery directly without store return', () => {
-    useOrderStore.getState().receiveMockOrder(true);
-    const order = useOrderStore.getState().activeOrders[0];
-    useOrderStore.getState().confirmHandoverAndStartTrial(order.id);
-
-    // All kept
-    useOrderStore.getState().recordCustomerSelection(order.id, {
-      item_1: 'KEEP',
-      item_2: 'KEEP',
-      item_3: 'KEEP',
-    });
-
-    useOrderStore.getState().proceedToPayment(order.id);
-    useOrderStore.getState().confirmPaymentAndBranch(order.id);
-
-    // Order should be completed directly
-    expect(useOrderStore.getState().activeOrders.length).toBe(0);
-    const completed = useOrderStore.getState().historicalOrders.find((o) => o.id === order.id);
-    expect(completed).toBeDefined();
-    expect(completed?.status).toBe('DELIVERED');
-  });
-
-  test('7. Branch B & C: Return items generate manifest and require store reconciliation', () => {
-    useOrderStore.getState().receiveMockOrder(true);
-    const order = useOrderStore.getState().activeOrders[0];
-    useOrderStore.getState().confirmHandoverAndStartTrial(order.id);
-
-    // Partial return
-    useOrderStore.getState().recordCustomerSelection(order.id, {
-      item_1: 'KEEP',
-      item_2: 'RETURN',
-      item_3: 'KEEP',
-    });
-
-    useOrderStore.getState().toggleItemCollected(order.id, 'item_2');
-    useOrderStore.getState().confirmReturnCollection(order.id, ['return_proof.jpg']);
-    useOrderStore.getState().confirmPaymentAndBranch(order.id);
-
-    // Should branch into RETURNING status with Manifest
-    const returningOrder = useOrderStore.getState().activeOrders[0];
-    expect(returningOrder.status).toBe('RETURNING');
-    expect(returningOrder.tryAndBuyStage).toBe('RETURNING_TO_STORE');
-    expect(returningOrder.returnManifestId).toMatch(/^#RM-\d+/);
-    expect(returningOrder.storeReconciliationStatus).toBe('PENDING');
-
-    // Partner arrives at store
-    useOrderStore.getState().markArrivedAtStore(order.id);
+    useOrderStore.getState().markArrivedAtStore(tnbOrder.id);
     expect(useOrderStore.getState().activeOrders[0].tryAndBuyStage).toBe('STORE_RECONCILIATION');
 
-    // Partner submits items for inwarding verification
-    useOrderStore.getState().submitForStoreConfirmation(order.id);
-    expect(useOrderStore.getState().activeOrders[0].tryAndBuyStage).toBe('WAITING_STORE_CONFIRMATION');
+    const ok = await useOrderStore.getState().reconcileStoreReturn(tnbOrder.id);
+    expect(ok).toBe(true);
+    expect(ordersApi.reconcileStoreReturn).toHaveBeenCalledWith(tnbOrder.id, undefined, undefined);
+    expect(useOrderStore.getState().activeOrders).toHaveLength(0);
+    expect(useOrderStore.getState().historicalOrders[0].status).toBe('RETURNED');
+    expect(useOrderStore.getState().historicalOrders[0].storeReconciliationStatus).toBe('RECONCILED');
+  });
 
-    // Store reconciles and receives returned items
-    useOrderStore.getState().reconcileStoreReturn(order.id);
+  test('reconcileStoreReturn keeps order active when server rejects with 4xx', async () => {
+    const returningOrder: Order = {
+      ...makeOrderFixture(true),
+      status: 'RETURNING',
+      tryAndBuyStage: 'STORE_RECONCILIATION',
+      storeReconciliationStatus: 'PENDING',
+    };
+    useOrderStore.setState({ activeOrders: [returningOrder] });
+    jest
+      .spyOn(ordersApi, 'reconcileStoreReturn')
+      .mockRejectedValueOnce({ status: 409, message: 'Supervisor confirmation required at store' });
 
-    expect(useOrderStore.getState().activeOrders.length).toBe(0);
-    const completed = useOrderStore.getState().historicalOrders.find((o) => o.id === order.id);
-    expect(completed?.storeReconciliationStatus).toBe('RECONCILED');
-    expect(completed?.status).toBe('DELIVERED');
+    const ok = await useOrderStore.getState().reconcileStoreReturn(returningOrder.id);
+    expect(ok).toBe(false);
+    expect(useOrderStore.getState().activeOrders).toHaveLength(1);
+    expect(useOrderStore.getState().historicalOrders).toHaveLength(0);
+    expect(useOrderStore.getState().lastSyncError).toBe('Supervisor confirmation required at store');
+  });
+
+  test('fetchAssignedOrdersAsync resumes location tracking for active PICKED_UP orders', async () => {
+    const pickedUpOrder: Order = {
+      ...makeOrderFixture(false),
+      status: 'PICKED_UP',
+    };
+    jest.spyOn(ordersApi, 'getAssignedOrders').mockResolvedValueOnce([pickedUpOrder]);
+
+    await useOrderStore.getState().fetchAssignedOrdersAsync();
+    expect(locationTrackingService.startTracking).toHaveBeenCalledWith(pickedUpOrder.id);
   });
 });

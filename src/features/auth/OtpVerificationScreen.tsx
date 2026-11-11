@@ -111,7 +111,7 @@ export const OtpVerificationScreen = ({ navigation, route }: any) => {
 
     setIsVerifying(true);
     try {
-      await useAuthStore.getState().verifyOtpAsync(phoneNumber, code);
+      await useAuthStore.getState().confirmPhoneOtpAsync(phoneNumber, code);
       setIsVerifying(false);
       toast.success('Mobile verification successful.');
     } catch (err: any) {
@@ -125,7 +125,7 @@ export const OtpVerificationScreen = ({ navigation, route }: any) => {
       try {
         setResendTimer(30);
         setOtpArray(['', '', '', '', '', '']);
-        const res = await useAuthStore.getState().sendOtpAsync(phoneNumber);
+        const res = await useAuthStore.getState().sendPhoneOtpAsync(phoneNumber);
         toast.success(res.message || 'A new OTP has been sent.');
         setTimeout(() => {
           inputs.current[0]?.focus();

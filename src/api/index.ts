@@ -5,3 +5,4 @@ export * from './shiftsApi';
 export * from './earningsApi';
 export * from './notificationsApi';
 export * from './ordersApi';
+export * from './mediaApi';

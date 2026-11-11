@@ -118,7 +118,7 @@ export const TryAndBuyHandoverView: React.FC<TryAndBuyHandoverViewProps> = ({
         <View style={styles.instructionBanner}>
           <KudiIcon name="package" size={16} color="#FF5A1F" />
           <Text style={styles.instructionText}>
-            Hand over all items to the customer. The 20-minute trial starts once handover is confirmed with OTP.
+            Hand over all items to the customer. The 10-minute trial starts once handover is confirmed with OTP.
           </Text>
         </View>
 
@@ -160,7 +160,7 @@ export const TryAndBuyHandoverView: React.FC<TryAndBuyHandoverViewProps> = ({
               <KudiIcon name="clock" size={20} color="#FF5A1F" />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.trialSpecTitle}>20 Minutes Trial Period</Text>
+              <Text style={styles.trialSpecTitle}>10 Minutes Trial Period</Text>
               <Text style={styles.trialSpecSub}>
                 Customer will try the garments and make Keep or Return selections directly in their app.
               </Text>
@@ -209,7 +209,7 @@ export const TryAndBuyHandoverView: React.FC<TryAndBuyHandoverViewProps> = ({
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Total trial value</Text>
             <Text style={styles.totalValue}>
-              ₹{(order.originalTotal || 3997).toLocaleString('en-IN')}
+              ₹{(order.originalTotal ?? 0).toLocaleString('en-IN')}
             </Text>
           </View>
         </View>

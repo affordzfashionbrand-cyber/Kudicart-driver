@@ -114,11 +114,10 @@ export const DocumentUploadDetailScreen = ({ route, navigation }: any) => {
       }
     }
 
-    updateDocument(docType, {
-      front: frontFile,
-      back: isPan ? null : backFile,
-      status: 'UPLOADED',
-    });
+    updateDocument(docType, 'front', frontFile);
+    if (!isPan) {
+      updateDocument(docType, 'back', backFile);
+    }
 
     toast.success(`${title} updated successfully.`);
     navigation.goBack();
@@ -156,14 +155,14 @@ export const DocumentUploadDetailScreen = ({ route, navigation }: any) => {
         ) : file ? (
           <View style={styles.selectedFileBox}>
             <View style={styles.fileIconBox}>
-              <KudiIcon name="file-text" size={20} color={colors.success} />
+              <KudiIcon name="document" size={20} color={colors.success} />
             </View>
             <View style={styles.fileInfo}>
               <Text style={styles.fileName} numberOfLines={1}>{file.name}</Text>
               <Text style={styles.fileMeta}>{file.size} · Uploaded</Text>
             </View>
             <TouchableOpacity onPress={() => handleRemove(side)} style={styles.iconButton} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <KudiIcon name="trash-2" size={18} color={colors.danger} />
+              <KudiIcon name="trash" size={18} color={colors.danger} />
             </TouchableOpacity>
           </View>
         ) : (
@@ -173,7 +172,7 @@ export const DocumentUploadDetailScreen = ({ route, navigation }: any) => {
             activeOpacity={0.8}
           >
             <View style={styles.emptyIconBox}>
-              <KudiIcon name="upload-cloud" size={20} color={colors.primary} />
+              <KudiIcon name="upload" size={20} color={colors.primary} />
             </View>
             <View style={styles.fileInfo}>
               <Text style={styles.emptyTitle}>Choose {label.toLowerCase()}</Text>
@@ -240,7 +239,7 @@ export const DocumentUploadDetailScreen = ({ route, navigation }: any) => {
             {isRejectedDoc && (
               <View style={styles.issueCard}>
                 <View style={styles.issueHeader}>
-                  <KudiIcon name="alert-triangle" size={16} color={colors.danger} />
+                  <KudiIcon name="warning" size={16} color={colors.danger} />
                   <Text style={styles.issueTitle}>Re-upload required</Text>
                 </View>
                 <Text style={styles.issueDescription}>

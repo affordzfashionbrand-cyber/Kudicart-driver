@@ -157,9 +157,15 @@ export const SelfieScreen = ({ navigation }: any) => {
                   </View>
                   <Text style={styles.emptyTitle}>Take a clear selfie</Text>
                   <Text style={styles.emptySubtitle}>Make sure your face is clearly visible and well lit.</Text>
-                  <TouchableOpacity style={styles.takeSelfieButton} onPress={handleTakeSelfie}>
+                  <TouchableOpacity
+                    style={styles.takeSelfieButton}
+                    onPress={handleTakeSelfie}
+                    disabled={isCapturing}
+                  >
                     <KudiIcon name="camera" color={colors.white} size={20} />
-                    <Text style={styles.takeSelfieButtonText}>Take Selfie</Text>
+                    <Text style={styles.takeSelfieButtonText}>
+                      {isCapturing ? 'Uploading...' : 'Take Selfie'}
+                    </Text>
                   </TouchableOpacity>
                 </View>
               ) : (

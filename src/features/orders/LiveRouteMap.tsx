@@ -1,8 +1,8 @@
-import React, { useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import React, { useCallback, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
+import { View, StyleSheet, Platform } from 'react-native';
 import { MAPS_CONFIG } from '../../config/maps';
 import { fetchRoadRoute } from '../../services/routingService';
-import { KudiIcon } from '../../components/KudiIcon';
+import { NativeRouteMap, NativeRouteMapRef } from './NativeRouteMap';
 
 export interface LiveRouteMapRef {
   recenter: () => void;
@@ -36,6 +36,7 @@ export const LiveRouteMap = forwardRef<LiveRouteMapRef, LiveRouteMapProps>(({
   const containerRef = useRef<any>(null);
   const mapInstanceRef = useRef<any>(null);
   const polylineRef = useRef<any>(null);
+  const nativeMapRef = useRef<NativeRouteMapRef | null>(null);
 
   const initialWaypoints =
     origin && destination && (origin.lat !== destination.lat || origin.lng !== destination.lng)
@@ -49,30 +50,37 @@ export const LiveRouteMap = forwardRef<LiveRouteMapRef, LiveRouteMapProps>(({
   // - Bottom sheet (bottom padding 55px)
   // - Left screen edge (left padding 45px)
   // - Or minimal padding in preview card mode (20px)
-  const fitRouteBounds = (animate = false) => {
-    if (!mapInstanceRef.current || !polylineRef.current) return;
-    const L = (window as any).L;
-    if (!L) return;
-    try {
-      const paddingLeft = isPreview ? 24 : 45;
-      const paddingTop = isPreview ? 24 : (isFullScreen ? 70 : 85);
-      const paddingRight = isPreview ? 24 : (isFullScreen ? 60 : 95);
-      const paddingBottom = isPreview ? 24 : (isFullScreen ? 50 : 55);
+  const fitRouteBounds = useCallback(
+    (animate = false) => {
+      if (!mapInstanceRef.current || !polylineRef.current) return;
+      const L = (window as any).L;
+      if (!L) return;
+      try {
+        const paddingLeft = isPreview ? 24 : 45;
+        const paddingTop = isPreview ? 24 : (isFullScreen ? 70 : 85);
+        const paddingRight = isPreview ? 24 : (isFullScreen ? 60 : 95);
+        const paddingBottom = isPreview ? 24 : (isFullScreen ? 50 : 55);
 
-      mapInstanceRef.current.fitBounds(polylineRef.current.getBounds(), {
-        paddingTopLeft: L.point(paddingLeft, paddingTop),
-        paddingBottomRight: L.point(paddingRight, paddingBottom),
-        maxZoom: 16,
-        animate,
-      });
-    } catch (e) {
-      // ignore
-    }
-  };
+        mapInstanceRef.current.fitBounds(polylineRef.current.getBounds(), {
+          paddingTopLeft: L.point(paddingLeft, paddingTop),
+          paddingBottomRight: L.point(paddingRight, paddingBottom),
+          maxZoom: 16,
+          animate,
+        });
+      } catch (e) {
+        // ignore
+      }
+    },
+    [isFullScreen, isPreview],
+  );
 
   useImperativeHandle(ref, () => ({
     recenter: () => {
-      fitRouteBounds(true);
+      if (Platform.OS === 'web') {
+        fitRouteBounds(true);
+      } else {
+        nativeMapRef.current?.recenter();
+      }
     },
   }));
 
@@ -282,6 +290,8 @@ export const LiveRouteMap = forwardRef<LiveRouteMapRef, LiveRouteMapProps>(({
         mapInstanceRef.current = null;
       }
     };
+    // Mount-once Leaflet initialization; layout/coordinate updates are handled in effects below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Invalidate size and refit complete route on layout or full-screen changes
@@ -296,7 +306,7 @@ export const LiveRouteMap = forwardRef<LiveRouteMapRef, LiveRouteMapProps>(({
         }
       }, 150);
     }
-  }, [isFullScreen, isPreview]);
+  }, [isFullScreen, isPreview, fitRouteBounds]);
 
   // Dynamically fetch road-following route from routing service and update polyline
   useEffect(() => {
@@ -312,7 +322,7 @@ export const LiveRouteMap = forwardRef<LiveRouteMapRef, LiveRouteMapProps>(({
     return () => {
       isMounted = false;
     };
-  }, [origin.lat, origin.lng, destination.lat, destination.lng]);
+  }, [origin, destination, fitRouteBounds]);
 
   return (
     <View style={styles.container}>
@@ -325,13 +335,15 @@ export const LiveRouteMap = forwardRef<LiveRouteMapRef, LiveRouteMapProps>(({
           ]}
         />
       ) : (
-        <View style={styles.nativeNoticeCard}>
-          <KudiIcon name="map-pin" size={28} color="#8A8781" />
-          <Text style={styles.nativeNoticeTitle}>Live Route Navigation</Text>
-          <Text style={styles.nativeNoticeSubtitle}>
-            Native map rendering (react-native-maps) is not linked in this device build. OpenStreetMap live route tracking is active on Web.
-          </Text>
-        </View>
+        <NativeRouteMap
+          ref={nativeMapRef}
+          origin={origin}
+          destination={destination}
+          originLabel={originLabel}
+          destinationLabel={destinationLabel}
+          isFullScreen={isFullScreen}
+          isPreview={isPreview}
+        />
       )}
     </View>
   );
@@ -348,26 +360,5 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     backgroundColor: '#F3F1EC',
-  },
-  nativeNoticeCard: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-    backgroundColor: '#F3F1EC',
-  },
-  nativeNoticeTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#171716',
-    marginTop: 12,
-    marginBottom: 6,
-  },
-  nativeNoticeSubtitle: {
-    fontSize: 13,
-    color: '#65635F',
-    textAlign: 'center',
-    lineHeight: 18,
-    maxWidth: 280,
   },
 });

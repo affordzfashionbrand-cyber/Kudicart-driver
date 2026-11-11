@@ -4,6 +4,11 @@ import { Order } from '../../../store/useOrderStore';
 import { KudiIcon } from '../../../components/KudiIcon';
 import { LiveRouteMap, LiveRouteMapRef } from '../LiveRouteMap';
 
+interface Coordinates {
+  lat: number;
+  lng: number;
+}
+
 interface OrderMapNavigationModeProps {
   order: Order;
   mapRef: React.RefObject<LiveRouteMapRef>;
@@ -13,8 +18,8 @@ interface OrderMapNavigationModeProps {
   isReturning: boolean;
   theme: any;
   onMarkArrived: () => void;
-  hubCoordinates: { latitude: number; longitude: number };
-  destCoordinates: { latitude: number; longitude: number };
+  hubCoordinates: Coordinates;
+  destCoordinates: Coordinates;
 }
 
 export const OrderMapNavigationMode: React.FC<OrderMapNavigationModeProps> = ({

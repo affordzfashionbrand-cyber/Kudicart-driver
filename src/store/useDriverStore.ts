@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { profileApi, ordersApi } from '../api';
+import { toast } from './useToastStore';
 
 
 export interface DriverProfile {
@@ -86,7 +87,8 @@ interface DriverState {
     workingDays: number;
     status: 'IN_PROGRESS' | 'ELIGIBLE';
   };
-  
+  lastError: string | null;
+
   fetchProfileAsync: () => Promise<void>;
   fetchDashboardAsync: () => Promise<void>;
   setIsOnline: (isOnline: boolean) => void;
@@ -159,6 +161,7 @@ export const useDriverStore = create<DriverState>((set) => ({
     status: 'IN_PROGRESS',
   },
   activeSurges: [],
+  lastError: null,
 
   fetchProfileAsync: async () => {
     try {
@@ -209,10 +212,11 @@ export const useDriverStore = create<DriverState>((set) => ({
           isOnline: typeof res.isOnline === 'boolean' ? res.isOnline : state.isOnline,
           assignedStore: res.assignedStore || state.assignedStore,
           workSummary: res.workSummary || state.workSummary,
+          lastError: null,
         };
       });
-    } catch {
-      // Offline or unauthenticated
+    } catch (err: any) {
+      set({ lastError: err?.message || 'Unable to load driver profile' });
     }
   },
 
@@ -221,7 +225,7 @@ export const useDriverStore = create<DriverState>((set) => ({
       const data = await ordersApi.getDashboard();
       if (!data) return;
       set((state) => {
-        const profileData = data.profile;
+        const profileData = data.profile || data.driver;
         let updatedProfile = state.profile;
         if (profileData) {
           const fullName = profileData.fullName || profileData.name || state.profile.fullName;
@@ -253,15 +257,55 @@ export const useDriverStore = create<DriverState>((set) => ({
           };
         }
 
+        const hasBackendWorkMetrics =
+          typeof data.todayEarnings === 'number' ||
+          typeof data.deliveriesCompletedToday === 'number';
+        const resolvedWorkSummary =
+          data.workSummary ||
+          (hasBackendWorkMetrics
+            ? {
+                ...(state.workSummary || {
+                  totalEarnings: 0,
+                  loginHours: '0h 00m',
+                  ordersDone: 0,
+                }),
+                totalEarnings:
+                  typeof data.todayEarnings === 'number'
+                    ? data.todayEarnings
+                    : state.workSummary?.totalEarnings ?? 0,
+                ordersDone:
+                  typeof data.deliveriesCompletedToday === 'number'
+                    ? data.deliveriesCompletedToday
+                    : state.workSummary?.ordersDone ?? 0,
+              }
+            : state.workSummary);
+
+        const resolvedKyc = profileData?.kycStatus
+          ? {
+              ...state.kyc,
+              status: profileData.kycStatus,
+              licenseStatus: state.kyc?.licenseStatus || profileData.kycStatus,
+              aadhaarStatus: state.kyc?.aadhaarStatus || profileData.kycStatus,
+              panStatus: state.kyc?.panStatus || profileData.kycStatus,
+            }
+          : state.kyc;
+
         return {
           profile: updatedProfile,
-          isOnline: typeof data.isOnline === 'boolean' ? data.isOnline : state.isOnline,
-          workSummary: data.workSummary || state.workSummary,
+          kyc: resolvedKyc,
+          isOnline:
+            typeof data.isOnline === 'boolean'
+              ? data.isOnline
+              : typeof profileData?.isOnline === 'boolean'
+                ? profileData.isOnline
+                : state.isOnline,
+          workSummary: resolvedWorkSummary,
           activeSurges: Array.isArray(data.activeSurges) ? data.activeSurges : state.activeSurges,
+          lastError: null,
         };
       });
-    } catch {
-      // Offline fallback
+    } catch (err: any) {
+      set({ lastError: err?.message || 'Unable to load driver dashboard' });
     }
   },
 
@@ -284,18 +328,31 @@ export const useDriverStore = create<DriverState>((set) => ({
         updatedProfile.name = `${first}${lastInitial}`;
         updatedProfile.avatarInitial = parts.map((p) => p[0]).slice(0, 2).join('').toUpperCase() || 'DP';
       }
-      return { profile: updatedProfile };
+      return { profile: updatedProfile, lastError: null };
     });
-    profileApi.updateDetails(updates).catch(() => {});
+    profileApi.updateDetails(updates).catch((err: any) => {
+      const msg = err?.message || 'Unable to save profile details';
+      set({ lastError: msg });
+      try {
+        toast.show({ type: 'error', message: msg });
+      } catch {}
+    });
   },
 
   updateVehicle: (updates) => {
-    set((state) => ({ vehicle: { ...state.vehicle, ...updates } }));
-    profileApi.updateVehicle(updates).catch(() => {});
+    set((state) => ({ vehicle: { ...state.vehicle, ...updates }, lastError: null }));
+    profileApi.updateVehicle(updates).catch((err: any) => {
+      const msg = err?.message || 'Unable to save vehicle details';
+      set({ lastError: msg });
+      try {
+        toast.show({ type: 'error', message: msg });
+      } catch {}
+    });
   },
 
   updateDocument: (docType, side, file) => {
     set((state) => ({
+      lastError: null,
       documents: {
         ...state.documents,
         [docType]: {
@@ -305,32 +362,49 @@ export const useDriverStore = create<DriverState>((set) => ({
       },
     }));
     if (file) {
-      profileApi.uploadDocument({
-        docType: docType as any,
-        side,
-        fileUri: file.uri,
-        fileName: file.name,
-        fileSize: file.size,
-        mimeType: file.type,
-      }).catch(() => {});
+      profileApi
+        .uploadDocument({
+          docType: docType as any,
+          side,
+          fileUri: file.uri,
+          fileName: file.name,
+          fileSize: file.size,
+          mimeType: file.type,
+        })
+        .catch((err: any) => {
+          const msg = err?.message || 'Unable to upload KYC document';
+          set({ lastError: msg });
+          try {
+            toast.show({ type: 'error', message: msg });
+          } catch {}
+        });
     }
   },
 
   setSelfie: (file) => {
     set((state) => ({
+      lastError: null,
       documents: {
         ...state.documents,
         selfie: file,
       },
     }));
     if (file) {
-      profileApi.uploadDocument({
-        docType: 'selfie',
-        fileUri: file.uri,
-        fileName: file.name,
-        fileSize: file.size,
-        mimeType: file.type,
-      }).catch(() => {});
+      profileApi
+        .uploadDocument({
+          docType: 'selfie',
+          fileUri: file.uri,
+          fileName: file.name,
+          fileSize: file.size,
+          mimeType: file.type,
+        })
+        .catch((err: any) => {
+          const msg = err?.message || 'Unable to upload selfie';
+          set({ lastError: msg });
+          try {
+            toast.show({ type: 'error', message: msg });
+          } catch {}
+        });
     }
   },
   clearKycData: () => set({

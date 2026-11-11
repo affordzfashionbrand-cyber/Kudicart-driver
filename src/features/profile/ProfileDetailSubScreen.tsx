@@ -84,7 +84,7 @@ export const ProfileDetailSubScreen = ({ navigation, route }: any) => {
       id: 'rc',
       title: 'Vehicle RC',
       rawNumber: vehicle.registrationNumber || vehicle.rcNumber || '',
-      maskedNumber: vehicle.registrationNumber || vehicle.rcNumber || 'KA 05 MJ 4821',
+      maskedNumber: vehicle.registrationNumber || vehicle.rcNumber || 'Not provided',
       status: vehicle.rcStatus || 'Verified',
       description: 'Vehicle registration certificate matching your active delivery vehicle.',
     },

@@ -14,7 +14,7 @@ const Stack = createNativeStackNavigator();
 export const KycNavigator = () => {
   const { kycStatus } = useAuthStore();
 
-  if (kycStatus === 'PENDING') {
+  if (kycStatus === 'PENDING' || kycStatus === 'UNDER_REVIEW') {
     return (
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="VerificationPending" component={VerificationPendingScreen} />

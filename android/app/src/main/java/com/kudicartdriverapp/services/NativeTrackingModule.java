@@ -67,10 +67,24 @@ public class NativeTrackingModule extends ReactContextBaseJavaModule {
 
     private static final String SECURE_PREFS_NAME = "kudicart_driver_secure_prefs";
 
+    private android.content.SharedPreferences getEncryptedPrefs() throws Exception {
+        androidx.security.crypto.MasterKey masterKey =
+                new androidx.security.crypto.MasterKey.Builder(reactContext)
+                        .setKeyScheme(androidx.security.crypto.MasterKey.KeyScheme.AES256_GCM)
+                        .build();
+        return androidx.security.crypto.EncryptedSharedPreferences.create(
+                reactContext,
+                SECURE_PREFS_NAME,
+                masterKey,
+                androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+        );
+    }
+
     @ReactMethod
     public void setSecureItem(String key, String value, Promise promise) {
         try {
-            android.content.SharedPreferences prefs = reactContext.getSharedPreferences(SECURE_PREFS_NAME, Context.MODE_PRIVATE);
+            android.content.SharedPreferences prefs = getEncryptedPrefs();
             prefs.edit().putString(key, value).apply();
             promise.resolve(true);
         } catch (Exception e) {
@@ -81,7 +95,7 @@ public class NativeTrackingModule extends ReactContextBaseJavaModule {
     @ReactMethod
     public void getSecureItem(String key, Promise promise) {
         try {
-            android.content.SharedPreferences prefs = reactContext.getSharedPreferences(SECURE_PREFS_NAME, Context.MODE_PRIVATE);
+            android.content.SharedPreferences prefs = getEncryptedPrefs();
             String value = prefs.getString(key, null);
             promise.resolve(value);
         } catch (Exception e) {
@@ -92,7 +106,7 @@ public class NativeTrackingModule extends ReactContextBaseJavaModule {
     @ReactMethod
     public void removeSecureItem(String key, Promise promise) {
         try {
-            android.content.SharedPreferences prefs = reactContext.getSharedPreferences(SECURE_PREFS_NAME, Context.MODE_PRIVATE);
+            android.content.SharedPreferences prefs = getEncryptedPrefs();
             prefs.edit().remove(key).apply();
             promise.resolve(true);
         } catch (Exception e) {

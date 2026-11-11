@@ -38,11 +38,11 @@ export const ProfileScreen = ({ navigation }: any) => {
   const { profile, isOnline } = useDriverStore();
   const { logout } = useAuthStore();
 
-  // Driver Name formatting: "Aman" / "Singh" or store values
-  const driverFullName = profile.fullName || profile.name || 'Aman Singh';
-  const nameParts = driverFullName.trim().split(' ');
-  const firstName = nameParts[0] || 'Aman';
-  const lastName = nameParts.slice(1).join(' ') || 'Singh';
+  // Driver Name formatting from authenticated store profile
+  const driverFullName = profile.fullName || profile.name || 'Delivery Partner';
+  const nameParts = driverFullName.trim().split(/\s+/);
+  const firstName = nameParts[0] || 'Delivery';
+  const lastName = nameParts.slice(1).join(' ');
 
   // Focused delivery partner menu items
   const menuItems = [
@@ -112,7 +112,7 @@ export const ProfileScreen = ({ navigation }: any) => {
               <View style={styles.avatarCircle}>
                 <Text style={styles.avatarInitials}>
                   {firstName.charAt(0)}
-                  {lastName.charAt(0)}
+                  {lastName ? lastName.charAt(0) : ''}
                 </Text>
               </View>
               {isOnline && <View style={styles.onlineBadgeDot} />}
@@ -120,7 +120,7 @@ export const ProfileScreen = ({ navigation }: any) => {
 
             <View style={styles.nameCol}>
               <Text style={styles.profileFirstName}>{firstName}</Text>
-              <Text style={styles.profileLastName}>{lastName}</Text>
+              {lastName ? <Text style={styles.profileLastName}>{lastName}</Text> : null}
               <View style={styles.roleTag}>
                 <Text style={styles.roleTagText}>DELIVERY PARTNER</Text>
               </View>
@@ -152,7 +152,7 @@ export const ProfileScreen = ({ navigation }: any) => {
         <View style={styles.updateCard}>
           <View style={styles.updateLeft}>
             <View style={styles.updateIconContainer}>
-              <KudiIcon name="arrow-up" size={18} color="#FF5A1F" />
+              <KudiIcon name="chevron-up" size={18} color="#FF5A1F" />
             </View>
             <View style={styles.updateTextCol}>
               <Text style={styles.updateTitle}>Update Available</Text>

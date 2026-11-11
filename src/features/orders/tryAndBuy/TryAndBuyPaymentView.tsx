@@ -17,7 +17,7 @@ export const TryAndBuyPaymentView: React.FC<TryAndBuyPaymentViewProps> = ({
 }) => {
   const [cashCollected, setCashCollected] = useState(false);
 
-  const retainedItems = (order.items || []).filter((i) => i.decision === 'KEEP');
+  const retainedItems = (order.items || []).filter((i) => i.decision !== 'RETURN');
   const returnedItems = (order.items || []).filter((i) => i.decision === 'RETURN');
 
   const retainedCount = retainedItems.length;
@@ -25,9 +25,17 @@ export const TryAndBuyPaymentView: React.FC<TryAndBuyPaymentViewProps> = ({
   const hasReturns = returnedCount > 0;
 
   const isCod = order.paymentMethod === 'COD' || !order.paymentMethod;
-  const finalAmount = order.finalPayableTotal ?? 2098;
-  const originalAmount = order.originalTotal ?? 3997;
-  const refundAmount = order.refundAmount ?? (originalAmount - finalAmount);
+  const computedOriginal = (order.items || []).reduce(
+    (sum, i) => sum + (Number(i.price) || 0) * (Number(i.quantity) || 1),
+    0,
+  );
+  const computedFinal = retainedItems.reduce(
+    (sum, i) => sum + (Number(i.price) || 0) * (Number(i.quantity) || 1),
+    0,
+  );
+  const originalAmount = order.originalTotal ?? computedOriginal;
+  const finalAmount = order.finalPayableTotal ?? computedFinal;
+  const refundAmount = order.refundAmount ?? Math.max(0, originalAmount - finalAmount);
 
   // If COD and amount > 0, cash collection must be verified
   const isActionAllowed = !isCod || finalAmount === 0 || cashCollected;

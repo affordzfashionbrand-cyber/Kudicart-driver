@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
 import { colors } from '../../theme/colors';
 import { KudiIcon } from '../../components/KudiIcon';
@@ -95,7 +94,7 @@ export const PolicyDocView: React.FC<PolicyDocViewProps> = ({ document }) => {
       <View style={styles.footerCard}>
         <Text style={styles.footerHeading}>Partner Acknowledgement</Text>
         <Text style={styles.footerNote}>
-          By registering and accepting orders on Affordz, the partner acknowledges
+          By registering and accepting orders on KudiCart, the partner acknowledges
           that they have reviewed and agree to the operational rules, safety
           requirements, and policies contained herein.
         </Text>

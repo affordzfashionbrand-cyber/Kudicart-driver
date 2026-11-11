@@ -1,4 +1,4 @@
-import { getDriverFieldError, formatAadhaar, formatDOB, formatPAN } from '../features/kyc/driverValidation';
+import { getDriverFieldError } from '../features/kyc/driverValidation';
 import { getVehicleFieldError, validateRegistrationNumber, VEHICLE_TYPES } from '../features/kyc/vehicleValidation';
 
 describe('KudiCart Driver — Form Validation & Phone Number Authority Tests', () => {

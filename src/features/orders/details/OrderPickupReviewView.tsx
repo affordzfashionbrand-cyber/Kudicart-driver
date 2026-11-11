@@ -10,6 +10,7 @@ interface OrderPickupReviewViewProps {
   setPickupImages: (images: string[]) => void;
   onOpenCamera: () => void;
   onConfirmPickup: () => void;
+  onStartDelivery?: () => void;
   onBack: () => void;
   defaultProductThumbnails: string[];
 }
@@ -20,9 +21,11 @@ export const OrderPickupReviewView: React.FC<OrderPickupReviewViewProps> = ({
   setPickupImages,
   onOpenCamera,
   onConfirmPickup,
+  onStartDelivery,
   onBack,
   defaultProductThumbnails,
 }) => {
+  const isAlreadyPickedUp = order.status === 'PICKED_UP';
   return (
     <SafeAreaView style={[styles.main, { backgroundColor: '#F3F1EC' }]}>
       {/* 1. TOP NAVIGATION BAR */}
@@ -50,7 +53,7 @@ export const OrderPickupReviewView: React.FC<OrderPickupReviewViewProps> = ({
             <View style={[styles.instructionBanner, { backgroundColor: '#FFF0E8', borderColor: '#FFD9C7' }]}>
               <KudiIcon name="clock" size={16} color="#FF5A1F" />
               <Text style={styles.instructionText}>
-                Try & Buy Order: Verify garment sizes & colors. Customer receives a 20-min trial upon delivery.
+                Try & Buy Order: Verify garment sizes & colors. Customer receives a 10-min trial upon delivery.
               </Text>
             </View>
           ) : (
@@ -85,7 +88,11 @@ export const OrderPickupReviewView: React.FC<OrderPickupReviewViewProps> = ({
                       ) : null}
                     </View>
                     <Image
-                      source={{ uri: defaultProductThumbnails[index % defaultProductThumbnails.length] }}
+                      source={{
+                        uri:
+                          item.image ||
+                          defaultProductThumbnails[index % defaultProductThumbnails.length],
+                      }}
                       style={styles.productThumb}
                       resizeMode="cover"
                     />
@@ -177,24 +184,36 @@ export const OrderPickupReviewView: React.FC<OrderPickupReviewViewProps> = ({
 
       {/* 3. FIXED BOTTOM ACTION */}
       <View style={styles.reviewFooter}>
-        <TouchableOpacity
-          style={[
-            styles.confirmPickupBtn,
-            pickupImages.length > 0 ? styles.confirmPickupBtnActive : styles.confirmPickupBtnDisabled,
-          ]}
-          onPress={onConfirmPickup}
-          disabled={pickupImages.length === 0}
-          activeOpacity={0.85}
-        >
-          <Text
-            style={[
-              styles.confirmPickupBtnText,
-              pickupImages.length > 0 ? styles.confirmPickupBtnTextActive : styles.confirmPickupBtnTextDisabled,
-            ]}
+        {isAlreadyPickedUp ? (
+          <TouchableOpacity
+            style={[styles.confirmPickupBtn, styles.confirmPickupBtnActive]}
+            onPress={onStartDelivery || onConfirmPickup}
+            activeOpacity={0.85}
           >
-            Confirm pickup
-          </Text>
-        </TouchableOpacity>
+            <Text style={[styles.confirmPickupBtnText, styles.confirmPickupBtnTextActive]}>
+              Start delivery
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={[
+              styles.confirmPickupBtn,
+              pickupImages.length > 0 ? styles.confirmPickupBtnActive : styles.confirmPickupBtnDisabled,
+            ]}
+            onPress={onConfirmPickup}
+            disabled={pickupImages.length === 0}
+            activeOpacity={0.85}
+          >
+            <Text
+              style={[
+                styles.confirmPickupBtnText,
+                pickupImages.length > 0 ? styles.confirmPickupBtnTextActive : styles.confirmPickupBtnTextDisabled,
+              ]}
+            >
+              Confirm pickup
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     </SafeAreaView>
   );

@@ -172,7 +172,7 @@ export const NotificationsScreen = ({ navigation }: any) => {
         {filteredList.length === 0 ? (
           <View style={styles.emptyContainer}>
             <View style={styles.emptyIconWrap}>
-              <KudiIcon name="bell-off" size={28} color="#8A8781" />
+              <KudiIcon name="notifications" size={28} color="#8A8781" />
             </View>
             <Text style={styles.emptyTitle}>No notifications</Text>
             <Text style={styles.emptySubtitle}>

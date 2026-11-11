@@ -1,5 +1,8 @@
 apply plugin: "com.android.application"
 apply plugin: "com.facebook.react"
+if (file("google-services.json").exists()) {
+    apply plugin: "com.google.gms.google-services"
+}
 
 /**
  * This is the configuration block to customize your React Native Android app.
@@ -53,7 +56,7 @@ react {
 /**
  * Set this to true to Run Proguard on Release builds to minify the Java bytecode.
  */
-def enableProguardInReleaseBuilds = false
+def enableProguardInReleaseBuilds = true
 
 /**
  * The preferred build flavor of JavaScriptCore (JSC)
@@ -94,18 +97,35 @@ android {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            // Production signing setup (D-028 / D-035):
+            // Configure KUDICART_UPLOAD_STORE_FILE, KUDICART_UPLOAD_STORE_PASSWORD,
+            // KUDICART_UPLOAD_KEY_ALIAS, and KUDICART_UPLOAD_KEY_PASSWORD in Gradle
+            // properties or CI secrets before cutting a Play Store release bundle.
+            def releaseStoreFile = System.getenv("KUDICART_UPLOAD_STORE_FILE") ?: project.findProperty("KUDICART_UPLOAD_STORE_FILE")
+            if (releaseStoreFile) {
+                signingConfig signingConfigs.create("release") {
+                    storeFile file(releaseStoreFile)
+                    storePassword System.getenv("KUDICART_UPLOAD_STORE_PASSWORD") ?: project.findProperty("KUDICART_UPLOAD_STORE_PASSWORD")
+                    keyAlias System.getenv("KUDICART_UPLOAD_KEY_ALIAS") ?: project.findProperty("KUDICART_UPLOAD_KEY_ALIAS")
+                    keyPassword System.getenv("KUDICART_UPLOAD_KEY_PASSWORD") ?: project.findProperty("KUDICART_UPLOAD_KEY_PASSWORD")
+                }
+            } else {
+                signingConfig signingConfigs.debug
+            }
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
     }
 }
 
+android.defaultConfig.manifestPlaceholders = [
+    GOOGLE_MAPS_API_KEY: System.getenv("GOOGLE_MAPS_API_KEY") ?: (project.findProperty("GOOGLE_MAPS_API_KEY") ?: "")
+]
+
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
     debugImplementation("com.facebook.flipper:flipper:${FLIPPER_VERSION}")
     debugImplementation("com.facebook.flipper:flipper-network-plugin:${FLIPPER_VERSION}") {

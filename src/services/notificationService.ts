@@ -1,19 +1,11 @@
 import { Platform } from 'react-native';
 import { request } from '../api/client';
+import { getFcmMessaging as getMessaging } from './fcmMessaging';
 
 let currentFcmToken: string | null = null;
 let unsubscribeTokenRefresh: (() => void) | null = null;
 let unsubscribeOnMessage: (() => void) | null = null;
-
-// Dynamically resolve messaging to support both native Android/iOS and web/jest environments
-const getMessaging = () => {
-  try {
-    const messagingModule = require('@react-native-firebase/messaging');
-    return messagingModule.default || messagingModule;
-  } catch {
-    return null;
-  }
-};
+let unsubscribeOnNotificationOpened: (() => void) | null = null;
 
 export const notificationService = {
   /**
@@ -83,11 +75,16 @@ export const notificationService = {
   },
 
   /**
-   * Sets up listeners for token refresh and incoming messages
+   * Sets up listeners for token refresh, foreground messages, and notification taps
    */
-  setupNotificationListeners(onMessageReceived?: (message: any) => void) {
+  setupNotificationListeners(
+    onMessageReceived?: (message: any) => void,
+    onNotificationOpened?: (message: any) => void,
+  ) {
     const messaging = getMessaging();
     if (!messaging) return;
+
+    this.teardownListeners();
 
     // Listen to token refresh
     if (typeof messaging().onTokenRefresh === 'function') {
@@ -105,6 +102,28 @@ export const notificationService = {
         }
       });
     }
+
+    // Background -> foreground tap handler
+    const tapHandler = onNotificationOpened || onMessageReceived;
+    if (typeof messaging().onNotificationOpenedApp === 'function') {
+      unsubscribeOnNotificationOpened = messaging().onNotificationOpenedApp((remoteMessage: any) => {
+        if (tapHandler) {
+          tapHandler(remoteMessage);
+        }
+      });
+    }
+
+    // Quit -> launch via notification tap handler
+    if (typeof messaging().getInitialNotification === 'function') {
+      messaging()
+        .getInitialNotification()
+        .then((remoteMessage: any) => {
+          if (remoteMessage && tapHandler) {
+            tapHandler(remoteMessage);
+          }
+        })
+        .catch(() => {});
+    }
   },
 
   /**
@@ -118,6 +137,10 @@ export const notificationService = {
     if (unsubscribeOnMessage) {
       unsubscribeOnMessage();
       unsubscribeOnMessage = null;
+    }
+    if (unsubscribeOnNotificationOpened) {
+      unsubscribeOnNotificationOpened();
+      unsubscribeOnNotificationOpened = null;
     }
   },
 

@@ -1,5 +1,6 @@
 import { request } from './client';
-import { DriverProfile, VehicleProfile, DocumentFile } from '../store/useDriverStore';
+import { isLocalFileUri, uploadMediaFile } from './mediaApi';
+import { DriverProfile, VehicleProfile } from '../store/useDriverStore';
 
 export interface DocumentUploadPayload {
   docType: 'aadhaar' | 'pan' | 'drivingLicence' | 'vehicleRc' | 'selfie';
@@ -30,9 +31,20 @@ export const profileApi = {
   },
 
   uploadDocument: async (payload: DocumentUploadPayload) => {
+    let resolvedUri = payload.fileUri;
+    if (isLocalFileUri(resolvedUri)) {
+      resolvedUri = await uploadMediaFile(
+        resolvedUri,
+        payload.fileName,
+        payload.mimeType,
+      );
+    }
     return request<any>('/driver/profile/documents/upload', {
       method: 'POST',
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        ...payload,
+        fileUri: resolvedUri,
+      }),
     });
   },
 
@@ -51,7 +63,15 @@ export const profileApi = {
     });
   },
 
-  updateLocation: async (coords: { latitude: number; longitude: number; heading?: number }) => {
+  updateLocation: async (coords: {
+    latitude: number;
+    longitude: number;
+    heading?: number;
+    speed?: number;
+    accuracy?: number;
+    timestamp?: number;
+    orderId?: string;
+  }) => {
     return request<any>('/driver/profile/location', {
       method: 'POST',
       body: JSON.stringify(coords),

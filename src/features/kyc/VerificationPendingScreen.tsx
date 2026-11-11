@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, Image, TouchableOpacity, ScrollView, Platform, Animated } from 'react-native';
+import { View, Text, Image, TouchableOpacity, ScrollView, Animated } from 'react-native';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { colors } from '../../theme/colors';
 import { KudiIcon } from '../../components/KudiIcon';

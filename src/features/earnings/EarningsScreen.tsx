@@ -193,7 +193,7 @@ export const EarningsScreen = ({ navigation }: any) => {
             {/* Daily Breakdown Section */}
             <Text style={styles.sectionTitle}>Daily breakdown</Text>
 
-            {currentWeek.days.map((day, index) => {
+            {currentWeek.days.map((day: any, index: number) => {
               const isLast = index === currentWeek.days.length - 1;
               return (
                 <TouchableOpacity

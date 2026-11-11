@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Linking } from 'react-native';
-import { colors } from '../../../theme/colors';
 import { KudiIcon } from '../../../components/KudiIcon';
 import { toast } from '../../../store/useToastStore';
 import { subviewStyles as styles } from './profileSubviews.styles';

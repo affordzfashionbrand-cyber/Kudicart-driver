@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { Order } from '../../../store/useOrderStore';
 import { KudiIcon } from '../../../components/KudiIcon';
@@ -7,6 +7,7 @@ import { styles } from './storeReconciliation.styles';
 interface TryAndBuyStoreReconciliationViewProps {
   order: Order;
   onReconcileReturn: () => void;
+  onRefreshStatus?: () => void;
   onBack?: () => void;
 }
 
@@ -19,9 +20,10 @@ const defaultThumbnails = [
 export const TryAndBuyStoreReconciliationView: React.FC<TryAndBuyStoreReconciliationViewProps> = ({
   order,
   onReconcileReturn,
+  onRefreshStatus,
   onBack,
 }) => {
-  const [hubConfirmed, setHubConfirmed] = useState(false);
+  const isSupervisorConfirmed = order.storeReconciliationStatus === 'RECONCILED';
   const returnedItems = (order.items || []).filter((i) => i.decision === 'RETURN');
 
   return (
@@ -129,44 +131,60 @@ export const TryAndBuyStoreReconciliationView: React.FC<TryAndBuyStoreReconcilia
           </View>
         )}
 
-        {/* HUB INVENTORY EXECUTIVE CONFIRMATION */}
-        <TouchableOpacity
-          style={[styles.verificationCard, hubConfirmed && styles.verificationCardActive]}
-          onPress={() => setHubConfirmed(!hubConfirmed)}
-          activeOpacity={0.85}
+        {/* HUB INVENTORY EXECUTIVE CONFIRMATION (READ-ONLY SERVER STATE) */}
+        <View
+          style={[styles.verificationCard, isSupervisorConfirmed && styles.verificationCardActive]}
         >
-          <View style={[styles.checkbox, hubConfirmed && styles.checkboxActive]}>
-            {hubConfirmed && <KudiIcon name="check" size={14} color="#FFFFFF" />}
+          <View style={[styles.checkbox, isSupervisorConfirmed && styles.checkboxActive]}>
+            {isSupervisorConfirmed && <KudiIcon name="check" size={14} color="#FFFFFF" />}
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.verificationTitle}>Hub supervisor receipt confirmed</Text>
+            <Text style={styles.verificationTitle}>
+              {isSupervisorConfirmed
+                ? 'Hub supervisor receipt confirmed'
+                : 'Awaiting hub supervisor verification'}
+            </Text>
             <Text style={styles.verificationSub}>
-              Darkstore inwarding executive has scanned barcodes and verified physical condition.
+              {isSupervisorConfirmed
+                ? 'Darkstore inwarding executive has scanned barcodes and confirmed return condition.'
+                : 'Hand over the returned garments to the darkstore supervisor to confirm inwarding in their portal.'}
             </Text>
           </View>
-        </TouchableOpacity>
+        </View>
       </ScrollView>
 
       {/* 3. FIXED BOTTOM ACTION */}
       <View style={styles.footer}>
-        <TouchableOpacity
-          style={[
-            styles.primaryBtn,
-            hubConfirmed ? styles.primaryBtnActive : styles.primaryBtnDisabled,
-          ]}
-          onPress={onReconcileReturn}
-          disabled={!hubConfirmed}
-          activeOpacity={0.88}
-        >
-          <Text
-            style={[
-              styles.primaryBtnText,
-              hubConfirmed ? styles.primaryBtnTextActive : styles.primaryBtnTextDisabled,
-            ]}
+        {isSupervisorConfirmed ? (
+          <TouchableOpacity
+            style={[styles.primaryBtn, styles.primaryBtnActive]}
+            onPress={onReconcileReturn}
+            activeOpacity={0.88}
           >
-            Complete store return & reconcile
-          </Text>
-        </TouchableOpacity>
+            <Text style={[styles.primaryBtnText, styles.primaryBtnTextActive]}>
+              Complete store return & reconcile
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={[
+              styles.primaryBtn,
+              onRefreshStatus ? styles.primaryBtnActive : styles.primaryBtnDisabled,
+            ]}
+            onPress={onRefreshStatus}
+            disabled={!onRefreshStatus}
+            activeOpacity={0.88}
+          >
+            <Text
+              style={[
+                styles.primaryBtnText,
+                onRefreshStatus ? styles.primaryBtnTextActive : styles.primaryBtnTextDisabled,
+              ]}
+            >
+              {onRefreshStatus ? 'Refresh hub verification status' : 'Waiting for hub confirmation'}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );

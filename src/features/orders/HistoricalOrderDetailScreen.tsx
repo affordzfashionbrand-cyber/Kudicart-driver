@@ -268,7 +268,7 @@ export const HistoricalOrderDetailScreen = ({ route, navigation }: any) => {
             toast.info(`Query raised for order ${order.id}. Support team will contact you.`);
           }}
         >
-          <KudiIcon name="help-circle" size={16} color={colors.textSecondary} />
+          <KudiIcon name="help" size={16} color={colors.textSecondary} />
           <Text style={styles.secondaryHelpText}>Have an issue with this trip?</Text>
         </TouchableOpacity>
       </ScrollView>

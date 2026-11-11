@@ -76,12 +76,12 @@ export const DriverProfileDetailsScreen = ({ navigation }: any) => {
 
           <View style={styles.row}>
             <Text style={styles.rowLabel}>Registered Phone</Text>
-            <Text style={styles.rowValue}>{profile.phone || '+91 98765 43210'}</Text>
+            <Text style={styles.rowValue}>{profile.phone || 'Not provided'}</Text>
           </View>
 
           <View style={styles.row}>
             <Text style={styles.rowLabel}>Date of Birth</Text>
-            <Text style={styles.rowValue}>{profile.dob || '15/08/1996'}</Text>
+            <Text style={styles.rowValue}>{profile.dob || 'Not provided'}</Text>
           </View>
 
           <View style={styles.row}>
@@ -105,18 +105,20 @@ export const DriverProfileDetailsScreen = ({ navigation }: any) => {
 
           <View style={styles.row}>
             <Text style={styles.rowLabel}>Registration No.</Text>
-            <Text style={styles.rowValue}>{vehicle.registrationNumber || 'KA 05 MJ 4821'}</Text>
+            <Text style={styles.rowValue}>{vehicle.registrationNumber || 'Not provided'}</Text>
           </View>
 
           <View style={styles.row}>
             <Text style={styles.rowLabel}>Vehicle Type</Text>
-            <Text style={styles.rowValue}>{vehicle.vehicleType || 'Two Wheeler (Scooter)'}</Text>
+            <Text style={styles.rowValue}>{vehicle.vehicleType || 'Not provided'}</Text>
           </View>
 
           <View style={styles.row}>
             <Text style={styles.rowLabel}>Make & Model</Text>
             <Text style={styles.rowValue}>
-              {vehicle.make || 'Honda'} {vehicle.model || 'Activa 6G'}
+              {vehicle.make || vehicle.model
+                ? `${vehicle.make || ''} ${vehicle.model || ''}`.trim()
+                : 'Not provided'}
             </Text>
           </View>
 

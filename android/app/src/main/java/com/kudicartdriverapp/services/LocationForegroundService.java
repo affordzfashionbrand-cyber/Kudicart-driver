@@ -138,8 +138,41 @@ public class LocationForegroundService extends Service implements LocationListen
 
     @Override
     public void onLocationChanged(Location location) {
-        // Active delivery location coordinate received
-        // Broadcasts or emits to native React Native bridge when registered
+        if (location == null) {
+            return;
+        }
+        try {
+            android.content.Intent broadcast = new android.content.Intent("com.kudicartdriverapp.LOCATION_UPDATE");
+            broadcast.setPackage(getPackageName());
+            broadcast.putExtra("latitude", location.getLatitude());
+            broadcast.putExtra("longitude", location.getLongitude());
+            broadcast.putExtra("heading", location.hasBearing() ? (double) location.getBearing() : 0.0);
+            broadcast.putExtra("speed", location.hasSpeed() ? (double) location.getSpeed() : 0.0);
+            broadcast.putExtra("accuracy", location.hasAccuracy() ? (double) location.getAccuracy() : 0.0);
+            broadcast.putExtra("timestamp", location.getTime());
+            sendBroadcast(broadcast);
+
+            android.app.Application app = getApplication();
+            if (app instanceof com.facebook.react.ReactApplication) {
+                com.facebook.react.ReactInstanceManager rim =
+                        ((com.facebook.react.ReactApplication) app).getReactNativeHost().getReactInstanceManager();
+                com.facebook.react.bridge.ReactContext reactContext = rim.getCurrentReactContext();
+                if (reactContext != null && reactContext.hasActiveReactInstance()) {
+                    com.facebook.react.bridge.WritableMap params = com.facebook.react.bridge.Arguments.createMap();
+                    params.putDouble("latitude", location.getLatitude());
+                    params.putDouble("longitude", location.getLongitude());
+                    params.putDouble("heading", location.hasBearing() ? (double) location.getBearing() : 0.0);
+                    params.putDouble("speed", location.hasSpeed() ? (double) location.getSpeed() : 0.0);
+                    params.putDouble("accuracy", location.hasAccuracy() ? (double) location.getAccuracy() : 0.0);
+                    params.putDouble("timestamp", (double) location.getTime());
+                    reactContext
+                            .getJSModule(com.facebook.react.modules.core.DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+                            .emit("KudiCartDriverLocationUpdate", params);
+                }
+            }
+        } catch (Exception ignored) {
+            // Guard against detached React Native catalyst instance during background execution
+        }
     }
 
     @Override

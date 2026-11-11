@@ -134,7 +134,7 @@ export const TryAndBuySelectionSummaryView: React.FC<TryAndBuySelectionSummaryVi
 
           <View style={styles.calcRow}>
             <Text style={styles.calcLabel}>Original order amount</Text>
-            <Text style={styles.calcValue}>₹{(order.originalTotal || 3997).toLocaleString('en-IN')}</Text>
+            <Text style={styles.calcValue}>₹{(order.originalTotal ?? 0).toLocaleString('en-IN')}</Text>
           </View>
 
           <View style={styles.calcRow}>

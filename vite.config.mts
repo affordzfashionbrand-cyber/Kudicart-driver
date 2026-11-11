@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [react()],
   resolve: {
     alias: {
@@ -11,7 +11,7 @@ export default defineConfig({
   },
   define: {
     global: 'window',
-    __DEV__: true,
+    __DEV__: mode !== 'production',
   },
   optimizeDeps: {
     exclude: [
@@ -22,4 +22,4 @@ export default defineConfig({
   build: {
     chunkSizeWarningLimit: 1500,
   },
-});
+}));

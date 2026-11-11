@@ -281,12 +281,18 @@ export const SlotsScreen = ({ navigation }: any) => {
         {filteredSlots.length === 0 ? (
           <View style={styles.emptyFilterState}>
             <Text style={styles.emptyFilterTitle}>
-              {activeFilter === 'BOOKED' ? 'No booked slots' : 'No available slots'}
+              {loading
+                ? 'Loading slots...'
+                : activeFilter === 'BOOKED'
+                  ? 'No booked slots'
+                  : 'No available slots'}
             </Text>
             <Text style={styles.emptyFilterSub}>
-              {activeFilter === 'BOOKED'
-                ? 'You have not booked any slots for this day.'
-                : 'No slots match the selected filter.'}
+              {loading
+                ? 'Fetching latest slot schedule from server.'
+                : activeFilter === 'BOOKED'
+                  ? 'You have not booked any slots for this day.'
+                  : 'No slots match the selected filter.'}
             </Text>
           </View>
         ) : (

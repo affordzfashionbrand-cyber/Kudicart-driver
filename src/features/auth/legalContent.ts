@@ -1,6 +1,6 @@
 /**
- * Affordz Delivery Partner Legal Policies
- * Generated directly from the Affordz Delivery Partner Policy (Pilot Version — Chennai Launch)
+ * KudiCart Delivery Partner Legal Policies
+ * Standard Partner Policy — Delivery Terms & Privacy Guidelines
  */
 
 export interface LegalSection {
@@ -26,23 +26,23 @@ export interface LegalDocument {
 }
 
 export const TERMS_AND_CONDITIONS: LegalDocument = {
-  title: 'Affordz Delivery Partner Terms & Conditions',
-  version: 'Pilot Version — Chennai Launch',
-  location: 'Chennai, Tamil Nadu',
+  title: 'KudiCart Delivery Partner Terms & Conditions',
+  version: 'Standard Partner Policy',
+  location: 'India Operations',
   lastUpdated: 'Effective October 2026',
   sections: [
     {
       title: '1. Purpose',
       content: [
-        'This Delivery Partner Policy defines the working structure, delivery payouts, incentives, attendance requirements, performance targets, and operational rules for Affordz Delivery Partners.',
-        'The policy is designed to provide delivery partners with a reasonable earning opportunity while maintaining sustainable delivery economics for Affordz.',
+        'This Delivery Partner Policy defines the working structure, delivery payouts, incentives, attendance requirements, performance targets, and operational rules for KudiCart Delivery Partners.',
+        'The policy is designed to provide delivery partners with a reasonable earning opportunity while maintaining sustainable delivery economics for KudiCart.',
         'This policy may be reviewed and modified based on actual operational data, delivery demand, partner feedback, and business requirements.',
       ],
     },
     {
       title: '2. Delivery Partner Categories & Commitments',
       content: [
-        'Affordz initially operates two delivery partner categories:',
+        'KudiCart operates two delivery partner categories:',
       ],
       subsections: [
         {
@@ -53,7 +53,7 @@ export const TERMS_AND_CONDITIONS: LegalDocument = {
             'Weekly day off: 1 scheduled day (does not count as an absence)',
             'Weekly eligible order target: 119 completed orders (approx. 19.83 orders/day or 2.48 orders/hour)',
             'Attendance & performance bonus: ₹1,100/week upon meeting all eligibility criteria',
-            'Maximum delivery radius: 3.0 km standard radius',
+            'Standard distance-slab delivery payout calculation',
           ],
         },
         {
@@ -64,7 +64,7 @@ export const TERMS_AND_CONDITIONS: LegalDocument = {
             'Weekly day off: 1 scheduled day (does not count as an absence)',
             'Weekly eligible order target: 75 completed orders (approx. 12.5 orders/day or 2.5 orders/hour)',
             'Attendance & performance bonus: ₹500/week upon meeting all eligibility criteria',
-            'Maximum delivery radius: 3.0 km standard radius',
+            'Standard distance-slab delivery payout calculation',
           ],
         },
       ],
@@ -78,7 +78,7 @@ export const TERMS_AND_CONDITIONS: LegalDocument = {
         '2. Work 6 days during the applicable week.',
         '3. Complete at least the weekly threshold (119 orders for FT, 75 orders for PT).',
         '4. Maintain required availability during assigned working hours.',
-        '5. Follow Affordz delivery and operational procedures.',
+        '5. Follow KudiCart delivery and operational procedures.',
         '6. Maintain accurate GPS/app activity where required.',
         '7. Have no serious policy, safety, fraud, or misconduct violation.',
         '8. Complete only genuine and verified deliveries.',
@@ -87,17 +87,17 @@ export const TERMS_AND_CONDITIONS: LegalDocument = {
     {
       title: '4. Delivery Distance & Base Payout Structure',
       content: [
-        'Affordz delivery partners receive the following base payout for eligible completed deliveries:',
+        'KudiCart delivery partners receive the following base payout for eligible completed deliveries:',
       ],
       table: {
         headers: ['Delivery Distance', 'Base Payout'],
         rows: [
           ['0 — 1 km', '₹20 / order'],
           ['Above 1 km — 2 km', '₹25 / order'],
-          ['Above 2 km — 3 km', '₹30 / order'],
+          ['Above 2 km', '₹30 / order'],
         ],
       },
-      callout: 'Maximum standard delivery radius is 3.0 km. Deliveries beyond 3 km are assigned only when specifically approved.',
+      callout: 'Payouts are calculated on actual pickup-to-drop distance verified via GPS.',
     },
     {
       title: '5. Daily Performance Incentives',
@@ -131,8 +131,8 @@ export const TERMS_AND_CONDITIONS: LegalDocument = {
     {
       title: '6. Peak-Hour Incentives & Customer Tips',
       content: [
-        'Peak-Hour Incentive: When high-demand periods are officially activated by Affordz, an additional ₹5 per eligible completed order is credited.',
-        'Customer Tips: 100% of customer tips belong to the Delivery Partner. Affordz does not retain any portion or commission from customer tips.',
+        'Peak-Hour Incentive: When high-demand periods are officially activated by KudiCart, an additional ₹5 per eligible completed order is credited.',
+        'Customer Tips: 100% of customer tips belong to the Delivery Partner. KudiCart does not retain any portion or commission from customer tips.',
         'Tips are separate from base delivery payout, daily incentives, peak-hour incentives, and attendance bonuses.',
       ],
     },
@@ -154,7 +154,7 @@ export const TERMS_AND_CONDITIONS: LegalDocument = {
     {
       title: '8. Eligible Order Criteria',
       content: [
-        'To qualify for payout and incentives, an order must be a genuine Affordz order, assigned through approved dispatch, successfully picked up, delivered to the customer, and verified via GPS/system.',
+        'To qualify for payout and incentives, an order must be a genuine KudiCart-dispatched Affordz order, assigned through approved dispatch, successfully picked up, delivered to the customer, and verified via GPS/system.',
         'Non-qualifying orders include: cancelled orders, fake/duplicate orders, fraudulent orders, orders incorrectly marked as completed, orders not actually delivered, or orders identified as manipulated.',
       ],
     },
@@ -181,14 +181,14 @@ export const TERMS_AND_CONDITIONS: LegalDocument = {
     {
       title: '12. Store & Pickup Operations',
       content: [
-        'Partners collect orders from Affordz dark-stores, partner fashion stores, or approved pickup locations.',
-        'Verify order items and package integrity before departure. Report any store delay promptly through the approved Affordz support channel.',
+        'Partners collect orders from KudiCart darkstores, Affordz partner fashion stores, or approved pickup locations.',
+        'Verify order items and package integrity before departure. Report any store delay promptly through the approved KudiCart support channel.',
       ],
     },
     {
       title: '13. Cancellations & Customer Unavailable Situations',
       content: [
-        'If a customer is unavailable, follow the Affordz escalation process. Never leave packages at unauthorized locations or self-dispose of orders.',
+        'If a customer is unavailable, follow the KudiCart escalation process. Never leave packages at unauthorized locations or self-dispose of orders.',
         'If an order is cancelled before/during delivery, payout is assessed based on whether the partner reached pickup, collected items, or followed instructions.',
       ],
     },
@@ -216,7 +216,7 @@ export const TERMS_AND_CONDITIONS: LegalDocument = {
     {
       title: '17. No Guaranteed Income Disclaimer',
       content: [
-        'Affordz does NOT guarantee a fixed daily or weekly income. Earnings depend on eligible orders, distances, demand, and partner availability.',
+        'KudiCart does NOT guarantee a fixed daily or weekly income. Earnings depend on eligible orders, distances, demand, and partner availability.',
         'The ₹1,100 Full-Time and ₹500 Part-Time bonuses are conditional performance bonuses, not guaranteed payments.',
       ],
     },
@@ -224,15 +224,15 @@ export const TERMS_AND_CONDITIONS: LegalDocument = {
 };
 
 export const PRIVACY_POLICY: LegalDocument = {
-  title: 'Affordz Delivery Partner Privacy Policy',
-  version: 'Pilot Version — Chennai Launch',
-  location: 'Chennai, Tamil Nadu',
+  title: 'KudiCart Delivery Partner Privacy Policy',
+  version: 'Standard Partner Policy',
+  location: 'India Operations',
   lastUpdated: 'Effective October 2026',
   sections: [
     {
       title: '1. Customer Data Protection & Confidentiality',
       content: [
-        'Delivery Partners receive access to customer contact details and delivery addresses solely for the purpose of executing approved Affordz deliveries.',
+        'Delivery Partners receive access to customer contact details and delivery addresses solely for the purpose of executing approved KudiCart deliveries.',
         'Delivery Partners are strictly prohibited from:',
         '• Sharing or disclosing customer telephone numbers or delivery locations to any third party.',
         '• Storing, copying, screenshotting, or saving customer contact details on personal devices beyond active delivery execution.',
@@ -241,9 +241,9 @@ export const PRIVACY_POLICY: LegalDocument = {
       ],
     },
     {
-      title: '2. Partner Information Collected by Affordz',
+      title: '2. Partner Information Collected by KudiCart',
       content: [
-        'To facilitate identity verification, statutory tax compliance, shift assignment, and secure payouts, Affordz collects and processes:',
+        'To facilitate identity verification, statutory tax compliance, shift assignment, and secure payouts, KudiCart collects and processes:',
         '• Identity & KYC Records: Full legal name, verified mobile phone number, residential address, emergency contact, photograph, Aadhaar number, PAN card, and Driving Licence.',
         '• Vehicle Details: Vehicle make, model, registration number (RC), pollution certificate, and insurance coverage.',
         '• Real-time Telemetry: Live GPS location coordinates, delivery route trails, speed, and app engagement timestamps during online shifts.',
@@ -255,8 +255,8 @@ export const PRIVACY_POLICY: LegalDocument = {
       content: [
         'Partner personal and telemetric data is processed strictly for legitimate operational purposes:',
         '• Verifying driver credentials and government-issued transport permits.',
-        '• Dispatching orders based on physical proximity and optimal route estimation (within 3 km radius).',
-        '• Calculating accurate base payouts (0-1 km, 1-2 km, 2-3 km distance tiers) and performance incentives.',
+        '• Assigning orders to available delivery partners based on operational readiness.',
+        '• Calculating accurate base payouts (0-1 km, 1-2 km, >2 km distance tiers) and performance incentives.',
         '• Ensuring partner on-road safety and investigating delivery disputes or traffic incidents.',
         '• Detecting and preventing fraudulent behavior such as location spoofing or phantom deliveries.',
       ],
@@ -265,16 +265,16 @@ export const PRIVACY_POLICY: LegalDocument = {
       title: '4. Location & GPS Tracking Transparency',
       content: [
         'GPS location tracking is activated exclusively when the partner toggles "Online" or accepts an active order assignment.',
-        'Location tracking allows Affordz darkstores, boutiques, and customers to monitor delivery transit in real time.',
+        'Location tracking allows KudiCart darkstores, Affordz partner stores, and customers to monitor delivery transit in real time.',
         'Partners may toggle "Offline" at any time to suspend telemetry recording, subject to shift scheduling guidelines.',
       ],
     },
     {
       title: '5. Data Security, Retention & Partner Rights',
       content: [
-        'Affordz stores all partner records in secure cloud data environments with strict role-based access control and encryption in transit.',
+        'KudiCart stores all partner records in secure cloud data environments with strict role-based access control and encryption in transit.',
         'Financial and tax-related transaction histories are retained in compliance with applicable Indian commercial and tax laws.',
-        'Partners may request updates to their vehicle details, banking information, or review their stored profile documents by contacting the Affordz Fleet Support Desk.',
+        'Partners may request updates to their vehicle details, banking information, or review their stored profile documents by contacting the KudiCart Fleet Support Desk.',
       ],
     },
   ],

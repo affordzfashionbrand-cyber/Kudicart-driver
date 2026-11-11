@@ -80,7 +80,7 @@ export const PhoneLoginScreen = ({ navigation }: any) => {
       } catch (_) {}
 
       const fullPhone = `+91${phone}`;
-      const res = await useAuthStore.getState().sendOtpAsync(fullPhone);
+      const res = await useAuthStore.getState().sendPhoneOtpAsync(fullPhone);
       setIsLoading(false);
       toast.success(res.message || `OTP sent to +91 ${phone}`);
       navigation.navigate('OtpVerification', {

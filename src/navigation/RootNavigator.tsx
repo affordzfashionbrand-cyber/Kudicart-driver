@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuthStore } from '../store/useAuthStore';
 import { SplashScreen } from '../features/auth/SplashScreen';
@@ -45,6 +45,13 @@ export type RootStackParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 import { getAuthToken } from '../api';
+import { driverSocket } from '../services/driverSocket';
+import { notificationService } from '../services/notificationService';
+import { useOrderStore } from '../store/useOrderStore';
+import { useNotificationStore } from '../store/useNotificationStore';
+import { toast } from '../store/useToastStore';
+
+export const navigationRef = createNavigationContainerRef<any>();
 
 export const RootNavigator = () => {
   const { isAuthenticated, kycStatus, syncStatusAsync } = useAuthStore();
@@ -62,12 +69,67 @@ export const RootNavigator = () => {
     }
   }, [syncStatusAsync]);
 
+  useEffect(() => {
+    if (isAuthenticated) {
+      driverSocket.connect().catch(() => {});
+      useOrderStore.getState().retryPendingSyncs().catch(() => {});
+      useOrderStore.getState().fetchAssignedOrdersAsync().catch(() => {});
+      useNotificationStore.getState().fetchNotificationsAsync().catch(() => {});
+
+      const handleForegroundMessage = (message: any) => {
+        const orderId = message?.data?.orderId;
+        if (orderId) {
+          useOrderStore.getState().refreshOrderAsync(String(orderId)).catch(() => {});
+        }
+        useNotificationStore.getState().fetchNotificationsAsync().catch(() => {});
+        const title = message?.notification?.title;
+        const body = message?.notification?.body;
+        if (title || body) {
+          try {
+            toast.show({
+              type: 'info',
+              message: title ? `${title}${body ? `: ${body}` : ''}` : String(body),
+            });
+          } catch {}
+        }
+      };
+
+      const handleNotificationTap = (message: any) => {
+        const data = message?.data || {};
+        const orderId = data.orderId ? String(data.orderId) : undefined;
+        if (orderId) {
+          useOrderStore.getState().refreshOrderAsync(orderId).catch(() => {});
+        } else {
+          useOrderStore.getState().fetchAssignedOrdersAsync().catch(() => {});
+        }
+        useNotificationStore.getState().fetchNotificationsAsync().catch(() => {});
+
+        if (navigationRef.isReady() && kycStatus === 'APPROVED') {
+          if (orderId) {
+            navigationRef.navigate('OrderDetails', { orderId });
+          } else if (data.actionRoute === 'Notifications' || data.screen === 'Notifications') {
+            navigationRef.navigate('Notifications');
+          }
+        }
+      };
+
+      notificationService.setupNotificationListeners(handleForegroundMessage, handleNotificationTap);
+    } else {
+      driverSocket.disconnect();
+      notificationService.teardownListeners();
+    }
+
+    return () => {
+      notificationService.teardownListeners();
+    };
+  }, [isAuthenticated, kycStatus]);
+
   if (isLoading) {
     return <SplashScreen />;
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!isAuthenticated ? (
           <>

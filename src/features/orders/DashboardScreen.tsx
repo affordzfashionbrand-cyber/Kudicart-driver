@@ -25,12 +25,11 @@ export const DashboardScreen = ({ navigation }: any) => {
   const {
     profile,
     isOnline = false,
-    setIsOnline,
     workSummary,
     fetchProfileAsync,
     fetchDashboardAsync,
   } = useDriverStore();
-  const { activeOrders, fetchAssignedOrdersAsync, clearOrders } = useOrderStore();
+  const { activeOrders, fetchAssignedOrdersAsync } = useOrderStore();
   const fetchNotificationsAsync = useNotificationStore((s) => s.fetchNotificationsAsync);
   const unreadNotifications = useNotificationStore(
     (s) => s.notifications.filter((n) => !n.read).length
@@ -59,7 +58,6 @@ export const DashboardScreen = ({ navigation }: any) => {
     isOnline &&
     !!activeOrder &&
     (activeOrder.status === 'OUT_FOR_DELIVERY' ||
-      activeOrder.status === 'ARRIVED' ||
       activeOrder.status === 'RETURNING' ||
       activeOrder.status === 'PICKED_UP');
 
@@ -87,8 +85,16 @@ export const DashboardScreen = ({ navigation }: any) => {
       } catch (_) {}
 
       if (!value) {
-        clearOrders();
-        permissionService.stopNativeTracking().catch(() => {});
+        // Preserve in-progress activeOrders when driver toggles offline;
+        // only suspend idle native tracking if no order is in transit.
+        const hasTransitOrder = useOrderStore
+          .getState()
+          .activeOrders.some(
+            (o) => o.status === 'PICKED_UP' || o.status === 'OUT_FOR_DELIVERY',
+          );
+        if (!hasTransitOrder) {
+          permissionService.stopNativeTracking().catch(() => {});
+        }
         toast.info('You are now offline.');
       } else {
         fetchAssignedOrdersAsync();

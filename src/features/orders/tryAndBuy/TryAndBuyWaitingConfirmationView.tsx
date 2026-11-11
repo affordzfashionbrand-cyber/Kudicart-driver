@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { Order } from '../../../store/useOrderStore';
 import { ordersApi } from '../../../api';
@@ -62,8 +62,7 @@ export const TryAndBuyWaitingConfirmationView: React.FC<TryAndBuyWaitingConfirma
   onBack,
 }) => {
   // Developer simulation restricted strictly to development environments (__DEV__)
-  const [devConfirmed, setDevConfirmed] = useState(false);
-  const isSupervisorConfirmed = order.storeReconciliationStatus === 'RECONCILED' || (__DEV__ && devConfirmed);
+  const isSupervisorConfirmed = order.storeReconciliationStatus === 'RECONCILED';
 
   // Real periodic poll of server confirmation status
   useEffect(() => {
@@ -101,13 +100,7 @@ export const TryAndBuyWaitingConfirmationView: React.FC<TryAndBuyWaitingConfirma
           <View style={{ width: 36 }} />
         )}
         <Text style={styles.topBarTitle}>Waiting for confirmation</Text>
-        <TouchableOpacity
-          disabled={!__DEV__}
-          onLongPress={() => __DEV__ && setDevConfirmed((prev) => !prev)}
-          activeOpacity={__DEV__ ? 0.6 : 1}
-        >
-          <Text style={styles.topBarOrderId}>{formattedOrderId}</Text>
-        </TouchableOpacity>
+        <Text style={styles.topBarOrderId}>{formattedOrderId}</Text>
       </View>
 
       {/* 2. CENTERED WAITING STATE WITH SCOOTER RADAR PULSE */}

@@ -5,13 +5,13 @@ import { ordersApi } from '../../api';
 import { tokens } from '../../theme/tokens';
 import { KudiIcon } from '../../components/KudiIcon';
 import { LiveRouteMapRef, DEFAULT_HUB_COORDINATES, DEFAULT_DEST_COORDINATES } from './LiveRouteMap';
+import { driverSocket } from '../../services/driverSocket';
 import { TryAndBuyHandoverView } from './tryAndBuy/TryAndBuyHandoverView';
 import { TryAndBuyTrialProgressView } from './tryAndBuy/TryAndBuyTrialProgressView';
 import { TryAndBuySelectionSummaryView } from './tryAndBuy/TryAndBuySelectionSummaryView';
 import { TryAndBuyReturnCollectionView } from './tryAndBuy/TryAndBuyReturnCollectionView';
 import { TryAndBuyPaymentView } from './tryAndBuy/TryAndBuyPaymentView';
 import { TryAndBuyStoreReconciliationView } from './tryAndBuy/TryAndBuyStoreReconciliationView';
-import { TryAndBuyWaitingConfirmationView } from './tryAndBuy/TryAndBuyWaitingConfirmationView';
 import { toast } from '../../store/useToastStore';
 import { styles } from './details/orderDetails.styles';
 import { OrderCameraModal, CameraTarget } from './details/OrderCameraModal';
@@ -35,36 +35,63 @@ export const OrderDetailsScreen = ({ route, navigation }: any) => {
   const {
     activeOrders,
     confirmPickup,
-    confirmDelivery,
+    startDelivery,
     markArrived,
     completeOrder,
     confirmHandoverAndStartTrial,
-    recordCustomerSelection,
     proceedToReturnCollection,
     toggleItemCollected,
     confirmReturnCollection,
     proceedToPayment,
     confirmPaymentAndBranch,
     markArrivedAtStore,
-    submitForStoreConfirmation,
     reconcileStoreReturn,
+    refreshOrderAsync,
   } = useOrderStore();
   const isDark = useColorScheme() === 'dark';
   const theme = isDark ? tokens.colors.dark : tokens.colors.light;
 
   const [fetchedOrder, setFetchedOrder] = useState<any>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const localOrder = activeOrders.find((o) => o.id === orderId) || (activeOrders.length > 0 && !orderId ? activeOrders[0] : null);
 
+  const hasLocalOrder = Boolean(localOrder);
+  const loadMissingOrder = React.useCallback(() => {
+    if (!orderId) return;
+    setFetchError(null);
+    ordersApi
+      .getOrderDetails(orderId)
+      .then((data) => {
+        setFetchedOrder(data);
+        setFetchError(null);
+      })
+      .catch((err: any) => {
+        setFetchError(err?.message || 'Unable to load order details.');
+      });
+  }, [orderId]);
+
   useEffect(() => {
-    if (!localOrder && orderId) {
-      ordersApi
-        .getOrderDetails(orderId)
-        .then((data) => setFetchedOrder(data))
-        .catch(() => {});
+    const targetId = localOrder?.id || orderId;
+    if (targetId) {
+      driverSocket.subscribe(targetId);
+      refreshOrderAsync(targetId).catch(() => {});
     }
-  }, [orderId, localOrder]);
+    if (!hasLocalOrder && orderId) {
+      loadMissingOrder();
+    }
+  }, [orderId, localOrder?.id, hasLocalOrder, refreshOrderAsync, loadMissingOrder]);
 
   const order = localOrder || fetchedOrder;
+  const trialStage = order?.tryAndBuyStage;
+  useEffect(() => {
+    if (!order?.id || !order?.isTryAndBuy || trialStage !== 'TRIAL_IN_PROGRESS') {
+      return;
+    }
+    const poll = setInterval(() => {
+      refreshOrderAsync(order.id).catch(() => {});
+    }, 8000);
+    return () => clearInterval(poll);
+  }, [order?.id, order?.isTryAndBuy, trialStage, refreshOrderAsync]);
   const mapRef = useRef<LiveRouteMapRef>(null);
   const [showCamera, setShowCamera] = useState<CameraTarget | false>(false);
   const [pickupImages, setPickupImages] = useState<string[]>([]);
@@ -95,11 +122,28 @@ export const OrderDetailsScreen = ({ route, navigation }: any) => {
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
             <KudiIcon name="arrow-left" size={24} color={theme.ink900} />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: theme.ink900 }]}>Order Not Found</Text>
+          <Text style={[styles.headerTitle, { color: theme.ink900 }]}>
+            {fetchError ? 'Unable to Load Order' : 'Order Not Found'}
+          </Text>
           <View style={{ width: 40 }} />
         </View>
         <View style={styles.emptyState}>
-          <Text style={{ color: theme.ink500 }}>This order has been completed or does not exist.</Text>
+          <Text style={{ color: theme.ink500, textAlign: 'center', marginBottom: 12 }}>
+            {fetchError || 'This order has been completed or does not exist.'}
+          </Text>
+          {fetchError && orderId ? (
+            <TouchableOpacity
+              onPress={loadMissingOrder}
+              style={{
+                paddingHorizontal: 16,
+                paddingVertical: 10,
+                borderRadius: 8,
+                backgroundColor: theme.ink900,
+              }}
+            >
+              <Text style={{ color: theme.surface, fontWeight: '600' }}>Retry</Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
       </SafeAreaView>
     );
@@ -108,9 +152,8 @@ export const OrderDetailsScreen = ({ route, navigation }: any) => {
   // --------------------------------------------------------
   // ACTIVE DELIVERY WORKSPACE
   // --------------------------------------------------------
-  const isAssigned = order.status === 'ASSIGNED';
   const isOutForDelivery = order.status === 'OUT_FOR_DELIVERY';
-  const isArrived = order.status === 'ARRIVED';
+  const isArrived = isOutForDelivery && Boolean(order.isArrived || order.arrivedAt);
   const isReturning = order.status === 'RETURNING';
 
   if (showCamera) {
@@ -118,20 +161,34 @@ export const OrderDetailsScreen = ({ route, navigation }: any) => {
       <OrderCameraModal
         target={showCamera}
         onClose={() => setShowCamera(false)}
-        onCapture={(photoUri) => {
-          const capturedUri =
-            photoUri ||
-            `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="200" height="200" fill="%23eee"/><text x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" fill="%23555">${showCamera}_proof</text></svg>`;
-          if (showCamera === 'pickup') {
-            setPickupImages([...pickupImages, capturedUri]);
-          } else if (showCamera === 'delivery') {
-            setDeliveryImages([...deliveryImages, capturedUri]);
-          } else if (showCamera === 'handover') {
-            setHandoverImages([...handoverImages, capturedUri]);
-          } else if (showCamera === 'return') {
-            setReturnImages([...returnImages, capturedUri]);
-          }
+        onCapture={async (photoUri) => {
+          const capturedTarget = showCamera;
           setShowCamera(false);
+          if (!photoUri) {
+            toast.error('Camera did not return a valid photo. Please try again.');
+            return;
+          }
+          let finalUri = photoUri;
+          if (photoUri.startsWith('blob:') || photoUri.startsWith('file:')) {
+            try {
+              finalUri = await ordersApi.uploadProofImage(
+                photoUri,
+                `${capturedTarget}_${order.id}_${Date.now()}.jpg`,
+              );
+            } catch (err: any) {
+              toast.error(err?.message || 'Failed to upload proof photo. Please retry.');
+              return;
+            }
+          }
+          if (capturedTarget === 'pickup') {
+            setPickupImages((prev) => [...prev, finalUri]);
+          } else if (capturedTarget === 'delivery') {
+            setDeliveryImages((prev) => [...prev, finalUri]);
+          } else if (capturedTarget === 'handover') {
+            setHandoverImages((prev) => [...prev, finalUri]);
+          } else if (capturedTarget === 'return') {
+            setReturnImages((prev) => [...prev, finalUri]);
+          }
         }}
       />
     );
@@ -145,40 +202,35 @@ export const OrderDetailsScreen = ({ route, navigation }: any) => {
       <SafeAreaView style={[styles.main, { backgroundColor: '#F3F1EC' }]}>
         <TryAndBuyStoreReconciliationView
           order={order}
-          onReconcileReturn={() => {
-            submitForStoreConfirmation(order.id);
+          onRefreshStatus={() => {
+            void refreshOrderAsync(order.id);
+          }}
+          onReconcileReturn={async () => {
+            const ok = await reconcileStoreReturn(order.id, order.storeReconciliationStatus === 'RECONCILED');
+            if (ok) {
+              navigation.goBack();
+            }
           }}
         />
       </SafeAreaView>
     );
   }
 
-  // --------------------------------------------------------
-  // WAITING FOR STORE CONFIRMATION VIEW (PHASE K)
-  // --------------------------------------------------------
-  if (order.isTryAndBuy && isReturning && order.tryAndBuyStage === 'WAITING_STORE_CONFIRMATION') {
-    return (
-      <SafeAreaView style={[styles.main, { backgroundColor: '#F3F1EC' }]}>
-        <TryAndBuyWaitingConfirmationView
-          order={order}
-          onCompleteReconciliation={() => {
-            reconcileStoreReturn(order.id);
-            navigation.goBack();
-          }}
-        />
-      </SafeAreaView>
-    );
-  }
+  const hubCoords = order.pickupCoordinates
+    ? { lat: order.pickupCoordinates.latitude, lng: order.pickupCoordinates.longitude }
+    : HUB_COORDINATES;
+  const destCoords = order.deliveryCoordinates
+    ? { lat: order.deliveryCoordinates.latitude, lng: order.deliveryCoordinates.longitude }
+    : DEST_COORDINATES;
 
   // --------------------------------------------------------
   // MAP NAVIGATION MODE (OUT FOR DELIVERY / FULL SCREEN / RETURNING)
   // --------------------------------------------------------
   if (
-    isOutForDelivery ||
+    (isOutForDelivery && !isArrived) ||
     (isArrived && fullScreenMap) ||
     (isReturning &&
-      order.tryAndBuyStage !== 'STORE_RECONCILIATION' &&
-      order.tryAndBuyStage !== 'WAITING_STORE_CONFIRMATION')
+      order.tryAndBuyStage !== 'STORE_RECONCILIATION')
   ) {
     return (
       <OrderMapNavigationMode
@@ -192,8 +244,8 @@ export const OrderDetailsScreen = ({ route, navigation }: any) => {
         }}
         isReturning={isReturning}
         theme={theme}
-        hubCoordinates={HUB_COORDINATES}
-        destCoordinates={DEST_COORDINATES}
+        hubCoordinates={hubCoords}
+        destCoordinates={destCoords}
         onMarkArrived={() => {
           if (isReturning) {
             if (order.isTryAndBuy) {
@@ -221,7 +273,7 @@ export const OrderDetailsScreen = ({ route, navigation }: any) => {
         <SafeAreaView style={[styles.main, { backgroundColor: '#F3F1EC' }]}>
           <TryAndBuyHandoverView
             order={order}
-            onConfirmHandover={(code) => confirmHandoverAndStartTrial(order.id, code)}
+            onConfirmHandover={(code) => confirmHandoverAndStartTrial(order.id, code, handoverImages)}
             onOpenMap={() => setFullScreenMap(true)}
             handoverImages={handoverImages}
             onOpenCamera={() => handleOpenCamera('handover')}
@@ -237,8 +289,10 @@ export const OrderDetailsScreen = ({ route, navigation }: any) => {
           <TryAndBuyTrialProgressView
             order={order}
             onBack={() => navigation.goBack()}
-            onSimulateSelection={(selections) => recordCustomerSelection(order.id, selections)}
-            onContactCustomer={() => {}}
+            onRefreshSelection={() => refreshOrderAsync(order.id)}
+            onContactCustomer={() =>
+              toast.info('Customer calling is disabled. Confirm doorstep arrival to coordinate.')
+            }
           />
         </SafeAreaView>
       );
@@ -277,7 +331,7 @@ export const OrderDetailsScreen = ({ route, navigation }: any) => {
           <TryAndBuyPaymentView
             order={order}
             onConfirmPaymentAndBranch={() => {
-              const returnedCount = (order.items || []).filter((i) => i.decision === 'RETURN').length;
+              const returnedCount = (order.items || []).filter((i: any) => i.decision === 'RETURN').length;
               confirmPaymentAndBranch(order.id);
               if (returnedCount === 0) {
                 navigation.goBack();
@@ -300,9 +354,10 @@ export const OrderDetailsScreen = ({ route, navigation }: any) => {
         setDeliveryImages={setDeliveryImages}
         onOpenCamera={() => handleOpenCamera('delivery')}
         onOpenMap={() => setFullScreenMap(true)}
-        onConfirmDelivery={() => {
-          confirmDelivery(order.id);
+        onConfirmDelivery={(cashCollected) => {
+          completeOrder(order.id, deliveryImages, cashCollected);
           toast.success('Order delivered successfully.');
+          navigation.goBack();
         }}
         defaultProductThumbnails={DEFAULT_PRODUCT_THUMBNAILS}
       />
@@ -310,7 +365,7 @@ export const OrderDetailsScreen = ({ route, navigation }: any) => {
   }
 
   // --------------------------------------------------------
-  // PICKUP REVIEW (ASSIGNED STATE & DEFAULT)
+  // PICKUP REVIEW (ASSIGNED & PICKED_UP STATES)
   // --------------------------------------------------------
   return (
     <OrderPickupReviewView
@@ -319,8 +374,12 @@ export const OrderDetailsScreen = ({ route, navigation }: any) => {
       setPickupImages={setPickupImages}
       onOpenCamera={() => handleOpenCamera('pickup')}
       onConfirmPickup={() => {
-        confirmPickup(order.id);
-        toast.success('Pickup verified. Starting delivery.');
+        confirmPickup(order.id, pickupImages);
+        toast.success('Pickup verified. Tap Start Delivery when departing hub.');
+      }}
+      onStartDelivery={() => {
+        startDelivery(order.id);
+        toast.success('Delivery started! Live tracking active.');
       }}
       onBack={() => navigation.goBack()}
       defaultProductThumbnails={DEFAULT_PRODUCT_THUMBNAILS}

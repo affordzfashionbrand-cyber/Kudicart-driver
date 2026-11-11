@@ -12,6 +12,8 @@ interface ActiveOrderProps {
   pickupLocation: string;
   customerAddress: string;
   isTryAndBuy?: boolean;
+  isArrived?: boolean;
+  arrivedAt?: string | null;
   tryAndBuyStage?: string;
 }
 
@@ -64,15 +66,19 @@ export const DashboardOperationalStatus: React.FC<DashboardOperationalStatusProp
             <View style={styles.activeDeliveryPulseDot} />
             <Text style={styles.activeDeliveryStatusText}>
               {activeOrder.status === 'RETURNING'
-                ? activeOrder.tryAndBuyStage === 'WAITING_STORE_CONFIRMATION'
+                ? activeOrder.tryAndBuyStage === 'STORE_RECONCILIATION'
                   ? 'Waiting for confirmation'
                   : activeOrder.tryAndBuyStage === 'STORE_RECONCILIATION'
                   ? 'At store'
                   : 'Returning to store'
-                : activeOrder.status === 'ARRIVED' && activeOrder.isTryAndBuy && activeOrder.tryAndBuyStage === 'TRIAL_IN_PROGRESS'
+                : (activeOrder.isArrived || activeOrder.arrivedAt) &&
+                  activeOrder.isTryAndBuy &&
+                  activeOrder.tryAndBuyStage === 'TRIAL_IN_PROGRESS'
                 ? 'Trial in progress'
-                : activeOrder.status === 'ARRIVED'
+                : activeOrder.isArrived || activeOrder.arrivedAt
                 ? 'At customer'
+                : activeOrder.status === 'PICKED_UP'
+                ? 'Picked up • Start delivery'
                 : 'On the way'}
             </Text>
           </View>
@@ -116,13 +122,17 @@ export const DashboardOperationalStatus: React.FC<DashboardOperationalStatusProp
         >
           <Text style={styles.continueActionText}>
             {activeOrder.status === 'RETURNING'
-              ? activeOrder.tryAndBuyStage === 'WAITING_STORE_CONFIRMATION'
+              ? activeOrder.tryAndBuyStage === 'STORE_RECONCILIATION'
                 ? 'View confirmation status'
                 : activeOrder.tryAndBuyStage === 'STORE_RECONCILIATION'
                 ? 'Reconcile return'
                 : 'Navigate to store'
-              : activeOrder.status === 'ARRIVED' && activeOrder.isTryAndBuy && activeOrder.tryAndBuyStage === 'TRIAL_IN_PROGRESS'
+              : (activeOrder.isArrived || activeOrder.arrivedAt) &&
+                activeOrder.isTryAndBuy &&
+                activeOrder.tryAndBuyStage === 'TRIAL_IN_PROGRESS'
               ? 'View trial in progress'
+              : activeOrder.status === 'PICKED_UP'
+              ? 'Start delivery'
               : 'Continue delivery'}
           </Text>
         </TouchableOpacity>
