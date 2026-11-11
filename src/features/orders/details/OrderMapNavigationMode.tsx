@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Platform, Linking } from 'react-native';
 import { Order } from '../../../store/useOrderStore';
 import { KudiIcon } from '../../../components/KudiIcon';
 import { LiveRouteMap, LiveRouteMapRef } from '../LiveRouteMap';
@@ -34,17 +34,36 @@ export const OrderMapNavigationMode: React.FC<OrderMapNavigationModeProps> = ({
   hubCoordinates,
   destCoordinates,
 }) => {
+  const openExternalGoogleMaps = async () => {
+    const target = isReturning ? hubCoordinates : destCoordinates;
+    const url = Platform.select({
+      ios: `comgooglemaps://?daddr=${target.latitude},${target.longitude}&directionsmode=driving`,
+      android: `google.navigation:q=${target.latitude},${target.longitude}&mode=d`,
+    }) || `https://www.google.com/maps/dir/?api=1&destination=${target.latitude},${target.longitude}&travelmode=driving`;
+
+    try {
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        const webUrl = `https://www.google.com/maps/dir/?api=1&destination=${target.latitude},${target.longitude}&travelmode=driving`;
+        await Linking.openURL(webUrl);
+      }
+    } catch {}
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: theme.canvas }}>
       {/* MAP BACKGROUND */}
       <View style={[StyleSheet.absoluteFillObject, !fullScreenMap && { bottom: 215 }]}>
         <LiveRouteMap
           ref={mapRef}
-          origin={hubCoordinates}
-          destination={destCoordinates}
+          origin={{ lat: hubCoordinates.latitude, lng: hubCoordinates.longitude }}
+          destination={{ lat: destCoordinates.latitude, lng: destCoordinates.longitude }}
           originLabel={order.pickupLocation}
           destinationLabel={order.customerAddress}
           isFullScreen={fullScreenMap}
+          orderId={order.id}
         />
       </View>
 
@@ -187,21 +206,47 @@ export const OrderMapNavigationMode: React.FC<OrderMapNavigationModeProps> = ({
             </View>
           </View>
 
-          {/* Primary Action Button: Signal Orange #FF5A1F + Charcoal Text #171716 */}
-          <TouchableOpacity
-            style={{
-              backgroundColor: '#FF5A1F',
-              height: 50,
-              borderRadius: 25,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-            onPress={onMarkArrived}
-          >
-            <Text style={{ color: '#171716', fontSize: 15, fontWeight: '700' }}>
-              {isReturning ? 'Mark arrived at store' : 'Mark Arrived'}
-            </Text>
-          </TouchableOpacity>
+          {/* Actions: Start Navigation & Mark Arrived */}
+          <View style={{ flexDirection: 'row', gap: 12 }}>
+            <TouchableOpacity
+              style={{
+                flex: 1,
+                backgroundColor: '#FFFFFF',
+                borderWidth: 1.5,
+                borderColor: '#FF5A1F',
+                height: 50,
+                borderRadius: 25,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+              }}
+              onPress={openExternalGoogleMaps}
+              accessibilityLabel="Start external Google Maps navigation"
+            >
+              <KudiIcon name="navigation" size={18} color="#FF5A1F" />
+              <Text style={{ color: '#FF5A1F', fontSize: 14, fontWeight: '700' }}>
+                Navigate
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={{
+                flex: 1.2,
+                backgroundColor: '#FF5A1F',
+                height: 50,
+                borderRadius: 25,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+              onPress={onMarkArrived}
+              accessibilityLabel={isReturning ? 'Mark arrived at store' : 'Mark Arrived'}
+            >
+              <Text style={{ color: '#171716', fontSize: 14, fontWeight: '700' }}>
+                {isReturning ? 'At Store' : 'Mark Arrived'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
     </View>

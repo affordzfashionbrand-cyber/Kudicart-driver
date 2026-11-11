@@ -48,6 +48,8 @@ export interface Order {
   customerName: string;
   customerAddress: string;
   customerPhone?: string;
+  pickupCoordinates?: { latitude: number; longitude: number };
+  deliveryCoordinates?: { latitude: number; longitude: number };
   distance: string;
   eta: string;
   date: string;

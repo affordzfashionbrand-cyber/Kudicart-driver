@@ -31,6 +31,11 @@
       android:allowBackup="false"
       android:theme="@style/AppTheme">
 
+      <!-- Google Maps Platform Android SDK Key -->
+      <meta-data
+        android:name="com.google.android.geo.API_KEY"
+        android:value="${googleMapsApiKey}" />
+
       <!-- Active Delivery Location Foreground Service with Location Service Type -->
       <service
         android:name=".services.LocationForegroundService"

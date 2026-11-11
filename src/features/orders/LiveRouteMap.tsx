@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState, useImperativeHandle, forwardRef } from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
 import { MAPS_CONFIG } from '../../config/maps';
 import { fetchRoadRoute } from '../../services/routingService';
@@ -23,25 +23,31 @@ interface LiveRouteMapProps {
   destinationLabel?: string;
   isFullScreen?: boolean;
   isPreview?: boolean;
+  orderId?: string;
+  driverHeading?: number;
 }
 
 export const LiveRouteMap = forwardRef<LiveRouteMapRef, LiveRouteMapProps>(({
   origin,
   destination,
-  originLabel = 'Indiranagar Hub',
-  destinationLabel = 'Flat 402, Skyline Heights',
+  originLabel = 'Pickup Location',
+  destinationLabel = 'Customer Delivery',
   isFullScreen = false,
   isPreview = false,
+  orderId,
+  driverHeading = 0,
 }, ref) => {
   const containerRef = useRef<any>(null);
   const mapInstanceRef = useRef<any>(null);
   const polylineRef = useRef<any>(null);
   const nativeMapRef = useRef<NativeRouteMapRef | null>(null);
 
-  const initialWaypoints =
+  const [isStraightLine, setIsStraightLine] = useState(false);
+  const [routeCoordinates, setRouteCoordinates] = useState<[number, number][]>(
     origin && destination && (origin.lat !== destination.lat || origin.lng !== destination.lng)
       ? [[origin.lat, origin.lng], [destination.lat, destination.lng]]
-      : MAPS_CONFIG.defaultRouteWaypoints;
+      : (MAPS_CONFIG.defaultRouteWaypoints as [number, number][])
+  );
 
   // Fits complete road-following route into visible viewport,
   // strictly accounting for:
@@ -84,6 +90,39 @@ export const LiveRouteMap = forwardRef<LiveRouteMapRef, LiveRouteMapProps>(({
     },
   }));
 
+  // Fetch road route from backend Google Routes API
+  useEffect(() => {
+    let isMounted = true;
+    fetchRoadRouteDetails(origin, destination, orderId).then((res) => {
+      if (isMounted && res?.coordinates && res.coordinates.length > 0) {
+        setRouteCoordinates(res.coordinates);
+        setIsStraightLine(res.isStraightLineReference);
+        if (polylineRef.current && Platform.OS === 'web') {
+          polylineRef.current.setLatLngs(res.coordinates);
+          polylineRef.current.setStyle({
+            color: res.isStraightLineReference ? '#94A3B8' : MAPS_CONFIG.routeColor,
+            dashArray: res.isStraightLineReference ? '8, 8' : undefined,
+          });
+          fitRouteBounds(true);
+        }
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [origin.lat, origin.lng, destination.lat, destination.lng, orderId]);
+
+  // Initial auto-fit on native map mount
+  useEffect(() => {
+    if (Platform.OS !== 'web') {
+      const timer = setTimeout(() => {
+        fitRouteBounds(false);
+      }, 350);
+      return () => clearTimeout(timer);
+    }
+  }, [routeCoordinates]);
+
+  // Web Leaflet fallback initialization
   useEffect(() => {
     if (Platform.OS !== 'web') return;
 
@@ -108,183 +147,73 @@ export const LiveRouteMap = forwardRef<LiveRouteMapRef, LiveRouteMapProps>(({
           attributionControl: false,
           fadeAnimation: true,
           zoomAnimation: true,
-          dragging: !isPreview,
-          touchZoom: !isPreview,
-          scrollWheelZoom: false,
-          doubleClickZoom: !isPreview,
-          boxZoom: !isPreview,
-          keyboard: false,
+          zoomSnap: 0.25,
         });
 
-        // 1. Primary provider: Google Maps Platform standard road tiles
-        const googleLayer = L.tileLayer(MAPS_CONFIG.googleTilesUrl, {
-          maxZoom: 20,
+        L.tileLayer(MAPS_CONFIG.googleTilesUrl, {
           subdomains: MAPS_CONFIG.googleSubdomains,
-          attribution: '&copy; Google Maps',
-        });
+          maxZoom: 20,
+        }).addTo(map);
 
-        // 2. Seamless fallback: OpenStreetMap standard tiles (unmetered, open)
-        const osmLayer = L.tileLayer(MAPS_CONFIG.osmTilesUrl, {
-          maxZoom: 19,
-          attribution: '&copy; OpenStreetMap contributors',
-        });
-
-        googleLayer.addTo(map);
-
-        // Fallback smoothly to OSM if Google road tile server is unreachable
-        googleLayer.on('tileerror', () => {
-          if (!map.hasLayer(osmLayer)) {
-            osmLayer.addTo(map);
-          }
-        });
-
-        // Brand Signal Orange (#FF5A1F) route line corresponding to actual road coordinates
-        const polyline = L.polyline(initialWaypoints, {
+        const initialPoints = routeCoordinates.map((c) => [c[0], c[1]]);
+        const polyline = L.polyline(initialPoints, {
           color: MAPS_CONFIG.routeColor,
-          weight: MAPS_CONFIG.routeWidth,
+          weight: isPreview ? 4 : MAPS_CONFIG.routeWidth,
           opacity: 0.95,
           lineJoin: 'round',
           lineCap: 'round',
         }).addTo(map);
-
         polylineRef.current = polyline;
 
-        if (origin && destination) {
-          fetchRoadRoute(origin, destination).then((coords) => {
-            if (coords && coords.length > 0 && polylineRef.current) {
-              polylineRef.current.setLatLngs(coords);
-              fitRouteBounds(false);
-            }
-          });
-        }
-
-        // 1. Delivery Partner (Driver) Navigation Marker ("You" in full, minimal puck in preview)
-        const bikeIcon = L.divIcon({
-          className: 'kudi-driver-marker',
-          html: isPreview ? `
-            <div style="width:30px;height:30px;border-radius:15px;background:rgba(255,90,31,0.22);border:1.5px solid #FF5A1F;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(255,90,31,0.35);">
-              <div style="width:22px;height:22px;border-radius:11px;background:#171716;border:2px solid #FFFFFF;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,0.4);">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="18.5" cy="17.5" r="3.5"/>
-                  <circle cx="5.5" cy="17.5" r="3.5"/>
-                  <circle cx="15" cy="5" r="1"/>
-                  <path d="M12 17.5V14l-3-3 4-3 2 3h2"/>
-                </svg>
-              </div>
-            </div>
-          ` : `
-            <div style="position:relative;display:flex;flex-direction:column;align-items:center;">
-              <div style="background:#171716;color:#FFFFFF;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;margin-bottom:4px;box-shadow:0 2px 6px rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.25);white-space:nowrap;letter-spacing:0.2px;">
-                You
-              </div>
-              <div style="width:44px;height:44px;border-radius:22px;background:rgba(255,90,31,0.22);border:1.5px solid #FF5A1F;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(255,90,31,0.35);">
-                <div style="width:32px;height:32px;border-radius:16px;background:#171716;border:2.5px solid #FFFFFF;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.4);">
-                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="18.5" cy="17.5" r="3.5"/>
-                    <circle cx="5.5" cy="17.5" r="3.5"/>
-                    <circle cx="15" cy="5" r="1"/>
-                    <path d="M12 17.5V14l-3-3 4-3 2 3h2"/>
-                  </svg>
-                </div>
-              </div>
+        // Origin Marker (Store / Driver)
+        const originIcon = L.divIcon({
+          className: 'kudi-origin-marker',
+          html: `
+            <div style="width:36px;height:36px;border-radius:18px;background:#171716;border:2.5px solid #FFFFFF;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.3);">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="3 11 22 2 13 21 11 13 3 11"/>
+              </svg>
             </div>
           `,
-          iconSize: isPreview ? [30, 30] : [56, 64],
-          iconAnchor: isPreview ? [15, 15] : [28, 50],
+          iconSize: isPreview ? [26, 26] : [36, 36],
+          iconAnchor: isPreview ? [13, 13] : [18, 18],
         });
-        L.marker([origin.lat, origin.lng], { icon: bikeIcon, zIndexOffset: 1000 }).addTo(map);
+        L.marker([origin.lat, origin.lng], { icon: originIcon, zIndexOffset: 400 }).addTo(map);
 
-        // 2. Customer Destination Marker ("Drop-off" in full, minimal pin in preview)
-        const homeIcon = L.divIcon({
+        // Destination Marker
+        const destIcon = L.divIcon({
           className: 'kudi-dest-marker',
-          html: isPreview ? `
-            <div style="width:26px;height:26px;border-radius:13px;background:#FFFFFF;border:2px solid #FF5A1F;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.25);">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#171716" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          html: `
+            <div style="width:36px;height:36px;border-radius:18px;background:#FFFFFF;border:2.5px solid #FF5A1F;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.25);">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#171716" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
                 <polyline points="9 22 9 12 15 12 15 22"/>
               </svg>
             </div>
-          ` : `
-            <div style="position:relative;display:flex;flex-direction:column;align-items:center;">
-              <div style="background:#FFFFFF;color:#171716;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;margin-bottom:4px;box-shadow:0 2px 6px rgba(0,0,0,0.2);border:1px solid #E2DED7;white-space:nowrap;letter-spacing:0.2px;">
-                Drop-off
-              </div>
-              <div style="width:36px;height:36px;border-radius:18px;background:#FFFFFF;border:2.5px solid #FF5A1F;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.25);">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#171716" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                  <polyline points="9 22 9 12 15 12 15 22"/>
-                </svg>
-              </div>
-            </div>
           `,
-          iconSize: isPreview ? [26, 26] : [56, 58],
-          iconAnchor: isPreview ? [13, 13] : [28, 44],
+          iconSize: isPreview ? [26, 26] : [36, 36],
+          iconAnchor: isPreview ? [13, 13] : [18, 18],
         });
-        L.marker([destination.lat, destination.lng], { icon: homeIcon, zIndexOffset: 500 }).addTo(map);
+        L.marker([destination.lat, destination.lng], { icon: destIcon, zIndexOffset: 500 }).addTo(map);
 
         mapInstanceRef.current = map;
-
-        // Automatically fit the entire route within the visible map accounting for all overlays
-        const paddingLeft = isPreview ? 24 : 45;
-        const paddingTop = isPreview ? 24 : (isFullScreen ? 70 : 85);
-        const paddingRight = isPreview ? 24 : (isFullScreen ? 60 : 95);
-        const paddingBottom = isPreview ? 24 : (isFullScreen ? 50 : 55);
-
-        map.fitBounds(polyline.getBounds(), {
-          paddingTopLeft: L.point(paddingLeft, paddingTop),
-          paddingBottomRight: L.point(paddingRight, paddingBottom),
-          maxZoom: 16,
-        });
-
+        fitRouteBounds(false);
         return true;
       } catch (err) {
-        console.warn('Map initialization error:', err);
         return false;
       }
     };
-
-    let resizeObserver: any = null;
-    if (typeof ResizeObserver !== 'undefined' && containerRef.current) {
-      try {
-        resizeObserver = new ResizeObserver(() => {
-          if (mapInstanceRef.current) {
-            mapInstanceRef.current.invalidateSize();
-            fitRouteBounds(false);
-          }
-        });
-        resizeObserver.observe(containerRef.current);
-      } catch (e) {
-        // ignore
-      }
-    }
-
-    const t1 = setTimeout(() => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.invalidateSize();
-        fitRouteBounds(false);
-      }
-    }, 120);
-
-    const t2 = setTimeout(() => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.invalidateSize();
-        fitRouteBounds(false);
-      }
-    }, 400);
 
     if (!checkAndInitLeaflet()) {
       checkInterval = setInterval(() => {
         if (checkAndInitLeaflet()) {
           clearInterval(checkInterval);
         }
-      }, 50);
+      }, 60);
     }
 
     return () => {
       if (checkInterval) clearInterval(checkInterval);
-      if (resizeObserver) resizeObserver.disconnect();
-      clearTimeout(t1);
-      clearTimeout(t2);
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
@@ -326,13 +255,10 @@ export const LiveRouteMap = forwardRef<LiveRouteMapRef, LiveRouteMapProps>(({
 
   return (
     <View style={styles.container}>
-      {Platform.OS === 'web' ? (
+      {Platform.OS === 'web' || !NativeMapView ? (
         <View
           ref={containerRef}
-          style={[
-            styles.mapSurface,
-            { outline: 'none' } as any,
-          ]}
+          style={[styles.mapSurface, { outline: 'none' } as any]}
         />
       ) : (
         <NativeRouteMap
