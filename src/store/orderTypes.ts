@@ -48,16 +48,14 @@ export interface Order {
   customerName: string;
   customerAddress: string;
   customerPhone?: string;
-  pickupCoordinates?: { latitude: number; longitude: number };
-  deliveryCoordinates?: { latitude: number; longitude: number };
+  pickupCoordinates?: { latitude: number; longitude: number } | null;
+  deliveryCoordinates?: { latitude: number; longitude: number } | null;
   distance: string;
   eta: string;
   date: string;
   items?: OrderItem[];
   accepted?: boolean;
   earnings?: number;
-  pickupCoordinates?: { latitude: number; longitude: number } | null;
-  deliveryCoordinates?: { latitude: number; longitude: number } | null;
 
   // Try & Buy workflow metadata
   tryAndBuyStage?: TryAndBuyStage;

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState, useImperativeHandle, forwardRef } from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
 import { MAPS_CONFIG } from '../../config/maps';
-import { fetchRoadRoute } from '../../services/routingService';
+import { fetchRoadRoute, fetchRoadRouteDetails } from '../../services/routingService';
 import { NativeRouteMap, NativeRouteMapRef } from './NativeRouteMap';
 
 export interface LiveRouteMapRef {
@@ -255,7 +255,7 @@ export const LiveRouteMap = forwardRef<LiveRouteMapRef, LiveRouteMapProps>(({
 
   return (
     <View style={styles.container}>
-      {Platform.OS === 'web' || !NativeMapView ? (
+      {Platform.OS === 'web' || !NativeRouteMap ? (
         <View
           ref={containerRef}
           style={[styles.mapSurface, { outline: 'none' } as any]}

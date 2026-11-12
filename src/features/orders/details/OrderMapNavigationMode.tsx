@@ -37,16 +37,16 @@ export const OrderMapNavigationMode: React.FC<OrderMapNavigationModeProps> = ({
   const openExternalGoogleMaps = async () => {
     const target = isReturning ? hubCoordinates : destCoordinates;
     const url = Platform.select({
-      ios: `comgooglemaps://?daddr=${target.latitude},${target.longitude}&directionsmode=driving`,
-      android: `google.navigation:q=${target.latitude},${target.longitude}&mode=d`,
-    }) || `https://www.google.com/maps/dir/?api=1&destination=${target.latitude},${target.longitude}&travelmode=driving`;
+      ios: `comgooglemaps://?daddr=${target.lat},${target.lng}&directionsmode=driving`,
+      android: `google.navigation:q=${target.lat},${target.lng}&mode=d`,
+    }) || `https://www.google.com/maps/dir/?api=1&destination=${target.lat},${target.lng}&travelmode=driving`;
 
     try {
       const supported = await Linking.canOpenURL(url);
       if (supported) {
         await Linking.openURL(url);
       } else {
-        const webUrl = `https://www.google.com/maps/dir/?api=1&destination=${target.latitude},${target.longitude}&travelmode=driving`;
+        const webUrl = `https://www.google.com/maps/dir/?api=1&destination=${target.lat},${target.lng}&travelmode=driving`;
         await Linking.openURL(webUrl);
       }
     } catch {}
@@ -58,8 +58,8 @@ export const OrderMapNavigationMode: React.FC<OrderMapNavigationModeProps> = ({
       <View style={[StyleSheet.absoluteFillObject, !fullScreenMap && { bottom: 215 }]}>
         <LiveRouteMap
           ref={mapRef}
-          origin={{ lat: hubCoordinates.latitude, lng: hubCoordinates.longitude }}
-          destination={{ lat: destCoordinates.latitude, lng: destCoordinates.longitude }}
+          origin={hubCoordinates}
+          destination={destCoordinates}
           originLabel={order.pickupLocation}
           destinationLabel={order.customerAddress}
           isFullScreen={fullScreenMap}

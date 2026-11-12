@@ -9,6 +9,7 @@ yarn-error.log*
 # React Native
 .expo/
 *.jks
+*.keystore
 *.p8
 *.p12
 *.key

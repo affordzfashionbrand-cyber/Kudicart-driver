@@ -158,8 +158,11 @@ export function resetAuthClientState() {
 function isAuthBootstrapEndpoint(formattedEndpoint: string): boolean {
   return (
     formattedEndpoint.includes('/driver/auth/firebase/login') ||
+    formattedEndpoint.includes('/driver/auth/login-firebase') ||
     formattedEndpoint.includes('/driver/auth/send-otp') ||
+    formattedEndpoint.includes('/driver/auth/otp/send') ||
     formattedEndpoint.includes('/driver/auth/verify-otp') ||
+    formattedEndpoint.includes('/driver/auth/otp/verify') ||
     formattedEndpoint.includes('/driver/auth/logout')
   );
 }

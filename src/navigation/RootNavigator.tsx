@@ -104,11 +104,28 @@ export const RootNavigator = () => {
         }
         useNotificationStore.getState().fetchNotificationsAsync().catch(() => {});
 
-        if (navigationRef.isReady() && kycStatus === 'APPROVED') {
+        const navigateToTarget = () => {
           if (orderId) {
             navigationRef.navigate('OrderDetails', { orderId });
           } else if (data.actionRoute === 'Notifications' || data.screen === 'Notifications') {
             navigationRef.navigate('Notifications');
+          }
+        };
+
+        if (kycStatus === 'APPROVED') {
+          if (navigationRef.isReady()) {
+            navigateToTarget();
+          } else {
+            let retries = 0;
+            const timer = setInterval(() => {
+              retries++;
+              if (navigationRef.isReady()) {
+                clearInterval(timer);
+                navigateToTarget();
+              } else if (retries >= 15) {
+                clearInterval(timer);
+              }
+            }, 100);
           }
         }
       };

@@ -57,5 +57,37 @@ public class MainApplication extends Application implements ReactApplication {
       DefaultNewArchitectureEntryPoint.load();
     }
     ReactNativeFlipper.initializeFlipper(this, getReactNativeHost().getReactInstanceManager());
+    createNotificationChannels();
+  }
+
+  private void createNotificationChannels() {
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+      android.app.NotificationManager manager = getSystemService(android.app.NotificationManager.class);
+      if (manager != null) {
+        // 1. Critical Driver Urgent Alerts & Assignments
+        android.app.NotificationChannel alertsChannel = new android.app.NotificationChannel(
+          "affordz_critical_alerts",
+          "KudiCart Driver Urgent Alerts",
+          android.app.NotificationManager.IMPORTANCE_HIGH
+        );
+        alertsChannel.setDescription("Urgent delivery assignments and order status updates");
+        alertsChannel.enableLights(true);
+        alertsChannel.enableVibration(true);
+        alertsChannel.setShowBadge(true);
+        manager.createNotificationChannel(alertsChannel);
+
+        // 2. Driver Order & Shift Notifications
+        android.app.NotificationChannel driverChannel = new android.app.NotificationChannel(
+          "kudicart_driver_alerts",
+          "KudiCart Driver Assignments",
+          android.app.NotificationManager.IMPORTANCE_HIGH
+        );
+        driverChannel.setDescription("New order offers and delivery status notifications");
+        driverChannel.enableLights(true);
+        driverChannel.enableVibration(true);
+        driverChannel.setShowBadge(true);
+        manager.createNotificationChannel(driverChannel);
+      }
+    }
   }
 }

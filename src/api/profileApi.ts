@@ -74,7 +74,7 @@ export const profileApi = {
   }) => {
     return request<any>('/driver/profile/location', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify(coords),
     });
   },
 };

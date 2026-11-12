@@ -35,7 +35,19 @@ export const useNotificationStore = create<NotificationState>((set) => ({
     try {
       const res = await notificationsApi.getNotifications();
       if (res && Array.isArray(res.notifications)) {
-        set({ notifications: res.notifications, error: null });
+        const mapped: NotificationItem[] = res.notifications.map((n: any) => ({
+          id: n.id,
+          category: n.category || 'SYSTEM',
+          title: n.title,
+          body: n.body,
+          timestamp: n.timestamp || n.createdAt || new Date().toISOString(),
+          read: typeof n.read === 'boolean' ? n.read : Boolean(n.isRead),
+          amount: n.amount || n.data?.amount,
+          actionRoute: n.actionRoute || (n.orderId || n.data?.orderId ? 'OrderDetails' : undefined),
+          actionLabel: n.actionLabel || (n.orderId || n.data?.orderId ? 'View Order' : undefined),
+          orderId: n.orderId || n.data?.orderId,
+        }));
+        set({ notifications: mapped, error: null });
       }
     } catch (err: any) {
       set({ error: err?.message || 'Unable to load notifications' });

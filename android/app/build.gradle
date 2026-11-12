@@ -90,7 +90,10 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
-        manifestPlaceholders = [googleMapsApiKey: googleMapsApiKey]
+        manifestPlaceholders = [
+            googleMapsApiKey: googleMapsApiKey,
+            GOOGLE_MAPS_API_KEY: googleMapsApiKey
+        ]
     }
     signingConfigs {
         debug {
@@ -99,36 +102,32 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        release {
+            def releaseStoreFile = System.getenv("DRIVER_UPLOAD_STORE_FILE") ?: System.getenv("KUDICART_UPLOAD_STORE_FILE") ?: project.findProperty("DRIVER_UPLOAD_STORE_FILE") ?: project.findProperty("KUDICART_UPLOAD_STORE_FILE")
+            def releaseStorePassword = System.getenv("DRIVER_UPLOAD_STORE_PASSWORD") ?: System.getenv("KUDICART_UPLOAD_STORE_PASSWORD") ?: project.findProperty("DRIVER_UPLOAD_STORE_PASSWORD") ?: project.findProperty("KUDICART_UPLOAD_STORE_PASSWORD")
+            def releaseKeyAlias = System.getenv("DRIVER_UPLOAD_KEY_ALIAS") ?: System.getenv("KUDICART_UPLOAD_KEY_ALIAS") ?: project.findProperty("DRIVER_UPLOAD_KEY_ALIAS") ?: project.findProperty("KUDICART_UPLOAD_KEY_ALIAS")
+            def releaseKeyPassword = System.getenv("DRIVER_UPLOAD_KEY_PASSWORD") ?: System.getenv("KUDICART_UPLOAD_KEY_PASSWORD") ?: project.findProperty("DRIVER_UPLOAD_KEY_PASSWORD") ?: project.findProperty("KUDICART_UPLOAD_KEY_PASSWORD")
+
+            if (releaseStoreFile && file(releaseStoreFile).exists() && releaseStorePassword && releaseKeyAlias && releaseKeyPassword) {
+                storeFile file(releaseStoreFile)
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Production signing setup (D-028 / D-035):
-            // Configure KUDICART_UPLOAD_STORE_FILE, KUDICART_UPLOAD_STORE_PASSWORD,
-            // KUDICART_UPLOAD_KEY_ALIAS, and KUDICART_UPLOAD_KEY_PASSWORD in Gradle
-            // properties or CI secrets before cutting a Play Store release bundle.
-            def releaseStoreFile = System.getenv("KUDICART_UPLOAD_STORE_FILE") ?: project.findProperty("KUDICART_UPLOAD_STORE_FILE")
-            if (releaseStoreFile) {
-                signingConfig signingConfigs.create("release") {
-                    storeFile file(releaseStoreFile)
-                    storePassword System.getenv("KUDICART_UPLOAD_STORE_PASSWORD") ?: project.findProperty("KUDICART_UPLOAD_STORE_PASSWORD")
-                    keyAlias System.getenv("KUDICART_UPLOAD_KEY_ALIAS") ?: project.findProperty("KUDICART_UPLOAD_KEY_ALIAS")
-                    keyPassword System.getenv("KUDICART_UPLOAD_KEY_PASSWORD") ?: project.findProperty("KUDICART_UPLOAD_KEY_PASSWORD")
-                }
-            } else {
-                signingConfig signingConfigs.debug
-            }
+            signingConfig signingConfigs.release
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
     }
 }
 
-android.defaultConfig.manifestPlaceholders = [
-    GOOGLE_MAPS_API_KEY: System.getenv("GOOGLE_MAPS_API_KEY") ?: (project.findProperty("GOOGLE_MAPS_API_KEY") ?: "")
-]
 
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
@@ -149,3 +148,27 @@ dependencies {
 }
 
 apply from: file("../../node_modules/@react-native-community/cli-platform-android/native_modules.gradle"); applyNativeModulesAppBuildGradle(project)
+
+gradle.taskGraph.whenReady { taskGraph ->
+    def isReleaseTask = taskGraph.allTasks.any { 
+        def n = it.name.toLowerCase()
+        (n.contains("release") || n.contains("bundle")) && 
+        (n.contains("bundle") || n.contains("assemble") || n.contains("package")) && 
+        !n.contains("debug") && !n.contains("test") && !n.contains("lint")
+    }
+    if (isReleaseTask) {
+        def releaseStoreFile = System.getenv("DRIVER_UPLOAD_STORE_FILE") ?: System.getenv("KUDICART_UPLOAD_STORE_FILE") ?: project.findProperty("DRIVER_UPLOAD_STORE_FILE") ?: project.findProperty("KUDICART_UPLOAD_STORE_FILE")
+        def releaseStorePassword = System.getenv("DRIVER_UPLOAD_STORE_PASSWORD") ?: System.getenv("KUDICART_UPLOAD_STORE_PASSWORD") ?: project.findProperty("DRIVER_UPLOAD_STORE_PASSWORD") ?: project.findProperty("KUDICART_UPLOAD_STORE_PASSWORD")
+        def releaseKeyAlias = System.getenv("DRIVER_UPLOAD_KEY_ALIAS") ?: System.getenv("KUDICART_UPLOAD_KEY_ALIAS") ?: project.findProperty("DRIVER_UPLOAD_KEY_ALIAS") ?: project.findProperty("KUDICART_UPLOAD_KEY_ALIAS")
+        def releaseKeyPassword = System.getenv("DRIVER_UPLOAD_KEY_PASSWORD") ?: System.getenv("KUDICART_UPLOAD_KEY_PASSWORD") ?: project.findProperty("DRIVER_UPLOAD_KEY_PASSWORD") ?: project.findProperty("KUDICART_UPLOAD_KEY_PASSWORD")
+
+        if (!releaseStoreFile || !file(releaseStoreFile).exists() || !releaseStorePassword || !releaseKeyAlias || !releaseKeyPassword) {
+            throw new GradleException(
+                "FAIL-CLOSED RELEASE SIGNING GUARD: Production release builds cannot use debug signing. " +
+                "The following upload keystore configuration is required: " +
+                "DRIVER_UPLOAD_STORE_FILE (must point to existing keystore file), " +
+                "DRIVER_UPLOAD_STORE_PASSWORD, DRIVER_UPLOAD_KEY_ALIAS, and DRIVER_UPLOAD_KEY_PASSWORD."
+            )
+        }
+    }
+}

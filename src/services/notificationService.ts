@@ -18,6 +18,24 @@ export const notificationService = {
         return null;
       }
 
+      if (Platform.OS === 'android' && Number(Platform.Version) >= 33) {
+        try {
+          const { PermissionsAndroid } = require('react-native');
+          if (PermissionsAndroid?.PERMISSIONS?.POST_NOTIFICATIONS) {
+            const hasPostNotif = await PermissionsAndroid.check(
+              PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+            );
+            if (!hasPostNotif) {
+              await PermissionsAndroid.request(
+                PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+              );
+            }
+          }
+        } catch {
+          // ignore permission check error; messaging().requestPermission() covers standard prompt
+        }
+      }
+
       const authStatus = await messaging().requestPermission();
       const enabled =
         authStatus === messaging.AuthorizationStatus?.AUTHORIZED ||

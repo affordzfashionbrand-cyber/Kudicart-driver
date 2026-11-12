@@ -1,4 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Network Connectivity -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -36,6 +37,12 @@
         android:name="com.google.android.geo.API_KEY"
         android:value="${googleMapsApiKey}" />
 
+      <!-- Firebase Cloud Messaging Default Notification Channel -->
+      <meta-data
+        android:name="com.google.firebase.messaging.default_notification_channel_id"
+        android:value="kudicart_driver_alerts"
+        tools:replace="android:value" />
+
       <!-- Active Delivery Location Foreground Service with Location Service Type -->
       <service
         android:name=".services.LocationForegroundService"
@@ -43,10 +50,6 @@
         android:exported="false"
         android:foregroundServiceType="location" />
 
-      <!-- Google Maps SDK for Android API Key (D-021) — supplied via Gradle manifestPlaceholders -->
-      <meta-data
-        android:name="com.google.android.geo.API_KEY"
-        android:value="${GOOGLE_MAPS_API_KEY}" />
 
       <activity
         android:name=".MainActivity"
