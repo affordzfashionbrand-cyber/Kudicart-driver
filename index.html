@@ -6,6 +6,15 @@
   <title>KudiCart Driver App Preview</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script>
+    // Firebase Phone Auth strictly validates domain credentials. On Windows, localhost can resolve to IPv6 (::1)
+    // causing auth/invalid-app-credential. Using literal 127.0.0.1 guarantees IPv4 matching Firebase Authorized Domains.
+    if (window.location.hostname !== '127.0.0.1' && !window.location.hostname.endsWith('firebaseapp.com') && !window.location.hostname.endsWith('web.app')) {
+      var target = 'http://127.0.0.1:' + (window.location.port || '3002') + window.location.pathname + window.location.search + window.location.hash;
+      console.warn('[Firebase Auth] Redirecting to 127.0.0.1 for authentic Phone Auth: ' + target);
+      window.location.replace(target);
+    }
+  </script>
   <style>
     .leaflet-container {
       width: 100% !important;
@@ -60,8 +69,15 @@
       }
     }
 
-    /* Constrain modals to mobile frame without displacing #root, ignoring reCAPTCHA and root */
-    body > div[aria-modal="true"] {
+    #recaptcha-container {
+      position: fixed !important;
+      bottom: 16px !important;
+      right: 16px !important;
+      z-index: 2147483647 !important;
+    }
+
+    /* Constrain React Native Web modals to mobile frame without displacing #root, ignoring Google reCAPTCHA dialogs */
+    body > div[aria-modal="true"]:not([style*="2000000000"]):not([style*="2147483647"]) {
       position: fixed !important;
       top: 0 !important;
       left: 0 !important;
@@ -72,7 +88,7 @@
       pointer-events: none !important;
       z-index: 99999 !important;
     }
-    body > div[aria-modal="true"] > * {
+    body > div[aria-modal="true"]:not([style*="2000000000"]):not([style*="2147483647"]) > * {
       pointer-events: auto !important;
     }
   </style>

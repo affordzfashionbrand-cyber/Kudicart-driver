@@ -104,6 +104,11 @@ export const DocumentUploadsScreen = ({ navigation }: any) => {
     if (isReviewMode) {
       // Re-submitted: transition back to pending verification
       setKycStatus('PENDING');
+      if (typeof navigation?.replace === 'function') {
+        navigation.replace('VerificationPending');
+      } else if (typeof navigation?.navigate === 'function') {
+        navigation.navigate('VerificationPending');
+      }
     } else {
       navigation.navigate('Selfie');
     }

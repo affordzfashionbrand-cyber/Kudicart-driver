@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform, Image } from 'react-native';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { PrimaryButton } from '../../components/PrimaryButton';
@@ -14,11 +14,21 @@ import { styles } from './selfie.styles';
 
 export const SelfieScreen = ({ navigation }: any) => {
   const { documents, setSelfie } = useDriverStore();
-  const { setKycStatus } = useAuthStore();
+  const { kycStatus, setKycStatus } = useAuthStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
   
   const hasSelfie = !!documents.selfie;
+
+  useEffect(() => {
+    if (kycStatus === 'PENDING' || kycStatus === 'UNDER_REVIEW') {
+      if (typeof navigation?.replace === 'function') {
+        navigation.replace('VerificationPending');
+      } else if (typeof navigation?.navigate === 'function') {
+        navigation.navigate('VerificationPending');
+      }
+    }
+  }, [kycStatus, navigation]);
 
   const handleTakeSelfie = async () => {
     const status = await permissionService.check('camera');
@@ -107,13 +117,34 @@ export const SelfieScreen = ({ navigation }: any) => {
   const handleContinue = async () => {
     try {
       setIsSubmitting(true);
-      await profileApi.submitKyc();
-      setKycStatus('PENDING');
+      const res = await profileApi.submitKyc();
+      const updatedStatus = res?.kycStatus || 'UNDER_REVIEW';
+      setKycStatus(updatedStatus);
       toast.show({
         type: 'success',
         message: 'KYC documents submitted for verification.',
       });
+      if (typeof navigation?.replace === 'function') {
+        navigation.replace('VerificationPending');
+      } else if (typeof navigation?.navigate === 'function') {
+        navigation.navigate('VerificationPending');
+      }
     } catch (err: any) {
+      const errMsg = String(err?.message || '');
+      if (
+        errMsg.includes('already') ||
+        errMsg.includes('review') ||
+        errMsg.includes('PENDING') ||
+        errMsg.includes('UNDER_REVIEW')
+      ) {
+        setKycStatus('UNDER_REVIEW');
+        if (typeof navigation?.replace === 'function') {
+          navigation.replace('VerificationPending');
+        } else if (typeof navigation?.navigate === 'function') {
+          navigation.navigate('VerificationPending');
+        }
+        return;
+      }
       toast.show({
         type: 'error',
         message: err?.message || 'Failed to submit KYC documents. Please verify all required documents are uploaded.',

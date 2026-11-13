@@ -4,6 +4,7 @@ export interface SendOtpResponse {
   success: boolean;
   message: string;
   countdownSeconds?: number;
+  devOtp?: string;
 }
 
 export interface VerifyOtpResponse {

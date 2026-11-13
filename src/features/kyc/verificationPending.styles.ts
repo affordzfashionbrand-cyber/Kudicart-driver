@@ -142,34 +142,23 @@ export const styles = StyleSheet.create({
   },
 
   footer: {
-    marginTop: 12,
+    marginTop: 16,
     alignItems: 'center',
     width: '100%',
-    paddingBottom: 16,
+    paddingBottom: 24,
   },
-  reviewBtn: {
+  logoutBtn: {
     width: '100%',
     paddingVertical: 14,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: colors.primary,
+    borderColor: '#E2DED7',
     backgroundColor: colors.white,
     alignItems: 'center',
-    marginBottom: 8,
-  },
-  reviewBtnText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-  logoutBtn: {
-    alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: spacing.l,
   },
   logoutBtnText: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.textSecondary,
+    color: '#4B5563',
   },
 });

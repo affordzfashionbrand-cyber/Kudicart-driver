@@ -9,12 +9,25 @@ import logo from '../../assets/logo.png';
 import { useAuthStore } from '../../store/useAuthStore';
 
 export const VerificationRejectedScreen = ({ navigation }: any) => {
-  const { logout } = useAuthStore();
+  const { logout, rejectionReason, syncStatusAsync } = useAuthStore();
+
+  React.useEffect(() => {
+    syncStatusAsync?.();
+  }, [syncStatusAsync]);
 
   const handleReview = () => {
-    // Route partner directly to document uploads review screen identifying failed documents
+    // Route partner directly to document uploads or driver details screen identifying failed documents
     navigation.navigate('DocumentUploads');
   };
+
+  const parsedIssues = React.useMemo(() => {
+    if (!rejectionReason) return [];
+    return rejectionReason
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0)
+      .map((line) => line.replace(/^[•\-\*]\s*/, ''));
+  }, [rejectionReason]);
 
   return (
     <ScreenContainer>
@@ -38,10 +51,27 @@ export const VerificationRejectedScreen = ({ navigation }: any) => {
             We couldn't verify some of your details or documents. Review the information below and resubmit it for verification.
           </Text>
 
-          {/* Secondary warning */}
-          <Text style={styles.secondaryWarning}>
-            Your account will remain unavailable until verification is complete.
-          </Text>
+          {/* Dynamic Rejection Feedback Card */}
+          {parsedIssues.length > 0 ? (
+            <View style={styles.issuesCard}>
+              <View style={styles.issuesHeader}>
+                <KudiIcon name="alert-circle" color={colors.danger} size={18} />
+                <Text style={styles.issuesTitle}>Items Requiring Attention</Text>
+              </View>
+              <View style={styles.issuesList}>
+                {parsedIssues.map((issue, idx) => (
+                  <View key={idx} style={styles.issueItem}>
+                    <Text style={styles.issueBullet}>•</Text>
+                    <Text style={styles.issueText}>{issue}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          ) : (
+            <Text style={styles.secondaryWarning}>
+              Your account will remain unavailable until verification is complete.
+            </Text>
+          )}
         </View>
 
         {/* Footer Actions */}
@@ -115,6 +145,49 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     textAlign: 'center',
     paddingHorizontal: spacing.s,
+  },
+  issuesCard: {
+    width: '100%',
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16,
+  },
+  issuesHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#FEE2E2',
+    paddingBottom: 8,
+  },
+  issuesTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.danger,
+  },
+  issuesList: {
+    gap: 6,
+  },
+  issueItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  issueBullet: {
+    fontSize: 13,
+    color: colors.danger,
+    lineHeight: 18,
+  },
+  issueText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#991B1B',
+    fontWeight: '500',
   },
   footer: {
     marginTop: 24,

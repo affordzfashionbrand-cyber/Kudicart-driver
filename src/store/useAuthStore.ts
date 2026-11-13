@@ -42,6 +42,7 @@ interface AuthState {
   isAuthenticated: boolean;
   phoneNumber: string | null;
   kycStatus: KycStatus | null;
+  rejectionReason: string | null;
   token: string | null;
   authMode: 'firebase' | 'dev-otp' | null;
   isLoading: boolean;
@@ -78,6 +79,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isAuthenticated: initialSession.isAuthenticated,
   phoneNumber: null,
   kycStatus: null,
+  rejectionReason: null,
   token: initialSession.token,
   isLoading: false,
   error: null,
@@ -184,22 +186,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       };
     } catch (err: any) {
       if (err?.code === 'FIREBASE_UNAVAILABLE') {
-        const isDevMode = typeof __DEV__ !== 'undefined' && __DEV__;
-        if (isDevMode) {
-          try {
-            const res = await get().sendOtpAsync(phone);
-            set({ authMode: 'dev-otp', isLoading: false });
-            return {
-              success: res.success,
-              mode: 'dev-otp' as const,
-              message: res.message || `OTP sent to ${phone}`,
-            };
-          } catch (backendErr: any) {
-            const msg = backendErr?.message || 'Failed to dispatch verification OTP';
-            set({ isLoading: false, error: msg });
-            throw new Error(msg);
-          }
-        }
         const prodErrMsg =
           'Firebase Phone Auth is required in production builds and is unavailable on this device.';
         set({ isLoading: false, error: prodErrMsg });
@@ -214,29 +200,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   confirmPhoneOtpAsync: async (phone: string, otp: string) => {
     set({ isLoading: true, error: null });
-    const isDevMode = typeof __DEV__ !== 'undefined' && __DEV__;
     try {
-      if (firebaseAuthService.hasPendingConfirmation()) {
-        const idToken = await firebaseAuthService.confirmPhoneOtp(otp);
-        setAuthTokenIssuedAt(Date.now());
-        const ok = await get().loginWithFirebaseAsync(idToken);
-        if (ok) {
-          set({ authMode: 'firebase', isLoading: false, error: null });
-          return true;
-        }
-        throw new Error(get().error || 'Failed to authenticate driver session.');
-      }
-
-      if (!isDevMode && !firebaseAuthService.hasPendingConfirmation()) {
+      if (!firebaseAuthService.hasPendingConfirmation()) {
         throw new Error('Firebase verification session expired. Please request a new OTP.');
       }
 
-      const ok = await get().verifyOtpAsync(phone, otp);
-      if (!ok) {
-        throw new Error(get().error || 'Invalid OTP. Please try again.');
+      const idToken = await firebaseAuthService.confirmPhoneOtp(otp);
+      setAuthTokenIssuedAt(Date.now());
+      const ok = await get().loginWithFirebaseAsync(idToken);
+      if (ok) {
+        set({ authMode: 'firebase', isLoading: false, error: null });
+        return true;
       }
-      set({ authMode: 'dev-otp', isLoading: false, error: null });
-      return true;
+      throw new Error(get().error || 'Failed to authenticate driver session.');
     } catch (err: any) {
       const msg = err?.message || 'OTP verification failed.';
       set({ isLoading: false, error: msg });
@@ -277,6 +253,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (status && status.kycStatus) {
         set({
           kycStatus: status.kycStatus as KycStatus,
+          rejectionReason: status.rejectionReason || null,
           isAuthenticated: true,
           error: null,
         });

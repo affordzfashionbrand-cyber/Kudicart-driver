@@ -140,14 +140,6 @@ export const VerificationPendingScreen = ({ navigation }: any) => {
         {/* Footer Actions */}
         <View style={styles.footer}>
           <TouchableOpacity
-            onPress={() => navigation?.navigate('DriverDetails')}
-            style={styles.reviewBtn}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.reviewBtnText}>Review / Edit Application Details</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
             onPress={logout}
             style={styles.logoutBtn}
             activeOpacity={0.7}
