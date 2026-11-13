@@ -184,7 +184,7 @@ export const OtpVerificationScreen = ({ navigation, route }: any) => {
                   onFocus={() => setFocusedIndex(index)}
                   onBlur={() => setFocusedIndex(null)}
                   keyboardType="number-pad"
-                  maxLength={index === 0 ? 6 : 2}
+                  maxLength={6}
                   textAlign="center"
                   selectTextOnFocus={true}
                   // @ts-ignore

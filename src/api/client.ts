@@ -12,17 +12,20 @@ export interface ApiResponse<T = any> {
   statusCode?: number;
 }
 
+const normalizeBaseUrl = (url: string): string =>
+  url.trim().replace(/\/api\/v1\/?$/, '').replace(/\/+$/, '');
+
 export const getApiBaseUrl = (): string => {
   try {
     // eslint-disable-next-line no-new-func
     const meta = new Function('try { return import.meta; } catch(e) { return null; }')();
     if (meta && meta.env && meta.env.VITE_API_BASE_URL) {
-      return meta.env.VITE_API_BASE_URL;
+      return normalizeBaseUrl(meta.env.VITE_API_BASE_URL);
     }
   } catch {}
   try {
     if (typeof process !== 'undefined' && process.env && process.env.VITE_API_BASE_URL) {
-      return process.env.VITE_API_BASE_URL;
+      return normalizeBaseUrl(process.env.VITE_API_BASE_URL);
     }
   } catch {}
 
@@ -265,9 +268,9 @@ async function performSingleRequest<T = any>(
   options: RequestInit = {},
   overrideToken?: string,
 ): Promise<T> {
-  const baseUrl = getApiBaseUrl();
+  const rawBase = getApiBaseUrl().replace(/\/+$/, '').replace(/\/api\/v1$/, '');
   const formattedEndpoint = formatEndpoint(endpoint);
-  const url = `${baseUrl}${formattedEndpoint}`;
+  const url = `${rawBase}${formattedEndpoint}`;
   const token = overrideToken !== undefined ? overrideToken : getAuthToken();
 
   const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
@@ -277,7 +280,7 @@ async function performSingleRequest<T = any>(
   };
 
   if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+    headers['Authorization'] = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
   }
 
   const config: RequestInit = {

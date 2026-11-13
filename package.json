@@ -8,9 +8,9 @@
   },
   "packageManager": "npm@10.9.2",
   "scripts": {
-    "android": "react-native run-android",
+    "android": "react-native run-android --port 8082",
     "lint": "eslint .",
-    "start": "react-native start",
+    "start": "react-native start --port 8082",
     "web": "vite --host --port 3002 --open",
     "build": "vite build",
     "test": "jest",

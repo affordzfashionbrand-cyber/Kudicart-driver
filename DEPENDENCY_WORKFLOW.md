@@ -9,7 +9,7 @@
 
 ## 2. Port Architecture
 - **Web App Port:** `3002` (prevents collision with Admin on 3000 and Backend on 3001)
-- **Metro Bundler Port:** `8081`
+- **Metro Bundler Port:** `8082` (prevents collision with Customer App Metro on 8081)
 
 ## 3. First-Time Setup
 ```bash

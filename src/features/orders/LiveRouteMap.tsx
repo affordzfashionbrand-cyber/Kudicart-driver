@@ -35,14 +35,14 @@ export const LiveRouteMap = forwardRef<LiveRouteMapRef, LiveRouteMapProps>(({
   isFullScreen = false,
   isPreview = false,
   orderId,
-  driverHeading = 0,
+  driverHeading: _driverHeading = 0,
 }, ref) => {
   const containerRef = useRef<any>(null);
   const mapInstanceRef = useRef<any>(null);
   const polylineRef = useRef<any>(null);
   const nativeMapRef = useRef<NativeRouteMapRef | null>(null);
 
-  const [isStraightLine, setIsStraightLine] = useState(false);
+  const [_isStraightLine, setIsStraightLine] = useState(false);
   const [routeCoordinates, setRouteCoordinates] = useState<[number, number][]>(
     origin && destination && (origin.lat !== destination.lat || origin.lng !== destination.lng)
       ? [[origin.lat, origin.lng], [destination.lat, destination.lng]]
@@ -110,7 +110,7 @@ export const LiveRouteMap = forwardRef<LiveRouteMapRef, LiveRouteMapProps>(({
     return () => {
       isMounted = false;
     };
-  }, [origin.lat, origin.lng, destination.lat, destination.lng, orderId]);
+  }, [origin, destination, orderId, fitRouteBounds]);
 
   // Initial auto-fit on native map mount
   useEffect(() => {
@@ -120,7 +120,7 @@ export const LiveRouteMap = forwardRef<LiveRouteMapRef, LiveRouteMapProps>(({
       }, 350);
       return () => clearTimeout(timer);
     }
-  }, [routeCoordinates]);
+  }, [routeCoordinates, fitRouteBounds]);
 
   // Web Leaflet fallback initialization
   useEffect(() => {

@@ -54,7 +54,7 @@ const RadarPulse = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
-export const VerificationPendingScreen = () => {
+export const VerificationPendingScreen = ({ navigation }: any) => {
   const { logout, syncStatusAsync } = useAuthStore();
   const { profile, vehicle, fetchProfileAsync } = useDriverStore();
 
@@ -139,6 +139,14 @@ export const VerificationPendingScreen = () => {
 
         {/* Footer Actions */}
         <View style={styles.footer}>
+          <TouchableOpacity
+            onPress={() => navigation?.navigate('DriverDetails')}
+            style={styles.reviewBtn}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.reviewBtnText}>Review / Edit Application Details</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity
             onPress={logout}
             style={styles.logoutBtn}

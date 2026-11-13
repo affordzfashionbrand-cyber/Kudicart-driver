@@ -19,6 +19,11 @@ export default defineConfig(({ mode }) => ({
       'react-native-safe-area-context',
     ],
   },
+  server: {
+    port: 3002,
+    host: true,
+    strictPort: true,
+  },
   build: {
     chunkSizeWarningLimit: 1500,
   },

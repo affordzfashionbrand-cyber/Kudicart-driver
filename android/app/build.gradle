@@ -85,7 +85,7 @@ android {
 
     namespace "com.kudicartdriverapp"
     defaultConfig {
-        applicationId "com.kudicartdriverapp"
+        applicationId "com.affordz.driver"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

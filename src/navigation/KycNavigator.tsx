@@ -14,26 +14,26 @@ const Stack = createNativeStackNavigator();
 export const KycNavigator = () => {
   const { kycStatus } = useAuthStore();
 
-  if (kycStatus === 'PENDING' || kycStatus === 'UNDER_REVIEW') {
-    return (
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="VerificationPending" component={VerificationPendingScreen} />
-      </Stack.Navigator>
-    );
-  }
+  const isPending = kycStatus === 'PENDING' || kycStatus === 'UNDER_REVIEW';
+  const initialRouteName = isPending
+    ? 'VerificationPending'
+    : kycStatus === 'REJECTED'
+      ? 'VerificationRejected'
+      : 'DriverDetails';
 
   return (
-    <Stack.Navigator 
+    <Stack.Navigator
       key={kycStatus}
-      screenOptions={{ headerShown: false }} 
-      initialRouteName={kycStatus === 'REJECTED' ? 'VerificationRejected' : 'DriverDetails'}
+      screenOptions={{ headerShown: false }}
+      initialRouteName={initialRouteName}
     >
-      <Stack.Screen name="VerificationRejected" component={VerificationRejectedScreen} />
       <Stack.Screen name="DriverDetails" component={DriverDetailsScreen} />
       <Stack.Screen name="VehicleDetails" component={VehicleDetailsScreen} />
       <Stack.Screen name="DocumentUploads" component={DocumentUploadsScreen} />
       <Stack.Screen name="Selfie" component={SelfieScreen} />
       <Stack.Screen name="DocumentUploadDetail" component={DocumentUploadDetailScreen} />
+      <Stack.Screen name="VerificationPending" component={VerificationPendingScreen} />
+      <Stack.Screen name="VerificationRejected" component={VerificationRejectedScreen} />
     </Stack.Navigator>
   );
 };

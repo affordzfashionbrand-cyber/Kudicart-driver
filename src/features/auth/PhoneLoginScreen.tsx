@@ -40,9 +40,17 @@ export const PhoneLoginScreen = ({ navigation }: any) => {
   );
 
   const handlePhoneChange = (text: string) => {
-    // Only accept numeric digits, max 10
-    const digitsOnly = text.replace(/[^0-9]/g, '').slice(0, 10);
-    setPhone(digitsOnly);
+    let digits = text.replace(/[^0-9]/g, '');
+    if (digits.length > 10) {
+      if (digits.startsWith('91') && digits.length === 12) {
+        digits = digits.slice(2);
+      } else if (digits.startsWith('0') && digits.length === 11) {
+        digits = digits.slice(1);
+      } else {
+        digits = digits.slice(-10);
+      }
+    }
+    setPhone(digits.slice(0, 10));
     setIsTouched(true);
   };
 

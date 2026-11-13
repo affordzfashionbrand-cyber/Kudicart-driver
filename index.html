@@ -60,9 +60,8 @@
       }
     }
 
-    /* Constrain any portals or full-window modals to mobile frame without displacing #root */
-    body > div[aria-modal="true"],
-    body > div:not(#root) {
+    /* Constrain modals to mobile frame without displacing #root, ignoring reCAPTCHA and root */
+    body > div[aria-modal="true"] {
       position: fixed !important;
       top: 0 !important;
       left: 0 !important;
@@ -73,13 +72,14 @@
       pointer-events: none !important;
       z-index: 99999 !important;
     }
-    body > div:not(#root) > * {
+    body > div[aria-modal="true"] > * {
       pointer-events: auto !important;
     }
   </style>
 </head>
 <body>
   <div id="root"></div>
+  <div id="recaptcha-container"></div>
   <script type="module" src="/index.web.js"></script>
 </body>
 </html>

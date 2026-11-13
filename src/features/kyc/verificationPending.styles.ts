@@ -147,6 +147,21 @@ export const styles = StyleSheet.create({
     width: '100%',
     paddingBottom: 16,
   },
+  reviewBtn: {
+    width: '100%',
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  reviewBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.primary,
+  },
   logoutBtn: {
     alignItems: 'center',
     paddingVertical: 10,

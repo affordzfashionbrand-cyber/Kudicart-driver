@@ -59,15 +59,23 @@ export const RootNavigator = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const token = getAuthToken();
-    if (token) {
-      syncStatusAsync()
-        .catch(() => {})
-        .finally(() => setIsLoading(false));
-    } else {
-      setIsLoading(false);
+    let mounted = true;
+    async function initSession() {
+      try {
+        await useAuthStore.getState().restoreSessionAsync();
+      } catch (err) {
+        console.warn('Driver session restoration error:', err);
+      } finally {
+        if (mounted) {
+          setIsLoading(false);
+        }
+      }
     }
-  }, [syncStatusAsync]);
+    initSession();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (isAuthenticated) {
