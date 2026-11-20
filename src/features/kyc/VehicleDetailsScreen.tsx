@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -24,10 +24,12 @@ import {
 import { styles } from './vehicleDetails.styles';
 
 export const VehicleDetailsScreen = ({ navigation }: any) => {
-  const { vehicle, updateVehicle } = useDriverStore();
+  const { vehicle, updateVehicle, updateVehicleAsync, fetchProfileAsync } = useDriverStore();
 
   const [registrationNumber, setRegistrationNumber] = useState(vehicle.registrationNumber || '');
-  const [vehicleType, setVehicleType] = useState(vehicle.vehicleType || '');
+  const [vehicleType, setVehicleType] = useState(
+    vehicle.vehicleType === 'EV Scooty' ? 'EV Scooter' : (vehicle.vehicleType || '')
+  );
   const [make, setMake] = useState(vehicle.make || '');
   const [model, setModel] = useState(vehicle.model || '');
 
@@ -37,6 +39,20 @@ export const VehicleDetailsScreen = ({ navigation }: any) => {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [touchedFields, setTouchedFields] = useState<{ [key: string]: boolean }>({});
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    fetchProfileAsync().catch(() => {});
+  }, [fetchProfileAsync]);
+
+  useEffect(() => {
+    if (vehicle.registrationNumber && !registrationNumber) setRegistrationNumber(vehicle.registrationNumber);
+    if (vehicle.vehicleType && !vehicleType) {
+      setVehicleType(vehicle.vehicleType === 'EV Scooty' ? 'EV Scooter' : vehicle.vehicleType);
+    }
+    if (vehicle.make && !make) setMake(vehicle.make);
+    if (vehicle.model && !model) setModel(vehicle.model);
+  }, [vehicle]);
 
   const shouldShowError = (field: string) => {
     return (hasSubmitted || !!touchedFields[field]) && !!errors[field];
@@ -70,16 +86,25 @@ export const VehicleDetailsScreen = ({ navigation }: any) => {
     return isValid;
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     setHasSubmitted(true);
-    if (validate()) {
-      updateVehicle({
+    if (!validate()) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const res = await updateVehicleAsync({
         registrationNumber,
         vehicleType: vehicleType as any,
         make,
         model,
       });
-      navigation.navigate('DocumentUploads');
+      if (res.success) {
+        navigation.navigate('DocumentUploads');
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -173,10 +198,10 @@ export const VehicleDetailsScreen = ({ navigation }: any) => {
             ) : null}
 
             {/* Vehicle Type Dropdown */}
+            <Text style={[styles.inputLabel, styles.fieldMargin]}>
+              Vehicle Type <Text style={styles.required}>*</Text>
+            </Text>
             <View style={styles.typeDropdownWrapper}>
-              <Text style={[styles.inputLabel, styles.fieldMargin]}>
-                Vehicle Type <Text style={styles.required}>*</Text>
-              </Text>
               <TouchableOpacity
                 style={[
                   styles.inputContainer,
@@ -213,13 +238,15 @@ export const VehicleDetailsScreen = ({ navigation }: any) => {
                     onPress={() => setIsTypeDropdownOpen(false)}
                   />
                   <View style={styles.typeDropdownList}>
-                    {VEHICLE_TYPES.map((type) => {
+                    {VEHICLE_TYPES.map((type, index) => {
                       const isSelected = vehicleType === type;
+                      const isLast = index === VEHICLE_TYPES.length - 1;
                       return (
                         <TouchableOpacity
                           key={type}
                           style={[
                             styles.typeDropdownItem,
+                            isLast && styles.typeDropdownItemLast,
                             isSelected && styles.typeDropdownItemActive,
                           ]}
                           onPress={() => {
@@ -322,7 +349,12 @@ export const VehicleDetailsScreen = ({ navigation }: any) => {
           </View>
 
           <View style={styles.footer}>
-            <PrimaryButton title="Continue" onPress={handleContinue} />
+            <PrimaryButton
+              title="Continue"
+              onPress={handleContinue}
+              loading={isSubmitting}
+              disabled={isSubmitting}
+            />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

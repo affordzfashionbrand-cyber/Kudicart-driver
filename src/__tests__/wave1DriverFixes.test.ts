@@ -1,4 +1,4 @@
-import { ordersApi, mapBackendDriverOrder } from '../api';
+import { ordersApi, profileApi, mapBackendDriverOrder } from '../api';
 import { setAuthToken } from '../api/client';
 import { driverSocket } from '../services/driverSocket';
 import { locationTrackingService } from '../services/locationTrackingService';
@@ -179,5 +179,25 @@ describe('Wave 1 Driver App Fixes', () => {
     expect(useOrderStore.getState().activeOrders).toHaveLength(0);
     expect(useDriverStore.getState().isOnline).toBe(false);
     expect(useNotificationStore.getState().notifications).toHaveLength(0);
+  });
+
+  test('fetchProfileAsync merges backend documents correctly into useDriverStore', async () => {
+    jest.spyOn(profileApi, 'getProfile').mockResolvedValueOnce({
+      id: 'drv-1',
+      fullName: 'Aman',
+      documents: {
+        aadhaar: {
+          front: { id: 'doc-1', uri: 'https://example.com/front.jpg', name: 'front.jpg', size: '1MB', type: 'image/jpeg' },
+          back: { id: 'doc-2', uri: 'https://example.com/back.jpg', name: 'back.jpg', size: '1MB', type: 'image/jpeg' },
+          status: 'PENDING',
+        },
+      },
+    });
+
+    await useDriverStore.getState().fetchProfileAsync();
+    const docs = useDriverStore.getState().documents;
+    expect(docs.aadhaar.front).toBeDefined();
+    expect(docs.aadhaar.front?.uri).toBe('https://example.com/front.jpg');
+    expect(docs.aadhaar.back?.uri).toBe('https://example.com/back.jpg');
   });
 });

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { profileApi, ordersApi } from '../api';
+import { isLocalFileUri } from '../api/mediaApi';
 import { toast } from './useToastStore';
 
 
@@ -95,7 +96,9 @@ interface DriverState {
   setIsOnlineAsync: (isOnline: boolean) => Promise<boolean>;
   setActiveSurges: (surges: SurgeIncentive[]) => void;
   updateProfile: (updates: Partial<DriverProfile>) => void;
+  updateProfileAsync: (updates: Partial<DriverProfile>) => Promise<{ success: boolean; error?: string }>;
   updateVehicle: (updates: Partial<VehicleProfile>) => void;
+  updateVehicleAsync: (updates: Partial<VehicleProfile>) => Promise<{ success: boolean; error?: string }>;
   updateDocument: (docType: keyof Omit<DocumentsProfile, 'selfie'>, side: 'front' | 'back', file: DocumentFile | null) => void;
   setSelfie: (file: DocumentFile | null) => void;
   clearKycData: () => void;
@@ -207,8 +210,38 @@ export const useDriverStore = create<DriverState>((set) => ({
             licenseStatus: res.kycStatus || state.kyc?.licenseStatus,
             aadhaarStatus: res.kycStatus || state.kyc?.aadhaarStatus,
             panStatus: res.kycStatus || state.kyc?.panStatus,
+            rejectionReason: res.rejectionReason || state.kyc?.rejectionReason,
             ...(res.kyc || {}),
           },
+          documents: res.documents
+            ? {
+                aadhaar: {
+                  ...state.documents.aadhaar,
+                  ...(res.documents.aadhaar || {}),
+                  front: res.documents.aadhaar?.front || state.documents.aadhaar?.front || null,
+                  back: res.documents.aadhaar?.back || state.documents.aadhaar?.back || null,
+                },
+                pan: {
+                  ...state.documents.pan,
+                  ...(res.documents.pan || {}),
+                  front: res.documents.pan?.front || state.documents.pan?.front || null,
+                  back: res.documents.pan?.back || state.documents.pan?.back || null,
+                },
+                drivingLicence: {
+                  ...state.documents.drivingLicence,
+                  ...(res.documents.drivingLicence || {}),
+                  front: res.documents.drivingLicence?.front || state.documents.drivingLicence?.front || null,
+                  back: res.documents.drivingLicence?.back || state.documents.drivingLicence?.back || null,
+                },
+                vehicleRc: {
+                  ...state.documents.vehicleRc,
+                  ...(res.documents.vehicleRc || {}),
+                  front: res.documents.vehicleRc?.front || state.documents.vehicleRc?.front || null,
+                  back: res.documents.vehicleRc?.back || state.documents.vehicleRc?.back || null,
+                },
+                selfie: res.documents.selfie || state.documents.selfie,
+              }
+            : state.documents,
           isOnline: typeof res.isOnline === 'boolean' ? res.isOnline : state.isOnline,
           assignedStore: res.assignedStore || state.assignedStore,
           workSummary: res.workSummary || state.workSummary,
@@ -287,12 +320,44 @@ export const useDriverStore = create<DriverState>((set) => ({
               licenseStatus: state.kyc?.licenseStatus || profileData.kycStatus,
               aadhaarStatus: state.kyc?.aadhaarStatus || profileData.kycStatus,
               panStatus: state.kyc?.panStatus || profileData.kycStatus,
+              rejectionReason: profileData?.rejectionReason || state.kyc?.rejectionReason,
             }
           : state.kyc;
+
+        const resolvedDocuments = profileData?.documents
+          ? {
+              aadhaar: {
+                ...state.documents.aadhaar,
+                ...(profileData.documents.aadhaar || {}),
+                front: profileData.documents.aadhaar?.front || state.documents.aadhaar?.front || null,
+                back: profileData.documents.aadhaar?.back || state.documents.aadhaar?.back || null,
+              },
+              pan: {
+                ...state.documents.pan,
+                ...(profileData.documents.pan || {}),
+                front: profileData.documents.pan?.front || state.documents.pan?.front || null,
+                back: profileData.documents.pan?.back || state.documents.pan?.back || null,
+              },
+              drivingLicence: {
+                ...state.documents.drivingLicence,
+                ...(profileData.documents.drivingLicence || {}),
+                front: profileData.documents.drivingLicence?.front || state.documents.drivingLicence?.front || null,
+                back: profileData.documents.drivingLicence?.back || state.documents.drivingLicence?.back || null,
+              },
+              vehicleRc: {
+                ...state.documents.vehicleRc,
+                ...(profileData.documents.vehicleRc || {}),
+                front: profileData.documents.vehicleRc?.front || state.documents.vehicleRc?.front || null,
+                back: profileData.documents.vehicleRc?.back || state.documents.vehicleRc?.back || null,
+              },
+              selfie: profileData.documents.selfie || state.documents.selfie,
+            }
+          : state.documents;
 
         return {
           profile: updatedProfile,
           kyc: resolvedKyc,
+          documents: resolvedDocuments,
           isOnline:
             typeof data.isOnline === 'boolean'
               ? data.isOnline
@@ -339,6 +404,41 @@ export const useDriverStore = create<DriverState>((set) => ({
     });
   },
 
+  updateProfileAsync: async (updates) => {
+    set((state) => {
+      const updatedProfile = { ...state.profile, ...updates };
+      if (updates.fullName) {
+        const parts = updates.fullName.trim().split(' ');
+        const first = parts[0] || '';
+        const lastInitial = parts.length > 1 ? ` ${parts[parts.length - 1][0]}.` : '';
+        updatedProfile.name = `${first}${lastInitial}`;
+        updatedProfile.avatarInitial = parts.map((p) => p[0]).slice(0, 2).join('').toUpperCase() || 'DP';
+      }
+      return { profile: updatedProfile, lastError: null };
+    });
+
+    try {
+      const res = await profileApi.updateDetails(updates);
+      if (res) {
+        set((state) => ({
+          profile: {
+            ...state.profile,
+            ...(res.profile || res),
+          },
+          lastError: null,
+        }));
+      }
+      return { success: true };
+    } catch (err: any) {
+      const msg = err?.message || 'Unable to save profile details';
+      set({ lastError: msg });
+      try {
+        toast.show({ type: 'error', message: msg });
+      } catch {}
+      return { success: false, error: msg };
+    }
+  },
+
   updateVehicle: (updates) => {
     set((state) => ({ vehicle: { ...state.vehicle, ...updates }, lastError: null }));
     profileApi.updateVehicle(updates).catch((err: any) => {
@@ -350,18 +450,48 @@ export const useDriverStore = create<DriverState>((set) => ({
     });
   },
 
+  updateVehicleAsync: async (updates) => {
+    set((state) => ({ vehicle: { ...state.vehicle, ...updates }, lastError: null }));
+    try {
+      const res = await profileApi.updateVehicle(updates);
+      if (res) {
+        set((state) => ({
+          vehicle: {
+            ...state.vehicle,
+            ...(res.vehicle || res),
+          },
+          lastError: null,
+        }));
+      }
+      return { success: true };
+    } catch (err: any) {
+      const msg = err?.message || 'Unable to save vehicle details';
+      set({ lastError: msg });
+      try {
+        toast.show({ type: 'error', message: msg });
+      } catch {}
+      return { success: false, error: msg };
+    }
+  },
+
   updateDocument: (docType, side, file) => {
-    set((state) => ({
-      lastError: null,
-      documents: {
-        ...state.documents,
-        [docType]: {
-          ...(state.documents[docType] as DocumentState),
-          [side]: file,
+    set((state) => {
+      const existingDoc = (state.documents[docType] as any) || {};
+      return {
+        lastError: null,
+        documents: {
+          ...state.documents,
+          [docType]: {
+            ...existingDoc,
+            [side]: file,
+            status: 'PENDING',
+            rejectionReason: null,
+            isReuploaded: true,
+          },
         },
-      },
-    }));
-    if (file) {
+      };
+    });
+    if (file && isLocalFileUri(file.uri)) {
       profileApi
         .uploadDocument({
           docType: docType as any,
@@ -370,6 +500,20 @@ export const useDriverStore = create<DriverState>((set) => ({
           fileName: file.name,
           fileSize: file.size,
           mimeType: file.type,
+        })
+        .then((res: any) => {
+          if (res?.documents?.[docType]) {
+            set((state) => ({
+              documents: {
+                ...state.documents,
+                [docType]: {
+                  ...(state.documents[docType] as any),
+                  ...res.documents[docType],
+                  isReuploaded: true,
+                },
+              },
+            }));
+          }
         })
         .catch((err: any) => {
           const msg = err?.message || 'Unable to upload KYC document';
@@ -389,7 +533,7 @@ export const useDriverStore = create<DriverState>((set) => ({
         selfie: file,
       },
     }));
-    if (file) {
+    if (file && isLocalFileUri(file.uri)) {
       profileApi
         .uploadDocument({
           docType: 'selfie',
@@ -407,28 +551,34 @@ export const useDriverStore = create<DriverState>((set) => ({
         });
     }
   },
-  clearKycData: () => set({
-    profile: {
-      id: '',
-      fullName: '',
-      aadhaarNumber: '',
-      panNumber: '',
-      dob: '',
-      licenseNumber: '',
-      workPreference: '',
-    },
-    vehicle: {
-      registrationNumber: '',
-      vehicleType: '',
-      make: '',
-      model: '',
-    },
-    documents: {
-      aadhaar: { front: null, back: null },
-      pan: { front: null, back: null },
-      drivingLicence: { front: null, back: null },
-      vehicleRc: { front: null, back: null },
-      selfie: null,
-    },
-  })
+  clearKycData: () => {
+    try {
+      const { useAuthStore } = require('./useAuthStore');
+      useAuthStore.getState().setHasSeenKycApproved(false);
+    } catch {}
+    set({
+      profile: {
+        id: '',
+        fullName: '',
+        aadhaarNumber: '',
+        panNumber: '',
+        dob: '',
+        licenseNumber: '',
+        workPreference: '',
+      },
+      vehicle: {
+        registrationNumber: '',
+        vehicleType: '',
+        make: '',
+        model: '',
+      },
+      documents: {
+        aadhaar: { front: null, back: null },
+        pan: { front: null, back: null },
+        drivingLicence: { front: null, back: null },
+        vehicleRc: { front: null, back: null },
+        selfie: null,
+      },
+    });
+  },
 }));

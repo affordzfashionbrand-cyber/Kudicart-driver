@@ -54,8 +54,11 @@ import { toast } from '../store/useToastStore';
 export const navigationRef = createNavigationContainerRef<any>();
 
 export const RootNavigator = () => {
-  const { isAuthenticated, kycStatus, syncStatusAsync } = useAuthStore();
-  const hasCompletedDeviceSetup = usePermissionStore((s) => s.hasCompletedDeviceSetup);
+  const { isAuthenticated, kycStatus, syncStatusAsync, hasSeenKycApproved } = useAuthStore();
+  const areAllPermissionsGranted = usePermissionStore((s) => s.areAllPermissionsGranted);
+  const permissionDecisions = usePermissionStore((s) => s.permissionDecisions);
+  const permissions = usePermissionStore((s) => s.permissions);
+  const allPermissionsGranted = areAllPermissionsGranted();
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -63,6 +66,7 @@ export const RootNavigator = () => {
     async function initSession() {
       try {
         await useAuthStore.getState().restoreSessionAsync();
+        await usePermissionStore.getState().checkAll();
       } catch (err) {
         console.warn('Driver session restoration error:', err);
       } finally {
@@ -167,18 +171,19 @@ export const RootNavigator = () => {
           </>
         ) : kycStatus === 'APPROVED' ? (
           <>
-            {!hasCompletedDeviceSetup ? (
+            {!hasSeenKycApproved ? (
               <>
-                <Stack.Screen name="DevicePermissionSetup" component={DevicePermissionSetupScreen} />
+                <Stack.Screen name="VerificationApproved" component={VerificationApprovedScreen} />
                 <Stack.Screen name="MainApp" component={MainNavigator} />
+                <Stack.Screen name="DevicePermissionSetup" component={DevicePermissionSetupScreen} />
               </>
             ) : (
               <>
                 <Stack.Screen name="MainApp" component={MainNavigator} />
                 <Stack.Screen name="DevicePermissionSetup" component={DevicePermissionSetupScreen} />
+                <Stack.Screen name="VerificationApproved" component={VerificationApprovedScreen} />
               </>
             )}
-            <Stack.Screen name="VerificationApproved" component={VerificationApprovedScreen} />
             <Stack.Screen name="StoreDetails" component={StoreDetailsScreen} />
             <Stack.Screen name="OrderDetails" component={OrderDetailsScreen} />
             <Stack.Screen name="HistoricalOrderDetail" component={HistoricalOrderDetailScreen} />

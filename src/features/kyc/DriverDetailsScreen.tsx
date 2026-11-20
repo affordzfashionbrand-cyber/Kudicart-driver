@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Image } from 'react-native';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { PrimaryButton } from '../../components/PrimaryButton';
@@ -17,7 +17,7 @@ import { styles } from './driverDetails.styles';
 import { WorkPreferenceSelector } from './WorkPreferenceSelector';
 
 export const DriverDetailsScreen = ({ navigation }: any) => {
-  const { profile, updateProfile } = useDriverStore();
+  const { profile, updateProfile, updateProfileAsync, fetchProfileAsync } = useDriverStore();
 
   const [fullName, setFullName] = useState(profile.fullName || '');
   const [aadhaarNumber, setAadhaarNumber] = useState(profile.aadhaarNumber || '');
@@ -30,7 +30,21 @@ export const DriverDetailsScreen = ({ navigation }: any) => {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [touchedFields, setTouchedFields] = useState<{ [key: string]: boolean }>({});
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAadhaar, setShowAadhaar] = useState(false);
+
+  useEffect(() => {
+    fetchProfileAsync().catch(() => {});
+  }, [fetchProfileAsync]);
+
+  useEffect(() => {
+    if (profile.fullName && !fullName) setFullName(profile.fullName);
+    if (profile.aadhaarNumber && !aadhaarNumber) setAadhaarNumber(profile.aadhaarNumber);
+    if (profile.panNumber && !panNumber) setPanNumber(profile.panNumber);
+    if (profile.dob && !dob) setDob(profile.dob);
+    if (profile.licenseNumber && !licenseNumber) setLicenseNumber(profile.licenseNumber);
+    if (profile.workPreference && !workPreference) setWorkPreference(profile.workPreference);
+  }, [profile]);
 
   const shouldShowError = (field: string) => {
     return (hasSubmitted || !!touchedFields[field]) && !!errors[field];
@@ -77,10 +91,15 @@ export const DriverDetailsScreen = ({ navigation }: any) => {
     return isValid;
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     setHasSubmitted(true);
-    if (validate()) {
-      updateProfile({
+    if (!validate()) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const res = await updateProfileAsync({
         fullName,
         aadhaarNumber,
         panNumber,
@@ -88,7 +107,17 @@ export const DriverDetailsScreen = ({ navigation }: any) => {
         licenseNumber,
         workPreference: workPreference as any,
       });
-      navigation.navigate('VehicleDetails');
+
+      if (res.success) {
+        navigation.navigate('VehicleDetails');
+      } else {
+        if (res.error && res.error.toLowerCase().includes('18')) {
+          setErrors((prev) => ({ ...prev, dob: 'Driver must be at least 18 years old' }));
+          setTouchedFields((prev) => ({ ...prev, dob: true }));
+        }
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -287,7 +316,6 @@ export const DriverDetailsScreen = ({ navigation }: any) => {
                     autoComplete="off"
                     textContentType="none"
                     onChangeText={(text) => {
-                      if (errors.dob) setErrors((prev) => ({ ...prev, dob: '' }));
                       if (text.length > dob.length) {
                         let i = 0;
                         while (i < dob.length && text[i] === dob[i]) i++;
@@ -298,8 +326,16 @@ export const DriverDetailsScreen = ({ navigation }: any) => {
                       }
                       const isMiddleEdit =
                         !text.startsWith(dob) && !dob.startsWith(text) && text !== '';
-                      if (isMiddleEdit) setDob(text);
-                      else setDob(formatDOB(text));
+                      const formatted = isMiddleEdit ? text : formatDOB(text);
+                      setDob(formatted);
+
+                      if (formatted.length === 10) {
+                        const dobErr = getDriverFieldError('dob', formatted);
+                        setErrors((prev) => ({ ...prev, dob: dobErr }));
+                        setTouchedFields((prev) => ({ ...prev, dob: true }));
+                      } else {
+                        if (errors.dob) setErrors((prev) => ({ ...prev, dob: '' }));
+                      }
                     }}
                     onFocus={() => setFocusedField('dob')}
                     onBlur={() => {
@@ -390,7 +426,12 @@ export const DriverDetailsScreen = ({ navigation }: any) => {
           </View>
 
           <View style={styles.footer}>
-            <PrimaryButton title="Continue" onPress={handleContinue} />
+            <PrimaryButton
+              title="Continue"
+              onPress={handleContinue}
+              loading={isSubmitting}
+              disabled={isSubmitting}
+            />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

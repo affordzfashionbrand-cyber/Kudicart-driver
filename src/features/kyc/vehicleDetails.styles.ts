@@ -38,6 +38,7 @@ export const styles = StyleSheet.create({
   content: {
     marginTop: spacing.xs,
     position: 'relative',
+    zIndex: 10,
   },
   stepText: {
     ...typography.caption,
@@ -120,19 +121,19 @@ export const styles = StyleSheet.create({
 
   typeDropdownWrapper: {
     position: 'relative',
-    zIndex: 100,
+    zIndex: 1000,
   },
   dropdownBackdrop: {
     position: 'absolute',
-    top: -600,
-    bottom: -600,
-    left: -200,
-    right: -200,
-    zIndex: 999,
+    top: -1000,
+    bottom: -1000,
+    left: -500,
+    right: -500,
+    zIndex: 1001,
   },
   typeDropdownList: {
     position: 'absolute',
-    top: 54,
+    top: 52,
     left: 0,
     right: 0,
     borderWidth: 1,
@@ -140,12 +141,13 @@ export const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: colors.white,
     overflow: 'hidden',
-    zIndex: 1000,
+    zIndex: 1002,
+    maxHeight: 220,
     shadowColor: '#1A2C5B',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.12,
     shadowRadius: 16,
-    elevation: 10,
+    elevation: 12,
   },
   typeDropdownItem: {
     flexDirection: 'row',
@@ -155,6 +157,9 @@ export const styles = StyleSheet.create({
     paddingHorizontal: spacing.m,
     borderBottomWidth: 1,
     borderBottomColor: '#F4F2EE',
+  },
+  typeDropdownItemLast: {
+    borderBottomWidth: 0,
   },
   typeDropdownItemActive: {
     backgroundColor: '#FFF0E8',
@@ -188,5 +193,6 @@ export const styles = StyleSheet.create({
     marginTop: 24,
     alignItems: 'center',
     marginBottom: 0,
+    zIndex: 1,
   },
 });
