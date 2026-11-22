@@ -41,3 +41,45 @@ export const pickFile = async (): Promise<DocumentFile | null> => {
     return Promise.resolve(null);
   }
 };
+
+/**
+ * A lightweight cross-platform camera capture utility via native device capture.
+ * - On Web/Mobile Browser: Creates a hidden <input type="file" capture="..."> triggering native camera app.
+ */
+export const captureCameraFile = async (
+  facingMode: 'user' | 'environment' = 'environment'
+): Promise<DocumentFile | null> => {
+  if (Platform.OS === 'web') {
+    return new Promise((resolve) => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.setAttribute('capture', facingMode);
+      input.onchange = (e: any) => {
+        const file = e.target.files?.[0];
+        if (file) {
+          const uri = URL.createObjectURL(file);
+          resolve({
+            uri,
+            name: file.name || (facingMode === 'user' ? 'selfie.jpg' : 'document.jpg'),
+            size: (file.size / 1024 / 1024).toFixed(2) + ' MB',
+            type: file.type || 'image/jpeg',
+          });
+        } else {
+          resolve(null);
+        }
+      };
+      input.style.display = 'none';
+      document.body.appendChild(input);
+      input.click();
+
+      setTimeout(() => {
+        if (document.body.contains(input)) {
+          document.body.removeChild(input);
+        }
+      }, 1000);
+    });
+  } else {
+    return Promise.resolve(null);
+  }
+};

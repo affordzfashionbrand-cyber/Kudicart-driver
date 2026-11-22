@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { Platform } from 'react-native';
 import {
   getAuthToken,
   setAuthToken,
@@ -38,6 +39,15 @@ const handleDefaultNotification = (message: any) => {
 
 export type KycStatus = 'NOT_SUBMITTED' | 'PENDING' | 'UNDER_REVIEW' | 'APPROVED' | 'REJECTED';
 
+const KYC_APPROVED_SEEN_KEY = 'kudicart_driver_kyc_approved_seen';
+
+const getInitialKycApprovedSeen = (): boolean => {
+  if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
+    return localStorage.getItem(KYC_APPROVED_SEEN_KEY) === 'true';
+  }
+  return false;
+};
+
 interface AuthState {
   isAuthenticated: boolean;
   phoneNumber: string | null;
@@ -47,11 +57,13 @@ interface AuthState {
   authMode: 'firebase' | 'dev-otp' | null;
   isLoading: boolean;
   error: string | null;
+  hasSeenKycApproved: boolean;
 
   // Actions
   login: (token: string, phone: string) => void;
   logout: () => Promise<void>;
   setKycStatus: (status: KycStatus) => void;
+  setHasSeenKycApproved: (seen: boolean) => void;
   sendOtpAsync: (phone: string) => Promise<{ success: boolean; message: string }>;
   verifyOtpAsync: (phone: string, otp: string) => Promise<boolean>;
   sendPhoneOtpAsync: (
@@ -83,6 +95,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   token: initialSession.token,
   isLoading: false,
   error: null,
+  hasSeenKycApproved: getInitialKycApprovedSeen(),
 
   login: (token: string, phone: string) => {
     setAuthToken(token);
@@ -97,6 +110,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch {
       // Local fallback
     }
+    if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
+      localStorage.removeItem(KYC_APPROVED_SEEN_KEY);
+    }
     locationTrackingService.stopTracking();
     driverSocket.disconnect();
     useOrderStore.getState().clearOrders();
@@ -104,10 +120,36 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     useDriverStore.getState().setIsOnline(false);
     useNotificationStore.getState().reset();
     setAuthToken(null);
-    set({ isAuthenticated: false, kycStatus: null, phoneNumber: null, token: null });
+    set({
+      isAuthenticated: false,
+      kycStatus: null,
+      phoneNumber: null,
+      token: null,
+      hasSeenKycApproved: false,
+    });
   },
 
-  setKycStatus: (status) => set({ kycStatus: status }),
+  setKycStatus: (status) => {
+    if (status !== 'APPROVED') {
+      if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
+        localStorage.removeItem(KYC_APPROVED_SEEN_KEY);
+      }
+      set({ kycStatus: status, hasSeenKycApproved: false });
+    } else {
+      set({ kycStatus: status });
+    }
+  },
+
+  setHasSeenKycApproved: (seen: boolean) => {
+    if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
+      if (seen) {
+        localStorage.setItem(KYC_APPROVED_SEEN_KEY, 'true');
+      } else {
+        localStorage.removeItem(KYC_APPROVED_SEEN_KEY);
+      }
+    }
+    set({ hasSeenKycApproved: seen });
+  },
 
   sendOtpAsync: async (phone: string) => {
     set({ isLoading: true, error: null });
@@ -251,12 +293,26 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const status = await authApi.getStatus();
       if (status && status.kycStatus) {
-        set({
-          kycStatus: status.kycStatus as KycStatus,
-          rejectionReason: status.rejectionReason || null,
-          isAuthenticated: true,
-          error: null,
-        });
+        const nextStatus = status.kycStatus as KycStatus;
+        if (nextStatus !== 'APPROVED') {
+          if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
+            localStorage.removeItem(KYC_APPROVED_SEEN_KEY);
+          }
+          set({
+            kycStatus: nextStatus,
+            rejectionReason: status.rejectionReason || null,
+            isAuthenticated: true,
+            hasSeenKycApproved: false,
+            error: null,
+          });
+        } else {
+          set({
+            kycStatus: nextStatus,
+            rejectionReason: status.rejectionReason || null,
+            isAuthenticated: true,
+            error: null,
+          });
+        }
       }
     } catch (err: any) {
       if (err?.status === 401) {

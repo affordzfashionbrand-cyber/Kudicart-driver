@@ -1,4 +1,4 @@
-export const VEHICLE_TYPES = ['Bike', 'Scooty', 'EV Bike', 'EV Scooty'];
+export const VEHICLE_TYPES = ['Bike', 'Scooty', 'EV Scooter', 'EV Bike'];
 
 export const isValidRCPrefix = (raw: string): boolean => {
   if (!raw) return true;

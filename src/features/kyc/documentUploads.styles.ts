@@ -54,6 +54,17 @@ export const styles = StyleSheet.create({
     marginBottom: 16,
     gap: 10,
   },
+  readyBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 16,
+    gap: 10,
+  },
   reviewBannerContent: {
     flex: 1,
   },
@@ -63,10 +74,21 @@ export const styles = StyleSheet.create({
     color: colors.danger,
     marginBottom: 2,
   },
+  readyBannerTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#15803D',
+    marginBottom: 2,
+  },
   reviewBannerText: {
     fontSize: 12,
     lineHeight: 18,
     color: colors.textSecondary,
+  },
+  readyBannerText: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#166534',
   },
 
   listContainer: {
@@ -80,7 +102,8 @@ export const styles = StyleSheet.create({
     borderColor: '#E2DED7',
     borderRadius: 16,
     paddingVertical: 14,
-    paddingHorizontal: spacing.l,
+    paddingHorizontal: spacing.m,
+    minHeight: 68,
   },
   documentRowRejected: {
     borderColor: '#FECACA',
@@ -93,6 +116,10 @@ export const styles = StyleSheet.create({
     color: colors.danger,
     fontWeight: '500',
   },
+  docSubtitleUpdated: {
+    color: '#15803D',
+    fontWeight: '500',
+  },
   iconBox: {
     width: 38,
     height: 38,
@@ -100,9 +127,14 @@ export const styles = StyleSheet.create({
     backgroundColor: '#F8F6F2',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: spacing.m,
+    marginRight: 12,
+    flexShrink: 0,
   },
-  docInfo: { flex: 1 },
+  docInfo: {
+    flex: 1,
+    marginRight: 8,
+    justifyContent: 'center',
+  },
   docTitle: {
     fontSize: 16,
     fontWeight: '600',
@@ -117,6 +149,7 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    flexShrink: 0,
   },
   statusText: {
     fontSize: 13,

@@ -76,6 +76,7 @@ describe('KudiCart Driver — Form Validation & Phone Number Authority Tests', (
       expect(getDriverFieldError('dob', '')).toBe('Date of birth is required');
       expect(getDriverFieldError('dob', '31/02/1995')).toBe('Enter a valid date of birth');
       expect(getDriverFieldError('dob', '01/01/2099')).toBe('Date of birth cannot be in the future');
+      expect(getDriverFieldError('dob', '15/05/2015')).toBe('Driver must be at least 18 years old');
       expect(getDriverFieldError('dob', '15/08/1996')).toBe('');
     });
 
@@ -113,10 +114,11 @@ describe('KudiCart Driver — Form Validation & Phone Number Authority Tests', (
     it('enforces supported vehicle types', () => {
       expect(VEHICLE_TYPES).toContain('Bike');
       expect(VEHICLE_TYPES).toContain('Scooty');
+      expect(VEHICLE_TYPES).toContain('EV Scooter');
       expect(VEHICLE_TYPES).toContain('EV Bike');
-      expect(VEHICLE_TYPES).toContain('EV Scooty');
       expect(getVehicleFieldError('vehicleType', '')).toBe('Please select a vehicle type');
       expect(getVehicleFieldError('vehicleType', 'Bike')).toBe('');
+      expect(getVehicleFieldError('vehicleType', 'EV Scooter')).toBe('');
     });
   });
 

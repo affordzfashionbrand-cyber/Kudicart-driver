@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text } from 'react-native';
+import { Text, View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DashboardScreen } from '../features/orders/DashboardScreen';
@@ -7,6 +7,7 @@ import { EarningsScreen } from '../features/earnings/EarningsScreen';
 import { ShiftsScreen } from '../features/shifts/ShiftsScreen';
 import { SlotsScreen } from '../features/shifts/SlotsScreen';
 import { ProfileScreen } from '../features/profile/ProfileScreen';
+import { DevicePermissionModal } from '../features/permissions/DevicePermissionModal';
 import { colors } from '../theme/colors';
 
 import { KudiIcon } from '../components/KudiIcon';
@@ -32,8 +33,9 @@ export const MainNavigator = () => {
   const barHeight = 62 + bottomInset;
 
   return (
-    <Tab.Navigator
-      screenOptions={({ route }) => ({
+    <View style={{ flex: 1, position: 'relative' }}>
+      <Tab.Navigator
+        screenOptions={({ route }) => ({
         headerShown: false,
         tabBarLabelPosition: 'below-icon',
         tabBarActiveTintColor: colors.text,
@@ -102,5 +104,7 @@ export const MainNavigator = () => {
       />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
-  );
+    <DevicePermissionModal />
+  </View>
+);
 };

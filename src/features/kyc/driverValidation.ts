@@ -62,7 +62,20 @@ export const getDriverFieldError = (field: string, value: string): string => {
       const [d, m, y] = value.trim().split('/').map(Number);
       const date = new Date(y, m - 1, d);
       if (date.getFullYear() !== y || date.getMonth() !== m - 1 || date.getDate() !== d) return 'Enter a valid date of birth';
-      if (date > new Date()) return 'Date of birth cannot be in the future';
+      const now = new Date();
+      if (date > now) return 'Date of birth cannot be in the future';
+
+      let age = now.getFullYear() - date.getFullYear();
+      const monthDiff = now.getMonth() - date.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < date.getDate())) {
+        age--;
+      }
+      if (age < 18) {
+        return 'Driver must be at least 18 years old';
+      }
+      if (age > 100) {
+        return 'Enter a valid date of birth';
+      }
       return '';
     }
     case 'panNumber':

@@ -282,8 +282,18 @@ class PermissionService {
         return 'granted';
       }
 
-      if (key === 'filePicker' || key === 'phoneDialer') {
+      if (key === 'filePicker') {
         return 'granted';
+      }
+
+      if (key === 'phoneDialer') {
+        if (PermissionsAndroid?.PERMISSIONS?.CALL_PHONE) {
+          const hasCall = await PermissionsAndroid.check(
+            PermissionsAndroid.PERMISSIONS.CALL_PHONE
+          );
+          return hasCall ? 'granted' : 'not_requested';
+        }
+        return 'not_requested';
       }
     } catch {
       return 'denied';
@@ -381,7 +391,24 @@ class PermissionService {
         return 'granted';
       }
 
-      if (key === 'filePicker' || key === 'phoneDialer') {
+      if (key === 'filePicker') {
+        return 'granted';
+      }
+
+      if (key === 'phoneDialer') {
+        if (PermissionsAndroid?.PERMISSIONS?.CALL_PHONE) {
+          const res = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.CALL_PHONE,
+            {
+              title: 'KudiCart Phone Call Access',
+              message:
+                'KudiCart needs phone call access to connect you directly with customers and hub dispatchers during deliveries.',
+              buttonPositive: 'Allow Calls',
+              buttonNegative: 'Deny',
+            }
+          );
+          return this.mapAndroidResult(res);
+        }
         return 'granted';
       }
     } catch {
@@ -443,8 +470,12 @@ class PermissionService {
       return 'unavailable';
     }
 
-    if (key === 'filePicker' || key === 'phoneDialer') {
+    if (key === 'filePicker') {
       return 'granted';
+    }
+
+    if (key === 'phoneDialer') {
+      return 'not_requested';
     }
 
     return 'unavailable';

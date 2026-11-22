@@ -12,18 +12,14 @@ import { useDriverStore } from '../../store/useDriverStore';
 import { usePermissionStore } from '../../store/usePermissionStore';
 
 export const VerificationApprovedScreen = ({ navigation }: any) => {
-  const { logout } = useAuthStore();
+  const { logout, setHasSeenKycApproved } = useAuthStore();
   const { updateProfile } = useDriverStore();
 
   const handleStartEarning = () => {
-    // Preserve active approved status and take partner into setup or approved Home dashboard
+    // Acknowledge approval screen and take driver directly into Home Page
+    setHasSeenKycApproved(true);
     updateProfile({ status: 'Active' });
-    const hasCompleted = usePermissionStore.getState().hasCompletedDeviceSetup;
-    if (!hasCompleted) {
-      navigation.replace('DevicePermissionSetup');
-    } else {
-      navigation.replace('MainApp');
-    }
+    navigation.replace('MainApp');
   };
 
   return (
