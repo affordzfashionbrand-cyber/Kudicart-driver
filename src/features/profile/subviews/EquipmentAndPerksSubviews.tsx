@@ -3,40 +3,45 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { toast } from '../../../store/useToastStore';
 import { subviewStyles as styles } from './profileSubviews.styles';
 
-export const StarSubview: React.FC = () => {
+interface StarSubviewProps {
+  tier?: string;
+  rating?: number;
+  completedDeliveries?: number;
+}
+
+export const StarSubview: React.FC<StarSubviewProps> = ({
+  tier = 'Partner Tier',
+  rating = 0,
+  completedDeliveries = 0,
+}) => {
   return (
     <>
       <View style={styles.goldBanner}>
         <Text style={{ fontSize: 32 }}>🌟</Text>
         <View style={{ flex: 1 }}>
-          <Text style={styles.goldTitle}>Gold Partner Tier</Text>
+          <Text style={styles.goldTitle}>{tier}</Text>
           <Text style={styles.goldSubtitle}>
-            4.92 ★ Rating • Top 5% Delivery Partners
+            {rating > 0 ? `${rating.toFixed(2)} ★ Rating` : 'Verified Partner'} • {completedDeliveries} Completed Deliveries
           </Text>
         </View>
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.cardSectionTitle}>Tier Benefits & Metrics</Text>
+        <Text style={styles.cardSectionTitle}>Partner Metrics</Text>
 
         <View style={styles.row}>
-          <Text style={styles.rowLabel}>On-Time Delivery Rate</Text>
-          <Text style={[styles.rowValue, { color: '#16805A' }]}>98.4% (Excellent)</Text>
+          <Text style={styles.rowLabel}>Completed Deliveries</Text>
+          <Text style={[styles.rowValue, { color: '#16805A' }]}>{completedDeliveries}</Text>
         </View>
 
         <View style={styles.row}>
-          <Text style={styles.rowLabel}>Priority Dispatch</Text>
-          <Text style={styles.rowValue}>Enabled</Text>
-        </View>
-
-        <View style={styles.row}>
-          <Text style={styles.rowLabel}>Asset Security Deposit</Text>
-          <Text style={styles.rowValue}>100% Waived</Text>
+          <Text style={styles.rowLabel}>Current Rating</Text>
+          <Text style={styles.rowValue}>{rating > 0 ? `${rating.toFixed(2)} / 5.0` : 'Pending reviews'}</Text>
         </View>
 
         <View style={[styles.row, styles.rowLast]}>
-          <Text style={styles.rowLabel}>Weekly Festival Bonus</Text>
-          <Text style={styles.highlightValue}>Eligible (+₹500 / week)</Text>
+          <Text style={styles.rowLabel}>Tier Standing</Text>
+          <Text style={styles.highlightValue}>{tier}</Text>
         </View>
       </View>
     </>

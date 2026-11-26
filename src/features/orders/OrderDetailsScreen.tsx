@@ -4,7 +4,7 @@ import { useOrderStore } from '../../store/useOrderStore';
 import { ordersApi } from '../../api';
 import { tokens } from '../../theme/tokens';
 import { KudiIcon } from '../../components/KudiIcon';
-import { LiveRouteMapRef, DEFAULT_HUB_COORDINATES, DEFAULT_DEST_COORDINATES } from './LiveRouteMap';
+import { LiveRouteMapRef } from './LiveRouteMap';
 import { driverSocket } from '../../services/driverSocket';
 import { TryAndBuyHandoverView } from './tryAndBuy/TryAndBuyHandoverView';
 import { TryAndBuyTrialProgressView } from './tryAndBuy/TryAndBuyTrialProgressView';
@@ -19,16 +19,6 @@ import { OrderMapNavigationMode } from './details/OrderMapNavigationMode';
 import { OrderDeliveryReviewView } from './details/OrderDeliveryReviewView';
 import { OrderPickupReviewView } from './details/OrderPickupReviewView';
 import { permissionService } from '../../services/permissionService';
-
-const HUB_COORDINATES = DEFAULT_HUB_COORDINATES;
-const DEST_COORDINATES = DEFAULT_DEST_COORDINATES;
-
-
-const DEFAULT_PRODUCT_THUMBNAILS = [
-  'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=120&q=80',
-  'https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=120&q=80',
-  'https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=120&q=80',
-];
 
 export const OrderDetailsScreen = ({ route, navigation }: any) => {
   const { orderId } = route.params || {};
@@ -218,10 +208,10 @@ export const OrderDetailsScreen = ({ route, navigation }: any) => {
 
   const hubCoords = order.pickupCoordinates
     ? { lat: order.pickupCoordinates.latitude, lng: order.pickupCoordinates.longitude }
-    : HUB_COORDINATES;
+    : null;
   const destCoords = order.deliveryCoordinates
     ? { lat: order.deliveryCoordinates.latitude, lng: order.deliveryCoordinates.longitude }
-    : DEST_COORDINATES;
+    : null;
 
   // --------------------------------------------------------
   // MAP NAVIGATION MODE (OUT FOR DELIVERY / FULL SCREEN / RETURNING)
@@ -359,7 +349,6 @@ export const OrderDetailsScreen = ({ route, navigation }: any) => {
           toast.success('Order delivered successfully.');
           navigation.goBack();
         }}
-        defaultProductThumbnails={DEFAULT_PRODUCT_THUMBNAILS}
       />
     );
   }
@@ -382,7 +371,6 @@ export const OrderDetailsScreen = ({ route, navigation }: any) => {
         toast.success('Delivery started! Live tracking active.');
       }}
       onBack={() => navigation.goBack()}
-      defaultProductThumbnails={DEFAULT_PRODUCT_THUMBNAILS}
     />
   );
 };

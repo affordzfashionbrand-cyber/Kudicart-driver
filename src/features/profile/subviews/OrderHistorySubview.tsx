@@ -35,8 +35,8 @@ export const OrderHistorySubview: React.FC<OrderHistorySubviewProps> = ({
       <View style={styles.orderHistoryListContainer}>
         {historicalOrders && historicalOrders.length > 0 ? (
           historicalOrders.map((order) => {
-            const orderKm = order.distance || '2.4 km';
-            const orderEarnings = order.earnings || 55;
+            const orderKm = order.distance || '—';
+            const orderEarnings = typeof order.earnings === 'number' ? order.earnings : 0;
 
             return (
               <View key={order.id} style={styles.orderHistoryCard}>

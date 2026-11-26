@@ -95,20 +95,21 @@ function getEnvVar(key: string, fallback: string): string {
     if (viteVal) return viteVal;
   } catch {}
   try {
-    if (typeof process !== 'undefined' && process?.env && process.env[key]) {
-      return process.env[key] as string;
+    const proc = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process;
+    if (proc?.env?.[key]) {
+      return String(proc.env[key]);
     }
   } catch {}
   return fallback;
 }
 
 const firebaseConfig = {
-  apiKey: getEnvVar('VITE_FIREBASE_API_KEY', 'AIzaSyDNrOgdNcWwL4RxN9f-3Ktp7e73rSlOifc'),
-  authDomain: getEnvVar('VITE_FIREBASE_AUTH_DOMAIN', 'kudikart-3ec2e.firebaseapp.com'),
-  projectId: getEnvVar('VITE_FIREBASE_PROJECT_ID', 'kudikart-3ec2e'),
-  storageBucket: getEnvVar('VITE_FIREBASE_STORAGE_BUCKET', 'kudikart-3ec2e.firebasestorage.app'),
-  messagingSenderId: getEnvVar('VITE_FIREBASE_MESSAGING_SENDER_ID', '174851114581'),
-  appId: getEnvVar('VITE_FIREBASE_APP_ID', '1:174851114581:web:142cf1f26ea50affe836dc'),
+  apiKey: getEnvVar('VITE_FIREBASE_API_KEY', ''),
+  authDomain: getEnvVar('VITE_FIREBASE_AUTH_DOMAIN', ''),
+  projectId: getEnvVar('VITE_FIREBASE_PROJECT_ID', ''),
+  storageBucket: getEnvVar('VITE_FIREBASE_STORAGE_BUCKET', ''),
+  messagingSenderId: getEnvVar('VITE_FIREBASE_MESSAGING_SENDER_ID', ''),
+  appId: getEnvVar('VITE_FIREBASE_APP_ID', ''),
 };
 
 export const FIREBASE_TEST_NUMBERS = [

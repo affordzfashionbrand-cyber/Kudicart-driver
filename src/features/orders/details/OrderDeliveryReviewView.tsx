@@ -11,7 +11,7 @@ interface OrderDeliveryReviewViewProps {
   onOpenCamera: () => void;
   onOpenMap: () => void;
   onConfirmDelivery: (cashCollected?: boolean) => void;
-  defaultProductThumbnails: string[];
+  defaultProductThumbnails?: string[];
 }
 
 export const OrderDeliveryReviewView: React.FC<OrderDeliveryReviewViewProps> = ({
@@ -21,7 +21,6 @@ export const OrderDeliveryReviewView: React.FC<OrderDeliveryReviewViewProps> = (
   onOpenCamera,
   onOpenMap,
   onConfirmDelivery,
-  defaultProductThumbnails,
 }) => {
   const isCodPending = order.paymentMethod === 'COD' && order.paymentStatus !== 'COMPLETED';
   const [cashCollected, setCashCollected] = useState(!isCodPending);
@@ -90,11 +89,22 @@ export const OrderDeliveryReviewView: React.FC<OrderDeliveryReviewViewProps> = (
                         <Text style={styles.productItemVariant}>{item.variant}</Text>
                       ) : null}
                     </View>
-                    <Image
-                      source={{ uri: defaultProductThumbnails[index % defaultProductThumbnails.length] }}
-                      style={styles.productThumb}
-                      resizeMode="cover"
-                    />
+                    {item.image ? (
+                      <Image
+                        source={{ uri: item.image }}
+                        style={styles.productThumb}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <View
+                        style={[
+                          styles.productThumb,
+                          { backgroundColor: '#F4F1EA', alignItems: 'center', justifyContent: 'center' },
+                        ]}
+                      >
+                        <KudiIcon name="package" size={18} color="#65635F" />
+                      </View>
+                    )}
                     <Text style={styles.productItemQty}>×{item.quantity}</Text>
                   </View>
                 );
@@ -104,11 +114,14 @@ export const OrderDeliveryReviewView: React.FC<OrderDeliveryReviewViewProps> = (
                 <View style={styles.productItemInfo}>
                   <Text style={styles.productItemName}>Assigned Package</Text>
                 </View>
-                <Image
-                  source={{ uri: defaultProductThumbnails[0] }}
-                  style={styles.productThumb}
-                  resizeMode="cover"
-                />
+                <View
+                  style={[
+                    styles.productThumb,
+                    { backgroundColor: '#F4F1EA', alignItems: 'center', justifyContent: 'center' },
+                  ]}
+                >
+                  <KudiIcon name="package" size={18} color="#65635F" />
+                </View>
                 <Text style={styles.productItemQty}>×{order.itemsCount}</Text>
               </View>
             )}

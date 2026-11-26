@@ -13,26 +13,26 @@ export const AcademySubview: React.FC = () => {
 
         <View style={styles.row}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.rowLabel}>10-Min Safe Riding Rules</Text>
+            <Text style={styles.rowLabel}>18-Min Express Safe Riding</Text>
             <Text style={styles.smallSubtext}>Traffic adherence and helmet protocols</Text>
           </View>
-          <Text style={[styles.rowValue, { color: '#16805A' }]}>Completed ✅</Text>
+          <Text style={[styles.rowValue, { color: '#16805A' }]}>Completed</Text>
         </View>
 
         <View style={styles.row}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.rowLabel}>Bag Packing & Cold Chain</Text>
-            <Text style={styles.smallSubtext}>Perishable grocery handling</Text>
+            <Text style={styles.rowLabel}>Apparel Care &amp; Seal Integrity</Text>
+            <Text style={styles.smallSubtext}>Garment bag handling &amp; barcode scan rules</Text>
           </View>
-          <Text style={[styles.rowValue, { color: '#16805A' }]}>Completed ✅</Text>
+          <Text style={[styles.rowValue, { color: '#16805A' }]}>Completed</Text>
         </View>
 
         <View style={[styles.row, styles.rowLast]}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.rowLabel}>Doorstep Delivery Etiquette</Text>
-            <Text style={styles.smallSubtext}>Customer communication rules</Text>
+            <Text style={styles.rowLabel}>Try &amp; Buy Doorstep Etiquette</Text>
+            <Text style={styles.smallSubtext}>10-min trial handover &amp; return verification</Text>
           </View>
-          <Text style={[styles.rowValue, { color: colors.primary }]}>In Progress 📚</Text>
+          <Text style={[styles.rowValue, { color: colors.primary }]}>Required</Text>
         </View>
       </View>
 
@@ -51,18 +51,22 @@ export interface CardSubviewProps {
   driverFullName: string;
   driverId: string;
   initials: string;
+  hubName?: string;
+  phone?: string;
 }
 
 export const CardSubview: React.FC<CardSubviewProps> = ({
   driverFullName,
   driverId,
   initials,
+  hubName,
+  phone,
 }) => {
   return (
     <>
       <View style={styles.digitalCardWrap}>
         <View style={styles.digitalCardHeader}>
-          <Text style={styles.digitalCardBrand}>KUDICART PARTNER</Text>
+          <Text style={styles.digitalCardBrand}>AFFORDZ PARTNER</Text>
           <View style={styles.digitalCardDot} />
         </View>
 
@@ -73,23 +77,23 @@ export const CardSubview: React.FC<CardSubviewProps> = ({
           <View style={{ flex: 1 }}>
             <Text style={styles.digitalCardName}>{driverFullName}</Text>
             <Text style={styles.digitalCardId}>ID: {driverId || 'Pending'}</Text>
-            <Text style={styles.digitalCardHub}>Hub: HSR Darkstore</Text>
+            <Text style={styles.digitalCardHub}>Hub: {hubName || 'Unassigned'}</Text>
           </View>
         </View>
 
         <View style={styles.digitalCardFooter}>
           <Text style={styles.digitalCardFootText}>
-            Blood Group: O+ • Emergency: +91 98765 43210
+            Partner Contact: {phone || 'Not linked'} • Helpline: 1800-419-5834
           </Text>
         </View>
       </View>
 
       <TouchableOpacity
         style={styles.primaryActionButton}
-        onPress={() => toast.success('Digital Partner Card saved to your photos.')}
+        onPress={() => toast.info('Digital Partner Card is active for in-person hub verification.')}
         activeOpacity={0.8}
       >
-        <Text style={styles.primaryActionButtonText}>Save Card to Phone</Text>
+        <Text style={styles.primaryActionButtonText}>Verified Digital ID</Text>
       </TouchableOpacity>
     </>
   );
@@ -156,60 +160,6 @@ export const AboutSubview: React.FC<{ navigation?: any }> = ({ navigation }) => 
         <Text style={styles.rowLabel}>Privacy Policy</Text>
         <Text style={[styles.rowValue, { color: colors.primary }]}>View Policy ›</Text>
       </TouchableOpacity>
-    </View>
-  );
-};
-
-export interface LanguageSubviewProps {
-  selectedLanguage: string;
-  onSelectLanguage: (lang: string) => void;
-}
-
-export const LanguageSubview: React.FC<LanguageSubviewProps> = ({
-  selectedLanguage,
-  onSelectLanguage,
-}) => {
-  const languages = [
-    { id: 'en', label: 'English (Default)' },
-    { id: 'hi', label: 'हिंदी (Hindi)' },
-    { id: 'kn', label: 'ಕನ್ನಡ (Kannada)' },
-    { id: 'te', label: 'తెలుగు (Telugu)' },
-    { id: 'ta', label: 'தமிழ் (Tamil)' },
-    { id: 'mr', label: 'मराठी (Marathi)' },
-  ];
-
-  return (
-    <View style={styles.card}>
-      <Text style={styles.cardSectionTitle}>Select Preferred Language</Text>
-
-      {languages.map((lang, index, arr) => {
-        const isSelected = selectedLanguage === lang.label;
-        return (
-          <TouchableOpacity
-            key={lang.id}
-            style={[
-              styles.languageRow,
-              index === arr.length - 1 && styles.rowLast,
-              isSelected && styles.languageRowSelected,
-            ]}
-            onPress={() => {
-              onSelectLanguage(lang.label);
-              toast.success(`Language updated to ${lang.label}`);
-            }}
-            activeOpacity={0.7}
-          >
-            <Text
-              style={[
-                styles.languageText,
-                isSelected && styles.languageTextSelected,
-              ]}
-            >
-              {lang.label}
-            </Text>
-            {isSelected && <KudiIcon name="check" size={18} color={colors.primary} />}
-          </TouchableOpacity>
-        );
-      })}
     </View>
   );
 };

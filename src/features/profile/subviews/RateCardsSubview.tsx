@@ -1,45 +1,54 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { colors } from '../../../theme/colors';
 import { KudiIcon } from '../../../components/KudiIcon';
+import { earningsApi } from '../../../api/earningsApi';
 import { subviewStyles as styles } from './profileSubviews.styles';
-
-const DAILY_INCENTIVE_TIERS = [
-  { orders: 'Below 15 orders', bonus: '₹0' },
-  { orders: '15 orders', bonus: '₹50' },
-  { orders: '16 orders', bonus: '₹55' },
-  { orders: '17 orders', bonus: '₹60' },
-  { orders: '18 orders', bonus: '₹65' },
-  { orders: '19 orders', bonus: '₹78' },
-  { orders: '20 orders', bonus: '₹86' },
-  { orders: '21 orders', bonus: '₹94' },
-  { orders: '22 orders', bonus: '₹102' },
-  { orders: '23 orders', bonus: '₹110' },
-  { orders: '24 orders', bonus: '₹120' },
-  { orders: '25 orders', bonus: '₹130' },
-  { orders: '26 orders', bonus: '₹140' },
-  { orders: '27 orders', bonus: '₹150' },
-  { orders: '28 orders', bonus: '₹160' },
-  { orders: '29 orders', bonus: '₹170' },
-  { orders: '30 orders', bonus: '₹175' },
-  { orders: '31+ orders', bonus: '₹175 + ₹5 / addl order' },
-];
 
 export const RateCardsSubview: React.FC = () => {
   const [rateCardTier, setRateCardTier] = useState<'fullTime' | 'partTime'>('fullTime');
   const [showAllDailyTiers, setShowAllDailyTiers] = useState(false);
+  const [basePayout, setBasePayout] = useState<number>(55);
+  const [dailyMilestones, setDailyMilestones] = useState<Array<{ orders: number; bonus: number }>>([
+    { orders: 15, bonus: 50 },
+    { orders: 20, bonus: 86 },
+    { orders: 25, bonus: 130 },
+    { orders: 30, bonus: 175 },
+  ]);
+
+  useEffect(() => {
+    earningsApi
+      .getEarnings(0)
+      .then((res: any) => {
+        if (typeof res?.basePayoutPerOrder === 'number' && res.basePayoutPerOrder > 0) {
+          setBasePayout(res.basePayoutPerOrder);
+        }
+      })
+      .catch(() => {});
+
+    earningsApi
+      .getBonusProgress()
+      .then((res) => {
+        if (Array.isArray(res?.dailyBonus?.milestones) && res.dailyBonus.milestones.length > 0) {
+          setDailyMilestones(
+            res.dailyBonus.milestones.map((m) => ({ orders: m.orders, bonus: m.bonus })),
+          );
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   return (
     <>
-      {/* KudiCart Partner Policy Header Card */}
+      {/* Affordz Partner Policy Header Card */}
       <View style={styles.policyHeaderCard}>
         <View style={styles.policyHeaderRow}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.policyTitle}>KudiCart Delivery Partner Policy</Text>
-            <Text style={styles.policySubtitle}>Standard Rate Card • Active</Text>
+            <Text style={styles.policyTitle}>Affordz Delivery Partner Policy</Text>
+            <Text style={styles.policySubtitle}>Base Payout ₹{basePayout}/order • Active</Text>
           </View>
           <View style={styles.pilotBadge}>
-            <Text style={styles.pilotBadgeText}>Active v1.0</Text>
+            <Text style={styles.pilotBadgeText}>Active</Text>
           </View>
         </View>
       </View>
@@ -195,30 +204,12 @@ export const RateCardsSubview: React.FC = () => {
         </Text>
 
         <View style={styles.tierGrid}>
-          <View style={styles.tierPill}>
-            <Text style={styles.tierPillOrders}>Below 15</Text>
-            <Text style={styles.tierPillBonus}>₹0</Text>
-          </View>
-          <View style={styles.tierPill}>
-            <Text style={styles.tierPillOrders}>15 orders</Text>
-            <Text style={styles.tierPillBonusHighlight}>₹50</Text>
-          </View>
-          <View style={styles.tierPill}>
-            <Text style={styles.tierPillOrders}>20 orders</Text>
-            <Text style={styles.tierPillBonusHighlight}>₹86</Text>
-          </View>
-          <View style={styles.tierPill}>
-            <Text style={styles.tierPillOrders}>25 orders</Text>
-            <Text style={styles.tierPillBonusHighlight}>₹130</Text>
-          </View>
-          <View style={styles.tierPill}>
-            <Text style={styles.tierPillOrders}>30 orders</Text>
-            <Text style={styles.tierPillBonusHighlight}>₹175</Text>
-          </View>
-          <View style={styles.tierPill}>
-            <Text style={styles.tierPillOrders}>31+ orders</Text>
-            <Text style={styles.tierPillBonusHighlight}>+₹5 / order</Text>
-          </View>
+          {dailyMilestones.map((tier) => (
+            <View key={tier.orders} style={styles.tierPill}>
+              <Text style={styles.tierPillOrders}>{tier.orders} orders</Text>
+              <Text style={styles.tierPillBonusHighlight}>₹{tier.bonus}</Text>
+            </View>
+          ))}
         </View>
 
         <TouchableOpacity
@@ -229,7 +220,7 @@ export const RateCardsSubview: React.FC = () => {
           accessibilityLabel="Toggle daily performance tier list"
         >
           <Text style={styles.expandTiersText}>
-            {showAllDailyTiers ? 'Hide Detailed Tier List' : 'View Complete Tier List (15–31+)'}
+            {showAllDailyTiers ? 'Hide Detailed Tier List' : 'View Complete Tier Breakdown'}
           </Text>
           <KudiIcon
             name={showAllDailyTiers ? 'chevron-up' : 'chevron-down'}
@@ -240,16 +231,16 @@ export const RateCardsSubview: React.FC = () => {
 
         {showAllDailyTiers && (
           <View style={styles.fullTierTable}>
-            {DAILY_INCENTIVE_TIERS.map((tier, idx) => (
+            {dailyMilestones.map((tier, idx) => (
               <View
-                key={idx}
+                key={tier.orders}
                 style={[
                   styles.tierRow,
-                  idx === DAILY_INCENTIVE_TIERS.length - 1 && styles.rowLast,
+                  idx === dailyMilestones.length - 1 && styles.rowLast,
                 ]}
               >
-                <Text style={styles.tierRowLabel}>{tier.orders}</Text>
-                <Text style={styles.tierRowValue}>{tier.bonus}</Text>
+                <Text style={styles.tierRowLabel}>{tier.orders} orders</Text>
+                <Text style={styles.tierRowValue}>₹{tier.bonus}</Text>
               </View>
             ))}
           </View>
@@ -271,7 +262,7 @@ export const RateCardsSubview: React.FC = () => {
         <View style={[styles.row, styles.rowLast]}>
           <View style={{ flex: 1, paddingRight: 8 }}>
             <Text style={styles.rowLabelBold}>Customer Tips</Text>
-            <Text style={styles.smallSubtext}>100% to partner — KudiCart retains 0%</Text>
+            <Text style={styles.smallSubtext}>100% to partner — Affordz retains 0%</Text>
           </View>
           <Text style={[styles.highlightValue, { color: '#16805A' }]}>100% Partner</Text>
         </View>

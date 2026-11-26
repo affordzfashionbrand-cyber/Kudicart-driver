@@ -30,7 +30,6 @@ import {
   AcademySubview,
   CardSubview,
   AboutSubview,
-  LanguageSubview,
   DefaultFallbackSubview,
 } from './subviews/FinanceAndLegalSubviews';
 
@@ -38,10 +37,9 @@ export const ProfileDetailSubScreen = ({ navigation, route }: any) => {
   const screenId = route?.params?.id || 'store';
   const customTitle = route?.params?.title;
 
-  const { profile, vehicle, kyc, assignedStore } = useDriverStore();
+  const { profile, vehicle, kyc, assignedStore, assignedHub, cashInHandCod, floatingCashLimit } =
+    useDriverStore();
   const { historicalOrders, fetchHistoricalOrdersAsync } = useOrderStore();
-
-  const [selectedLanguage, setSelectedLanguage] = useState('English');
 
   useEffect(() => {
     if (screenId === 'orderHistory') {
@@ -141,11 +139,17 @@ export const ProfileDetailSubScreen = ({ navigation, route }: any) => {
   const renderContent = () => {
     switch (screenId) {
       case 'store':
-        return <StoreSubview assignedStore={assignedStore} />;
+        return <StoreSubview assignedHub={assignedHub} assignedStore={assignedStore} />;
       case 'rateCards':
         return <RateCardsSubview />;
       case 'star':
-        return <StarSubview />;
+        return (
+          <StarSubview
+            tier={profile.tier}
+            rating={profile.rating}
+            completedDeliveries={profile.completedDeliveries}
+          />
+        );
       case 'assets':
         return <AssetsSubview />;
       case 'slotHistory':
@@ -157,26 +161,27 @@ export const ProfileDetailSubScreen = ({ navigation, route }: any) => {
       case 'help':
         return <HelpSubview />;
       case 'cash':
-        return <CashSubview />;
+        return (
+          <CashSubview
+            cashInHandCod={cashInHandCod}
+            floatingCashLimit={floatingCashLimit}
+            hubName={assignedHub?.name || assignedStore?.name}
+          />
+        );
       case 'insurance':
         return <InsuranceSubview />;
       case 'loan':
         return <LoanSubview />;
       case 'academy':
         return <AcademySubview />;
-      case 'language':
-        return (
-          <LanguageSubview
-            selectedLanguage={selectedLanguage}
-            onSelectLanguage={setSelectedLanguage}
-          />
-        );
       case 'card':
         return (
           <CardSubview
             driverFullName={driverFullName}
             driverId={profile.id}
             initials={initials}
+            hubName={assignedHub?.name || assignedStore?.name}
+            phone={profile.phone}
           />
         );
       case 'documents':

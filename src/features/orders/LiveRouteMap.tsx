@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState, useImperativeHandle, forwardRef } from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import { MAPS_CONFIG } from '../../config/maps';
 import { fetchRoadRoute, fetchRoadRouteDetails } from '../../services/routingService';
 import { NativeRouteMap, NativeRouteMapRef } from './NativeRouteMap';
@@ -13,12 +13,9 @@ interface Coordinates {
   lng: number;
 }
 
-export const DEFAULT_HUB_COORDINATES = { lat: 12.9719, lng: 77.6412 };
-export const DEFAULT_DEST_COORDINATES = { lat: 12.9658, lng: 77.6465 };
-
 interface LiveRouteMapProps {
-  origin: Coordinates;
-  destination: Coordinates;
+  origin?: Coordinates | null;
+  destination?: Coordinates | null;
   originLabel?: string;
   destinationLabel?: string;
   isFullScreen?: boolean;
@@ -46,7 +43,7 @@ export const LiveRouteMap = forwardRef<LiveRouteMapRef, LiveRouteMapProps>(({
   const [routeCoordinates, setRouteCoordinates] = useState<[number, number][]>(
     origin && destination && (origin.lat !== destination.lat || origin.lng !== destination.lng)
       ? [[origin.lat, origin.lng], [destination.lat, destination.lng]]
-      : (MAPS_CONFIG.defaultRouteWaypoints as [number, number][])
+      : []
   );
 
   // Fits complete road-following route into visible viewport,
@@ -92,6 +89,7 @@ export const LiveRouteMap = forwardRef<LiveRouteMapRef, LiveRouteMapProps>(({
 
   // Fetch road route from backend Google Routes API
   useEffect(() => {
+    if (!origin || !destination) return;
     let isMounted = true;
     fetchRoadRouteDetails(origin, destination, orderId).then((res) => {
       if (isMounted && res?.coordinates && res.coordinates.length > 0) {
@@ -178,7 +176,9 @@ export const LiveRouteMap = forwardRef<LiveRouteMapRef, LiveRouteMapProps>(({
           iconSize: isPreview ? [26, 26] : [36, 36],
           iconAnchor: isPreview ? [13, 13] : [18, 18],
         });
-        L.marker([origin.lat, origin.lng], { icon: originIcon, zIndexOffset: 400 }).addTo(map);
+        if (origin) {
+          L.marker([origin.lat, origin.lng], { icon: originIcon, zIndexOffset: 400 }).addTo(map);
+        }
 
         // Destination Marker
         const destIcon = L.divIcon({
@@ -194,7 +194,9 @@ export const LiveRouteMap = forwardRef<LiveRouteMapRef, LiveRouteMapProps>(({
           iconSize: isPreview ? [26, 26] : [36, 36],
           iconAnchor: isPreview ? [13, 13] : [18, 18],
         });
-        L.marker([destination.lat, destination.lng], { icon: destIcon, zIndexOffset: 500 }).addTo(map);
+        if (destination) {
+          L.marker([destination.lat, destination.lng], { icon: destIcon, zIndexOffset: 500 }).addTo(map);
+        }
 
         mapInstanceRef.current = map;
         fitRouteBounds(false);
@@ -239,8 +241,9 @@ export const LiveRouteMap = forwardRef<LiveRouteMapRef, LiveRouteMapProps>(({
 
   // Dynamically fetch road-following route from routing service and update polyline
   useEffect(() => {
+    if (!origin || !destination) return;
     let isMounted = true;
-    fetchRoadRoute(origin, destination).then((coords) => {
+    fetchRoadRoute(origin, destination).then((coords: [number, number][]) => {
       if (isMounted && coords && coords.length > 0) {
         if (polylineRef.current) {
           polylineRef.current.setLatLngs(coords);
@@ -252,6 +255,16 @@ export const LiveRouteMap = forwardRef<LiveRouteMapRef, LiveRouteMapProps>(({
       isMounted = false;
     };
   }, [origin, destination, fitRouteBounds]);
+
+  if (!origin || !destination) {
+    return (
+      <View style={[styles.container, { alignItems: 'center', justifyContent: 'center', padding: 24 }]}>
+        <Text style={{ color: '#65635F', fontSize: 13, fontWeight: '600', textAlign: 'center' }}>
+          Coordinates pending from backend for this delivery. Use Turn-by-Turn Google Maps launch below.
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>

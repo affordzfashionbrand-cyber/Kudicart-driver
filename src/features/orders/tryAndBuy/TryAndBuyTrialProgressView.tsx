@@ -11,12 +11,6 @@ interface TryAndBuyTrialProgressViewProps {
   onBack?: () => void;
 }
 
-const defaultThumbnails = [
-  'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=120&q=80',
-  'https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=120&q=80',
-  'https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=120&q=80',
-];
-
 export const TryAndBuyTrialProgressView: React.FC<TryAndBuyTrialProgressViewProps> = ({
   order,
   onRefreshSelection,
@@ -153,11 +147,22 @@ export const TryAndBuyTrialProgressView: React.FC<TryAndBuyTrialProgressViewProp
                 key={item.id || index}
                 style={[styles.productRow, !isLast && styles.productBorder]}
               >
-                <Image
-                  source={{ uri: defaultThumbnails[index % defaultThumbnails.length] }}
-                  style={styles.productThumb}
-                  resizeMode="cover"
-                />
+                {item.image ? (
+                  <Image
+                    source={{ uri: item.image }}
+                    style={styles.productThumb}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View
+                    style={[
+                      styles.productThumb,
+                      { backgroundColor: '#F4F1EA', alignItems: 'center', justifyContent: 'center' },
+                    ]}
+                  >
+                    <KudiIcon name="package" size={18} color="#65635F" />
+                  </View>
+                )}
                 <View style={styles.productInfo}>
                   <Text style={styles.productName}>{item.name}</Text>
                   {item.variant ? <Text style={styles.productVariant}>{item.variant}</Text> : null}

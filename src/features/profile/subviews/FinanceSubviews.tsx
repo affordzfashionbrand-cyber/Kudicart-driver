@@ -1,19 +1,71 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, Linking } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, Linking, TextInput } from 'react-native';
 import { KudiIcon } from '../../../components/KudiIcon';
 import { toast } from '../../../store/useToastStore';
+import { request } from '../../../api/client';
 import { subviewStyles as styles } from './profileSubviews.styles';
 
 export const HelpSubview: React.FC = () => {
+  const [ticketMessage, setTicketMessage] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmitTicket = async () => {
+    const trimmed = ticketMessage.trim();
+    if (!trimmed) {
+      toast.info('Please describe your issue before submitting.');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await request('/support/tickets', {
+        method: 'POST',
+        body: JSON.stringify({
+          subject: 'Delivery Partner Support Request',
+          category: 'DELIVERY',
+          priority: 'HIGH',
+          message: trimmed,
+        }),
+      });
+      setTicketMessage('');
+      toast.success('Support ticket raised. Operations team will respond shortly.');
+    } catch (err: any) {
+      toast.error(err?.message || 'Unable to submit support ticket right now.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <>
-      <TouchableOpacity
-        style={styles.sosButton}
-        onPress={() => toast.error('Emergency Safety SOS triggered. Support team alerted.')}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.sosButtonText}>🚨 Emergency Safety SOS</Text>
-      </TouchableOpacity>
+      <View style={styles.card}>
+        <Text style={styles.cardSectionTitle}>Raise a Support Ticket</Text>
+        <TextInput
+          value={ticketMessage}
+          onChangeText={setTicketMessage}
+          placeholder="Describe order, hub, or payout issue..."
+          multiline
+          style={{
+            borderWidth: 1,
+            borderColor: '#E4E0DB',
+            borderRadius: 10,
+            padding: 12,
+            minHeight: 80,
+            textAlignVertical: 'top',
+            marginBottom: 12,
+            color: '#171716',
+          }}
+        />
+        <TouchableOpacity
+          style={styles.primaryActionButton}
+          onPress={handleSubmitTicket}
+          disabled={submitting}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.primaryActionButtonText}>
+            {submitting ? 'Submitting...' : 'Submit Support Ticket'}
+          </Text>
+        </TouchableOpacity>
+      </View>
 
       <View style={styles.card}>
         <Text style={styles.cardSectionTitle}>24/7 Partner Helpline</Text>
@@ -24,8 +76,8 @@ export const HelpSubview: React.FC = () => {
         </View>
 
         <View style={styles.row}>
-          <Text style={styles.rowLabel}>WhatsApp Hub Help</Text>
-          <Text style={styles.rowValue}>+91 98451 22890</Text>
+          <Text style={styles.rowLabel}>Concierge Email</Text>
+          <Text style={styles.rowValue}>concierge@affordz.in</Text>
         </View>
 
         <View style={[styles.row, styles.rowLast]}>
@@ -46,21 +98,43 @@ export const HelpSubview: React.FC = () => {
   );
 };
 
-export const CashSubview: React.FC = () => {
+interface CashSubviewProps {
+  cashInHandCod?: number;
+  floatingCashLimit?: number;
+  hubName?: string;
+}
+
+export const CashSubview: React.FC<CashSubviewProps> = ({
+  cashInHandCod = 0,
+  floatingCashLimit = 2500,
+  hubName,
+}) => {
+  const formattedCod = cashInHandCod.toLocaleString('en-IN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  const formattedLimit = floatingCashLimit.toLocaleString('en-IN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
   return (
     <>
       <View style={styles.cashHeroCard}>
         <Text style={styles.cashHeroLabel}>Cash in Hand (COD)</Text>
-        <Text style={styles.cashHeroAmount}>₹0.00</Text>
-        <Text style={styles.cashHeroStatus}>All collected COD has been deposited</Text>
+        <Text style={styles.cashHeroAmount}>₹{formattedCod}</Text>
+        <Text style={styles.cashHeroStatus}>
+          {cashInHandCod > 0
+            ? 'Pending deposit at assigned Darkstore Hub'
+            : 'All collected COD has been settled'}
+        </Text>
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.cardSectionTitle}>Deposit Limits & Guidelines</Text>
+        <Text style={styles.cardSectionTitle}>Deposit Limits &amp; Guidelines</Text>
 
         <View style={styles.row}>
           <Text style={styles.rowLabel}>Floating Cash Limit</Text>
-          <Text style={styles.rowValue}>₹2,500.00</Text>
+          <Text style={styles.rowValue}>₹{formattedLimit}</Text>
         </View>
 
         <View style={styles.row}>
@@ -70,7 +144,7 @@ export const CashSubview: React.FC = () => {
 
         <View style={[styles.row, styles.rowLast]}>
           <Text style={styles.rowLabel}>Deposit Drop Location</Text>
-          <Text style={styles.rowValue}>HSR Darkstore Smart Kiosk</Text>
+          <Text style={styles.rowValue}>{hubName || 'Assigned Darkstore Hub'}</Text>
         </View>
       </View>
     </>

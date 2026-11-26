@@ -171,15 +171,15 @@ export const DocumentUploadsScreen = ({ navigation }: any) => {
     if (isReviewMode) {
       try {
         await profileApi.submitKyc();
-      } catch {
-        // Fallback for mock/offline resilience
-      }
-      setKycStatus('PENDING');
-      toast.success('KYC resubmitted for verification.');
-      if (typeof navigation?.replace === 'function') {
-        navigation.replace('VerificationPending');
-      } else if (typeof navigation?.navigate === 'function') {
-        navigation.navigate('VerificationPending');
+        setKycStatus('PENDING');
+        toast.success('KYC resubmitted for verification.');
+        if (typeof navigation?.replace === 'function') {
+          navigation.replace('VerificationPending');
+        } else if (typeof navigation?.navigate === 'function') {
+          navigation.navigate('VerificationPending');
+        }
+      } catch (err: any) {
+        toast.error(err?.message || 'Failed to submit KYC for verification. Please retry.');
       }
     } else {
       navigation.navigate('Selfie');

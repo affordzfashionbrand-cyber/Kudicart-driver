@@ -18,8 +18,8 @@ interface OrderMapNavigationModeProps {
   isReturning: boolean;
   theme: any;
   onMarkArrived: () => void;
-  hubCoordinates: Coordinates;
-  destCoordinates: Coordinates;
+  hubCoordinates: Coordinates | null;
+  destCoordinates: Coordinates | null;
 }
 
 export const OrderMapNavigationMode: React.FC<OrderMapNavigationModeProps> = ({
@@ -36,6 +36,16 @@ export const OrderMapNavigationMode: React.FC<OrderMapNavigationModeProps> = ({
 }) => {
   const openExternalGoogleMaps = async () => {
     const target = isReturning ? hubCoordinates : destCoordinates;
+    if (!target) {
+      const addressQuery = encodeURIComponent(
+        isReturning ? order.pickupAddress || order.pickupLocation : order.customerAddress,
+      );
+      if (!addressQuery) return;
+      await Linking.openURL(
+        `https://www.google.com/maps/dir/?api=1&destination=${addressQuery}&travelmode=driving`,
+      ).catch(() => {});
+      return;
+    }
     const url = Platform.select({
       ios: `comgooglemaps://?daddr=${target.lat},${target.lng}&directionsmode=driving`,
       android: `google.navigation:q=${target.lat},${target.lng}&mode=d`,

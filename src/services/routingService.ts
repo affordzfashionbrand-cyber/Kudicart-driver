@@ -5,7 +5,7 @@
  * Replaces legacy OSRM third-party routing.
  */
 
-import { getApiBaseUrl } from '../api/client';
+import { getApiBaseUrl, ensureFreshAuthToken } from '../api/client';
 
 export interface Coordinates {
   lat: number;
@@ -17,34 +17,6 @@ export interface RouteResponse {
   distanceKm: string;
   durationMinutes: number;
 }
-
-/**
- * Verified road-following street geometry following Bengaluru street network
- * used as offline fallback corridor.
- */
-export const BENGALURU_ROAD_ROUTE: [number, number][] = [
-  [12.97190, 77.64120], // KudiCart Darkstore Hub #04, 100 Feet Road
-  [12.97155, 77.64120],
-  [12.97100, 77.64120],
-  [12.97050, 77.64120],
-  [12.97005, 77.64120],
-  [12.97005, 77.64160],
-  [12.97005, 77.64220],
-  [12.97005, 77.64300],
-  [12.97005, 77.64390],
-  [12.97005, 77.64460],
-  [12.97005, 77.64520],
-  [12.96960, 77.64522],
-  [12.96900, 77.64525],
-  [12.96840, 77.64528],
-  [12.96780, 77.64532],
-  [12.96720, 77.64536],
-  [12.96660, 77.64540],
-  [12.96610, 77.64545],
-  [12.96582, 77.64550],
-  [12.96582, 77.64600],
-  [12.96582, 77.64648], // Customer Destination
-];
 
 /**
  * Decodes Google encoded polyline string to array of [lat, lng].
@@ -96,11 +68,14 @@ export async function fetchRoadRouteDetails(
   destination: Coordinates,
   orderId?: string,
 ): Promise<RoadRouteData> {
-  // If orderId is provided, query backend route endpoint
+  // If orderId is provided, query backend route endpoint with Bearer token
   if (orderId) {
     try {
       const baseUrl = getApiBaseUrl();
-      const res = await fetch(`${baseUrl}/api/v1/orders/${orderId}/route`);
+      const token = await ensureFreshAuthToken();
+      const res = await fetch(`${baseUrl}/api/v1/orders/${encodeURIComponent(orderId)}/route`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
       if (res.ok) {
         const data = await res.json();
         const isReal = data?.route?.isRealRoute === true;

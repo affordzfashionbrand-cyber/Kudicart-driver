@@ -1,6 +1,5 @@
 import React, { ErrorInfo, ReactNode } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { captureException } from './services/sentryService';
 
 interface Props {
   children: ReactNode;
@@ -24,7 +23,6 @@ export class ErrorBoundary extends React.Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     this.setState({ error, errorInfo });
-    captureException(error, { componentStack: errorInfo.componentStack });
     if (__DEV__) {
       console.error('ErrorBoundary caught:', error, errorInfo);
     }

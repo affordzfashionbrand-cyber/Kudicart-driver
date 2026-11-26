@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { KudiIcon } from '../../../components/KudiIcon';
 import { DeliveryScooterIcon } from '../../../components/DeliveryScooterIcon';
-import { LiveRouteMap, DEFAULT_HUB_COORDINATES, DEFAULT_DEST_COORDINATES } from '../LiveRouteMap';
+import { LiveRouteMap } from '../LiveRouteMap';
 import { RadarPulse } from './RadarPulse';
 import { dashboardStyles as styles } from './dashboard.styles';
 
@@ -11,6 +11,8 @@ interface ActiveOrderProps {
   status: string;
   pickupLocation: string;
   customerAddress: string;
+  pickupCoordinates?: { latitude: number; longitude: number } | null;
+  deliveryCoordinates?: { latitude: number; longitude: number } | null;
   isTryAndBuy?: boolean;
   isArrived?: boolean;
   arrivedAt?: string | null;
@@ -104,8 +106,22 @@ export const DashboardOperationalStatus: React.FC<DashboardOperationalStatusProp
         {/* Map Preview Container */}
         <View style={styles.activeDeliveryMapWrap} pointerEvents="none">
           <LiveRouteMap
-            origin={DEFAULT_HUB_COORDINATES}
-            destination={DEFAULT_DEST_COORDINATES}
+            origin={
+              activeOrder.pickupCoordinates
+                ? {
+                    lat: activeOrder.pickupCoordinates.latitude,
+                    lng: activeOrder.pickupCoordinates.longitude,
+                  }
+                : null
+            }
+            destination={
+              activeOrder.deliveryCoordinates
+                ? {
+                    lat: activeOrder.deliveryCoordinates.latitude,
+                    lng: activeOrder.deliveryCoordinates.longitude,
+                  }
+                : null
+            }
             originLabel={activeOrder.pickupLocation}
             destinationLabel={activeOrder.customerAddress}
             isPreview={true}

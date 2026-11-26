@@ -5,9 +5,6 @@ import { queryClient } from './src/lib/queryClient';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { GlobalToast } from './src/components/GlobalToast';
 import { ErrorBoundary } from './src/ErrorBoundary';
-import { initSentry, wrapRootApp } from './src/services/sentryService';
-
-initSentry();
 
 const App = () => {
   return (
@@ -22,5 +19,5 @@ const App = () => {
   );
 };
 
-export default wrapRootApp(App);
+export default App;
 

@@ -12,6 +12,8 @@ export interface DriverProfile {
   status?: string;
   phone?: string;
   tier?: string;
+  rating?: number;
+  completedDeliveries?: number;
   avatarInitial?: string;
   aadhaarNumber: string;
   panNumber: string;
@@ -76,6 +78,15 @@ interface DriverState {
     name: string;
     address: string;
   };
+  assignedHub?: {
+    id: string;
+    name: string;
+    locality: string;
+    address: string;
+    deliveryMinutes?: number;
+  } | null;
+  cashInHandCod?: number;
+  floatingCashLimit?: number;
   workSummary?: {
     totalEarnings: number;
     loginHours: string;
@@ -148,8 +159,8 @@ export const useDriverStore = create<DriverState>((set) => ({
     status: 'IN_PROGRESS',
   },
   assignedStore: {
-    name: 'KudiCart Darkstore',
-    address: 'HSR Sector 2, 12th Main Road, Bengaluru — 560102',
+    name: '',
+    address: '',
   },
   workSummary: {
     totalEarnings: 0,
@@ -196,6 +207,11 @@ export const useDriverStore = create<DriverState>((set) => ({
             status: res.status || state.profile.status,
             phone: res.phone || state.profile.phone,
             tier: res.tier || state.profile.tier,
+            rating: typeof res.rating === 'number' ? res.rating : state.profile.rating,
+            completedDeliveries:
+              typeof res.completedDeliveries === 'number'
+                ? res.completedDeliveries
+                : state.profile.completedDeliveries,
             avatarInitial,
             aadhaarNumber: res.aadhaarNumber || state.profile.aadhaarNumber,
             panNumber: res.panNumber || state.profile.panNumber,
@@ -244,6 +260,13 @@ export const useDriverStore = create<DriverState>((set) => ({
             : state.documents,
           isOnline: typeof res.isOnline === 'boolean' ? res.isOnline : state.isOnline,
           assignedStore: res.assignedStore || state.assignedStore,
+          assignedHub: res.assignedHub !== undefined ? res.assignedHub : state.assignedHub,
+          cashInHandCod:
+            typeof res.cashInHandCod === 'number' ? res.cashInHandCod : state.cashInHandCod,
+          floatingCashLimit:
+            typeof res.floatingCashLimit === 'number'
+              ? res.floatingCashLimit
+              : state.floatingCashLimit,
           workSummary: res.workSummary || state.workSummary,
           lastError: null,
         };

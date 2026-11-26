@@ -12,7 +12,7 @@ interface OrderPickupReviewViewProps {
   onConfirmPickup: () => void;
   onStartDelivery?: () => void;
   onBack: () => void;
-  defaultProductThumbnails: string[];
+  defaultProductThumbnails?: string[];
 }
 
 export const OrderPickupReviewView: React.FC<OrderPickupReviewViewProps> = ({
@@ -23,7 +23,6 @@ export const OrderPickupReviewView: React.FC<OrderPickupReviewViewProps> = ({
   onConfirmPickup,
   onStartDelivery,
   onBack,
-  defaultProductThumbnails,
 }) => {
   const isAlreadyPickedUp = order.status === 'PICKED_UP';
   return (
@@ -87,15 +86,22 @@ export const OrderPickupReviewView: React.FC<OrderPickupReviewViewProps> = ({
                         <Text style={styles.productItemVariant}>{item.variant}</Text>
                       ) : null}
                     </View>
-                    <Image
-                      source={{
-                        uri:
-                          item.image ||
-                          defaultProductThumbnails[index % defaultProductThumbnails.length],
-                      }}
-                      style={styles.productThumb}
-                      resizeMode="cover"
-                    />
+                    {item.image ? (
+                      <Image
+                        source={{ uri: item.image }}
+                        style={styles.productThumb}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <View
+                        style={[
+                          styles.productThumb,
+                          { backgroundColor: '#F4F1EA', alignItems: 'center', justifyContent: 'center' },
+                        ]}
+                      >
+                        <KudiIcon name="package" size={18} color="#65635F" />
+                      </View>
+                    )}
                     <Text style={styles.productItemQty}>×{item.quantity}</Text>
                   </View>
                 );
@@ -105,11 +111,14 @@ export const OrderPickupReviewView: React.FC<OrderPickupReviewViewProps> = ({
                 <View style={styles.productItemInfo}>
                   <Text style={styles.productItemName}>Assigned Package</Text>
                 </View>
-                <Image
-                  source={{ uri: defaultProductThumbnails[0] }}
-                  style={styles.productThumb}
-                  resizeMode="cover"
-                />
+                <View
+                  style={[
+                    styles.productThumb,
+                    { backgroundColor: '#F4F1EA', alignItems: 'center', justifyContent: 'center' },
+                  ]}
+                >
+                  <KudiIcon name="package" size={18} color="#65635F" />
+                </View>
                 <Text style={styles.productItemQty}>×{order.itemsCount}</Text>
               </View>
             )}
