@@ -48,6 +48,20 @@ export const OrderDeliveryReviewView: React.FC<OrderDeliveryReviewViewProps> = (
             <Text style={styles.instructionText}>Hand over the package to the customer.</Text>
           </View>
 
+          {order.deliveryInstructions ? (
+            <View
+              style={[
+                styles.instructionBanner,
+                { backgroundColor: '#FFF7ED', borderColor: '#FDBA74', borderWidth: 1 },
+              ]}
+            >
+              <KudiIcon name="alert-circle" size={16} color="#C2410C" />
+              <Text style={[styles.instructionText, { color: '#9A3412', fontWeight: '700' }]}>
+                Delivery Preferences: {order.deliveryInstructions}
+              </Text>
+            </View>
+          ) : null}
+
           {/* DELIVER TO */}
           <View style={styles.reviewCard}>
             <Text style={styles.reviewSectionLabel}>Deliver to</Text>
