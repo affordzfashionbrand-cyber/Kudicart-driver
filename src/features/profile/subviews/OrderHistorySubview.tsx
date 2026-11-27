@@ -2,7 +2,6 @@ import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { colors } from '../../../theme/colors';
 import { KudiIcon } from '../../../components/KudiIcon';
-import { toast } from '../../../store/useToastStore';
 import { subviewStyles as styles } from './profileSubviews.styles';
 
 interface OrderItem {
@@ -25,8 +24,6 @@ export const OrderHistorySubview: React.FC<OrderHistorySubviewProps> = ({
   const handleOrderPress = (orderId: string) => {
     if (navigation?.navigate) {
       navigation.navigate('HistoricalOrderDetail', { orderId });
-    } else {
-      toast.info(`Viewing details for ${orderId}`);
     }
   };
 

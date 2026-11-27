@@ -1,9 +1,9 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Linking } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { colors } from '../../../theme/colors';
 import { KudiIcon } from '../../../components/KudiIcon';
-import { toast } from '../../../store/useToastStore';
 import { subviewStyles as styles } from './profileSubviews.styles';
+import { isValidCoordinatePair } from '../../../utils/geospatial';
 
 interface StoreSubviewProps {
   assignedHub?: {
@@ -11,15 +11,24 @@ interface StoreSubviewProps {
     name: string;
     locality?: string;
     address: string;
+    lat?: number | null;
+    lng?: number | null;
     deliveryMinutes?: number;
   } | null;
   assignedStore?: {
     name: string;
     address: string;
   } | null;
+  supportPhone?: string | null;
+  navigation?: any;
 }
 
-export const StoreSubview: React.FC<StoreSubviewProps> = ({ assignedHub, assignedStore }) => {
+export const StoreSubview: React.FC<StoreSubviewProps> = ({
+  assignedHub,
+  assignedStore,
+  supportPhone,
+  navigation,
+}) => {
   const storeName = assignedHub?.name || assignedStore?.name || 'No Darkstore Assigned';
   const storeAddress =
     assignedHub?.address ||
@@ -27,16 +36,19 @@ export const StoreSubview: React.FC<StoreSubviewProps> = ({ assignedHub, assigne
     'Assigned hub address will appear once dispatch links your active hub.';
   const localityLabel = assignedHub?.locality || 'Hub Dispatch Zone';
   const hasHub = Boolean(assignedHub?.name || assignedStore?.name);
+  const canNavigateToHub = hasHub && isValidCoordinatePair(assignedHub?.lat, assignedHub?.lng);
 
   const handleNavigate = () => {
-    if (!hasHub || !assignedHub?.address && !assignedStore?.address) {
-      toast.info('Hub address is not configured yet.');
-      return;
-    }
-    const query = encodeURIComponent(storeAddress);
-    Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${query}`).catch(() =>
-      toast.info('Opening directions to assigned darkstore hub...')
-    );
+    if (!canNavigateToHub) return;
+    navigation?.navigate?.('InAppMap', {
+      title: storeName,
+      destinationLabel: storeName,
+      destinationAddress: storeAddress,
+      destination: {
+        lat: assignedHub!.lat!,
+        lng: assignedHub!.lng!,
+      },
+    });
   };
 
   return (
@@ -48,8 +60,13 @@ export const StoreSubview: React.FC<StoreSubviewProps> = ({ assignedHub, assigne
         <View style={{ flex: 1, marginRight: 8 }}>
           <Text style={styles.bannerTitle}>{storeName}</Text>
           <Text style={styles.bannerSubtitle}>{storeAddress}</Text>
+          {hasHub && !canNavigateToHub ? (
+            <Text style={[styles.smallSubtext, { marginTop: 4 }]}>
+              Hub map coordinates pending configuration.
+            </Text>
+          ) : null}
         </View>
-        {hasHub ? (
+        {canNavigateToHub ? (
           <TouchableOpacity
             style={styles.storeNavIconBtn}
             onPress={handleNavigate}
@@ -72,13 +89,13 @@ export const StoreSubview: React.FC<StoreSubviewProps> = ({ assignedHub, assigne
 
         <View style={styles.row}>
           <Text style={styles.rowLabel}>Support Helpline</Text>
-          <Text style={styles.rowValue}>1800-419-5834</Text>
+          <Text style={styles.rowValue}>{supportPhone || 'Configured via Support'}</Text>
         </View>
 
         <View style={[styles.row, styles.rowLast]}>
           <Text style={styles.rowLabel}>SLA Target</Text>
           <Text style={styles.rowValue}>
-            {assignedHub?.deliveryMinutes ? `${assignedHub.deliveryMinutes} mins Express` : '18 mins Express'}
+            {assignedHub?.deliveryMinutes ? `${assignedHub.deliveryMinutes} mins Express` : 'Standard SLA'}
           </Text>
         </View>
       </View>

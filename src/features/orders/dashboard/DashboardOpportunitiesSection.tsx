@@ -1,12 +1,28 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { AppState, View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { useIsFocused } from '@react-navigation/native';
 import { dashboardStyles as styles } from './dashboard.styles';
 import { earningsApi } from '../../../api';
 
-export const DashboardOpportunitiesSection: React.FC = () => {
+const AUTO_SCROLL_INTERVAL_MS = 4000;
+const RESUME_AFTER_INTERACTION_MS = 3500;
+
+interface DashboardOpportunitiesSectionProps {
+  navigation?: any;
+}
+
+export const DashboardOpportunitiesSection: React.FC<DashboardOpportunitiesSectionProps> = ({
+  navigation,
+}) => {
+  const isFocused = useIsFocused();
   const [oppIndex, setOppIndex] = useState(0);
   const [oppSectionWidth, setOppSectionWidth] = useState(0);
   const [opportunities, setOpportunities] = useState<any[]>([]);
+  const [isPaused, setIsPaused] = useState(false);
+
+  const scrollRef = useRef<ScrollView | null>(null);
+  const resumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const currentIndexRef = useRef(0);
 
   useEffect(() => {
     earningsApi
@@ -19,8 +35,65 @@ export const DashboardOpportunitiesSection: React.FC = () => {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state !== 'active') {
+        setIsPaused(true);
+      } else {
+        setIsPaused(false);
+      }
+    });
+    return () => sub.remove();
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
+    };
+  }, []);
+
   const oppBannerWidth = 310;
+  const itemStride = oppBannerWidth + 16;
   const oppSidePadding = oppSectionWidth > 0 ? (oppSectionWidth - oppBannerWidth) / 2 : 0;
+
+  const pauseTemporarily = useCallback(() => {
+    setIsPaused(true);
+    if (resumeTimerRef.current) {
+      clearTimeout(resumeTimerRef.current);
+      resumeTimerRef.current = null;
+    }
+  }, []);
+
+  const scheduleResume = useCallback(() => {
+    if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
+    resumeTimerRef.current = setTimeout(() => {
+      setIsPaused(false);
+    }, RESUME_AFTER_INTERACTION_MS);
+  }, []);
+
+  useEffect(() => {
+    if (
+      !isFocused ||
+      isPaused ||
+      opportunities.length <= 1 ||
+      oppSectionWidth <= 0
+    ) {
+      return;
+    }
+
+    const timer = setInterval(() => {
+      const nextIndex = (currentIndexRef.current + 1) % opportunities.length;
+      currentIndexRef.current = nextIndex;
+      setOppIndex(nextIndex);
+      scrollRef.current?.scrollTo({
+        x: nextIndex * itemStride,
+        y: 0,
+        animated: true,
+      });
+    }, AUTO_SCROLL_INTERVAL_MS);
+
+    return () => clearInterval(timer);
+  }, [isFocused, isPaused, opportunities.length, oppSectionWidth, itemStride]);
 
   if (opportunities.length === 0) {
     return null;
@@ -37,16 +110,28 @@ export const DashboardOpportunitiesSection: React.FC = () => {
 
       {oppSectionWidth > 0 && (
         <ScrollView
+          ref={scrollRef}
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{
             gap: 16,
           }}
-          snapToInterval={oppBannerWidth + 16}
+          snapToInterval={itemStride}
           decelerationRate="fast"
           snapToAlignment="center"
+          onTouchStart={pauseTemporarily}
+          onScrollBeginDrag={pauseTemporarily}
+          onScrollEndDrag={scheduleResume}
+          onMomentumScrollEnd={scheduleResume}
           onScroll={(e) => {
-            const page = Math.round(e.nativeEvent.contentOffset.x / (oppBannerWidth + 16));
+            const page = Math.max(
+              0,
+              Math.min(
+                opportunities.length - 1,
+                Math.round(e.nativeEvent.contentOffset.x / itemStride),
+              ),
+            );
+            currentIndexRef.current = page;
             if (oppIndex !== page) setOppIndex(page);
           }}
           scrollEventThrottle={16}
@@ -55,6 +140,10 @@ export const DashboardOpportunitiesSection: React.FC = () => {
 
           {opportunities.map((opp, idx) => {
             const isPrimary = idx % 2 === 0;
+            const bonusDisplay =
+              opp.bonusAmount != null
+                ? `+₹${opp.bonusAmount}`
+                : opp.bonusText?.split(' ')[0] || '';
             return (
               <View
                 key={opp.id || idx}
@@ -74,7 +163,7 @@ export const DashboardOpportunitiesSection: React.FC = () => {
 
                 <View style={styles.bannerMid}>
                   <Text style={styles.bannerAmount}>
-                    {opp.bonusText?.split(' ')[0] || '₹100'}{' '}
+                    {bonusDisplay}{' '}
                     <Text style={styles.bannerType}>INCENTIVE</Text>
                   </Text>
                 </View>
@@ -88,7 +177,18 @@ export const DashboardOpportunitiesSection: React.FC = () => {
                   >
                     {opp.title}: {opp.timeWindow}
                   </Text>
-                  <TouchableOpacity style={styles.bannerAction}>
+                  <TouchableOpacity
+                    style={styles.bannerAction}
+                    onPress={() =>
+                      navigation?.navigate?.('IncentiveDetails', {
+                        mode: 'opportunity',
+                        opportunity: opp,
+                      })
+                    }
+                    activeOpacity={0.75}
+                    accessibilityRole="button"
+                    accessibilityLabel={`View offer ${opp.title}`}
+                  >
                     <Text
                       style={[
                         styles.bannerActionText,
@@ -110,10 +210,19 @@ export const DashboardOpportunitiesSection: React.FC = () => {
       {opportunities.length > 1 && (
         <View style={styles.oppPagerIndicatorContainer}>
           {opportunities.map((_, i) => (
-            <View
+            <TouchableOpacity
               key={i}
-              style={[styles.pagerDot, oppIndex === i && styles.pagerDotActive]}
-            />
+              onPress={() => {
+                pauseTemporarily();
+                currentIndexRef.current = i;
+                setOppIndex(i);
+                scrollRef.current?.scrollTo({ x: i * itemStride, y: 0, animated: true });
+                scheduleResume();
+              }}
+              hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+            >
+              <View style={[styles.pagerDot, oppIndex === i && styles.pagerDotActive]} />
+            </TouchableOpacity>
           ))}
         </View>
       )}

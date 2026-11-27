@@ -6,7 +6,6 @@ import { useOrderStore, Order } from '../../store/useOrderStore';
 import { useDriverStore } from '../../store/useDriverStore';
 import { ordersApi } from '../../api';
 import { KudiIcon } from '../../components/KudiIcon';
-import { toast } from '../../store/useToastStore';
 import { styles } from './historicalOrderDetail.styles';
 
 export const HistoricalOrderDetailScreen = ({ route, navigation }: any) => {
@@ -77,23 +76,23 @@ export const HistoricalOrderDetailScreen = ({ route, navigation }: any) => {
     );
   }
 
-  const orderKm = order.distance || '2.4 km';
-  const orderEarnings = order.earnings || 55;
+  const orderKm = order.distance || 'Distance N/A';
+  const orderEarnings = typeof order.earnings === 'number' ? order.earnings : 0;
   const storeName =
     order.pickupLocation ||
     assignedStore?.name ||
     'KudiCart Darkstore Hub';
   const storeAddress =
+    order.pickupAddress ||
     assignedStore?.address ||
-    'Darkstore Hub Address';
+    'Hub address unavailable';
   const customerName = order.customerName || 'Customer';
   const customerAddress =
     order.customerAddress || 'Customer Address';
 
-  // Compute breakdown approximations based on distance & earnings
-  const basePay = 35;
-  const distancePay = Math.max(0, orderEarnings - basePay - 5);
-  const incentivePay = orderEarnings - basePay - distancePay;
+  const basePay = orderEarnings;
+  const distancePay = 0;
+  const incentivePay = 0;
 
   return (
     <ScreenContainer>
@@ -246,30 +245,25 @@ export const HistoricalOrderDetailScreen = ({ route, navigation }: any) => {
 
           <View style={[styles.infoRow, styles.infoRowLast]}>
             <Text style={styles.infoLabel}>Payment Mode</Text>
-            <Text style={styles.infoValue}>Prepaid (Online)</Text>
+            <Text style={styles.infoValue}>
+              {order.paymentMethod === 'COD' ? 'Cash on Delivery (COD)' : 'Prepaid (Online)'}
+            </Text>
           </View>
         </View>
 
-        {/* 5. Support & Feedback Actions */}
-        <TouchableOpacity
-          style={styles.primaryActionButton}
-          activeOpacity={0.85}
-          onPress={() => {
-            toast.info(`E-receipt for order ${order.id} sent to registered mobile.`);
-          }}
-        >
-          <Text style={styles.primaryActionButtonText}>Download E-Receipt</Text>
-        </TouchableOpacity>
-
+        {/* 5. Support & Help Navigation */}
         <TouchableOpacity
           style={styles.secondaryHelpBtn}
           activeOpacity={0.7}
           onPress={() => {
-            toast.info(`Query raised for order ${order.id}. Support team will contact you.`);
+            navigation?.navigate?.('ProfileDetailSub', {
+              id: 'help',
+              title: 'Help & Support',
+            });
           }}
         >
           <KudiIcon name="help" size={16} color={colors.textSecondary} />
-          <Text style={styles.secondaryHelpText}>Have an issue with this trip?</Text>
+          <Text style={styles.secondaryHelpText}>Report an issue with this trip</Text>
         </TouchableOpacity>
       </ScrollView>
     </ScreenContainer>

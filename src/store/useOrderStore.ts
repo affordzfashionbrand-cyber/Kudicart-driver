@@ -12,6 +12,7 @@ export interface PendingSyncMutation {
   orderId: string;
   action:
     | 'ACCEPT'
+    | 'REJECT'
     | 'PICKUP'
     | 'OUT_FOR_DELIVERY'
     | 'MARK_ARRIVED'
@@ -42,12 +43,13 @@ interface OrderState {
 
   // Standard Lifecycle Actions
   clearOrders: () => void;
-  acceptOrder: (orderId: string) => void;
+  acceptOrder: (orderId: string) => Promise<boolean>;
+  rejectOrder: (orderId: string, reason?: string) => Promise<boolean>;
   confirmPickup: (orderId: string, pickupImages?: string[]) => void;
   startDelivery: (orderId: string) => void;
   markArrived: (orderId: string) => void;
-  confirmDelivery: (orderId: string, deliveryImages?: string[], cashCollected?: boolean) => void;
-  completeOrder: (orderId: string, deliveryImages?: string[], cashCollected?: boolean) => void;
+  confirmDelivery: (orderId: string, deliveryImages?: string[], cashCollected?: boolean) => Promise<boolean>;
+  completeOrder: (orderId: string, deliveryImages?: string[], cashCollected?: boolean) => Promise<boolean>;
 
   // Try & Buy Specific Lifecycle Actions
   confirmHandoverAndStartTrial: (orderId: string, otp?: string, handoverImages?: string[]) => void;
@@ -56,7 +58,7 @@ interface OrderState {
   toggleItemCollected: (orderId: string, itemId: string) => void;
   confirmReturnCollection: (orderId: string, returnImages?: string[]) => void;
   proceedToPayment: (orderId: string) => void;
-  confirmPaymentAndBranch: (orderId: string, cashCollected?: boolean) => Promise<void>;
+  confirmPaymentAndBranch: (orderId: string, cashCollected?: boolean) => Promise<boolean>;
   markArrivedAtStore: (orderId: string) => void;
   reconcileStoreReturn: (
     orderId: string,
@@ -117,7 +119,11 @@ function handleMutationFailure(
       lastSyncError: message,
     }));
     try {
-      toast.show({ type: 'error', message });
+      toast.show({
+        type: 'error',
+        message,
+        dedupeKey: `order-sync-err:${mutation.orderId}:${message}`,
+      });
     } catch {}
     return;
   }
@@ -136,6 +142,8 @@ async function executeQueuedMutation(m: PendingSyncMutation) {
   switch (m.action) {
     case 'ACCEPT':
       return ordersApi.acceptOrder(m.orderId, m.idempotencyKey);
+    case 'REJECT':
+      return ordersApi.rejectOrder(m.orderId, m.payload?.reason, m.idempotencyKey);
     case 'PICKUP':
       return ordersApi.pickupOrder(m.orderId, m.payload?.pickupImages || [], m.idempotencyKey);
     case 'OUT_FOR_DELIVERY':
@@ -157,7 +165,7 @@ async function executeQueuedMutation(m: PendingSyncMutation) {
         m.idempotencyKey,
       );
     case 'TNB_RECORD_SELECTION':
-      return ordersApi.recordSelections(m.orderId, m.payload?.selections || {});
+      return ordersApi.recordSelections(m.orderId, m.payload?.selections || {}, m.idempotencyKey);
     case 'TNB_RETURN_COLLECTION':
       return ordersApi.confirmReturnCollection(
         m.orderId,
@@ -172,12 +180,13 @@ async function executeQueuedMutation(m: PendingSyncMutation) {
         m.idempotencyKey,
       );
     case 'TNB_ARRIVE_STORE':
-      return ordersApi.arriveAtStore(m.orderId);
+      return ordersApi.arriveAtStore(m.orderId, m.idempotencyKey);
     case 'TNB_RECONCILE_STORE':
       return ordersApi.reconcileStoreReturn(
         m.orderId,
         m.payload?.supervisorConfirmed,
         m.payload?.note,
+        m.idempotencyKey,
       );
   }
 }
@@ -287,11 +296,6 @@ export const useOrderStore = create<OrderState>((set, get) => ({
       pendingSyncQueue: remaining,
       ...(droppedError ? { lastSyncError: droppedError } : {}),
     });
-    if (droppedError) {
-      try {
-        toast.show({ type: 'error', message: droppedError });
-      } catch {}
-    }
   },
 
   clearOrders: () => {
@@ -299,24 +303,63 @@ export const useOrderStore = create<OrderState>((set, get) => ({
     set({ activeOrders: [], pendingSyncQueue: [] });
   },
 
-  acceptOrder: (orderId) => {
+  acceptOrder: async (orderId) => {
     const previousSnapshot = get().activeOrders;
     set((state) => ({
+      lastSyncError: null,
       activeOrders: state.activeOrders.map((order) =>
-        order.id === orderId ? { ...order, accepted: true } : order,
+        order.id === orderId
+          ? {
+              ...order,
+              accepted: true,
+              deliveryAssignmentStatus: 'ACCEPTED_BY_DELIVERY_PARTNER',
+            }
+          : order,
       ),
     }));
+    const key = makeIdempotencyKey('accept', orderId);
     const mutation: PendingSyncMutation = {
-      id: makeIdempotencyKey('accept', orderId),
+      id: key,
       orderId,
       action: 'ACCEPT',
-      idempotencyKey: makeIdempotencyKey('accept', orderId),
+      idempotencyKey: key,
       createdAt: Date.now(),
     };
-    ordersApi
-      .acceptOrder(orderId, mutation.idempotencyKey)
-      .then((res) => applyServerResponseOrder(set, orderId, res, get().syncOrderFromServer))
-      .catch((err) => handleMutationFailure(set, previousSnapshot, mutation, err));
+    try {
+      const res = await ordersApi.acceptOrder(orderId, key);
+      applyServerResponseOrder(set, orderId, res, get().syncOrderFromServer);
+      return true;
+    } catch (err) {
+      handleMutationFailure(set, previousSnapshot, mutation, err);
+      return false;
+    }
+  },
+
+  rejectOrder: async (orderId, reason) => {
+    const previousSnapshot = get().activeOrders;
+    const trimmedReason = reason?.trim() || 'Rejected by delivery partner';
+    set((state) => ({
+      lastSyncError: null,
+      activeOrders: state.activeOrders.filter((order) => order.id !== orderId),
+    }));
+    const key = makeIdempotencyKey('reject', orderId);
+    const mutation: PendingSyncMutation = {
+      id: key,
+      orderId,
+      action: 'REJECT',
+      payload: { reason: trimmedReason },
+      idempotencyKey: key,
+      createdAt: Date.now(),
+    };
+    try {
+      await ordersApi.rejectOrder(orderId, trimmedReason, key);
+      queryClient.invalidateQueries({ queryKey: ['driver-orders'] });
+      void get().fetchAssignedOrdersAsync();
+      return true;
+    } catch (err) {
+      handleMutationFailure(set, previousSnapshot, mutation, err);
+      return false;
+    }
   },
 
   confirmPickup: (orderId, pickupImages = []) => {
@@ -401,11 +444,11 @@ export const useOrderStore = create<OrderState>((set, get) => ({
       .catch((err) => handleMutationFailure(set, previousSnapshot, mutation, err));
   },
 
-  confirmDelivery: (orderId, deliveryImages = [], cashCollected = true) => {
-    get().completeOrder(orderId, deliveryImages, cashCollected);
+  confirmDelivery: async (orderId, deliveryImages = [], cashCollected = true) => {
+    return get().completeOrder(orderId, deliveryImages, cashCollected);
   },
 
-  completeOrder: (orderId, deliveryImages = [], cashCollected = true) => {
+  completeOrder: async (orderId, deliveryImages = [], cashCollected = true) => {
     const previousSnapshot = get().activeOrders;
     const targetOrder = get().activeOrders.find((o) => o.id === orderId);
     const isReturnCompletion =
@@ -427,6 +470,7 @@ export const useOrderStore = create<OrderState>((set, get) => ({
       };
 
       return {
+        lastSyncError: null,
         activeOrders: state.activeOrders.filter((o) => o.id !== orderId),
         historicalOrders: [completedOrder, ...state.historicalOrders],
       };
@@ -443,10 +487,37 @@ export const useOrderStore = create<OrderState>((set, get) => ({
         idempotencyKey: key,
         createdAt: Date.now(),
       };
-      ordersApi
-        .deliverOrder(orderId, deliveryImages, cashCollected, key)
-        .then((res) => applyServerResponseOrder(set, orderId, res, get().syncOrderFromServer))
-        .catch((err) => handleMutationFailure(set, previousSnapshot, mutation, err));
+      try {
+        const res = await ordersApi.deliverOrder(orderId, deliveryImages, cashCollected, key);
+        applyServerResponseOrder(set, orderId, res, get().syncOrderFromServer);
+        return true;
+      } catch (err) {
+        handleMutationFailure(set, previousSnapshot, mutation, err);
+        return false;
+      }
+    }
+
+    const key = makeIdempotencyKey('reconcile', orderId);
+    const mutation: PendingSyncMutation = {
+      id: key,
+      orderId,
+      action: 'TNB_RECONCILE_STORE',
+      payload: { note: 'Completed return handover at store' },
+      idempotencyKey: key,
+      createdAt: Date.now(),
+    };
+    try {
+      const res = await ordersApi.reconcileStoreReturn(
+        orderId,
+        undefined,
+        'Completed return handover at store',
+        key,
+      );
+      applyServerResponseOrder(set, orderId, res, get().syncOrderFromServer);
+      return true;
+    } catch (err) {
+      handleMutationFailure(set, previousSnapshot, mutation, err);
+      return false;
     }
   },
 
@@ -459,9 +530,6 @@ export const useOrderStore = create<OrderState>((set, get) => ({
     if (!trimmedOtp) {
       const msg = 'Customer OTP is required to confirm handover.';
       set({ lastSyncError: msg });
-      try {
-        toast.show({ type: 'error', message: msg });
-      } catch {}
       return;
     }
 
@@ -549,7 +617,7 @@ export const useOrderStore = create<OrderState>((set, get) => ({
       createdAt: Date.now(),
     };
     ordersApi
-      .recordSelections(orderId, selections)
+      .recordSelections(orderId, selections, key)
       .then((res) => applyServerResponseOrder(set, orderId, res, get().syncOrderFromServer))
       .catch((err) => handleMutationFailure(set, previousSnapshot, mutation, err));
   },
@@ -617,7 +685,7 @@ export const useOrderStore = create<OrderState>((set, get) => ({
   confirmPaymentAndBranch: async (orderId, cashCollected = true) => {
     const previousSnapshot = get().activeOrders;
     const order = get().activeOrders.find((o) => o.id === orderId);
-    if (!order) return;
+    if (!order) return false;
 
     const returnedCount = (order.items || []).filter((i) => i.decision === 'RETURN').length;
     const key = makeIdempotencyKey('settle', orderId);
@@ -674,8 +742,10 @@ export const useOrderStore = create<OrderState>((set, get) => ({
         queryClient.invalidateQueries({ queryKey: ['driver-orders'] });
       }
       syncTrackingForActiveOrders(get().activeOrders);
+      return true;
     } catch (err) {
       handleMutationFailure(set, previousSnapshot, mutation, err);
+      return false;
     }
   },
 
@@ -695,7 +765,7 @@ export const useOrderStore = create<OrderState>((set, get) => ({
       createdAt: Date.now(),
     };
     ordersApi
-      .arriveAtStore(orderId)
+      .arriveAtStore(orderId, key)
       .then((res) => applyServerResponseOrder(set, orderId, res, get().syncOrderFromServer))
       .catch((err) => handleMutationFailure(set, previousSnapshot, mutation, err));
   },
@@ -713,7 +783,7 @@ export const useOrderStore = create<OrderState>((set, get) => ({
     };
 
     try {
-      const res = await ordersApi.reconcileStoreReturn(orderId, supervisorConfirmed, note);
+      const res = await ordersApi.reconcileStoreReturn(orderId, supervisorConfirmed, note, key);
       const rawOrder = res?.order || (res?.id ? res : null);
       if (rawOrder) {
         applyServerResponseOrder(set, orderId, res, get().syncOrderFromServer);

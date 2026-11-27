@@ -1,102 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Linking, TextInput } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { KudiIcon } from '../../../components/KudiIcon';
-import { toast } from '../../../store/useToastStore';
-import { request } from '../../../api/client';
 import { subviewStyles as styles } from './profileSubviews.styles';
-
-export const HelpSubview: React.FC = () => {
-  const [ticketMessage, setTicketMessage] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-
-  const handleSubmitTicket = async () => {
-    const trimmed = ticketMessage.trim();
-    if (!trimmed) {
-      toast.info('Please describe your issue before submitting.');
-      return;
-    }
-    setSubmitting(true);
-    try {
-      await request('/support/tickets', {
-        method: 'POST',
-        body: JSON.stringify({
-          subject: 'Delivery Partner Support Request',
-          category: 'DELIVERY',
-          priority: 'HIGH',
-          message: trimmed,
-        }),
-      });
-      setTicketMessage('');
-      toast.success('Support ticket raised. Operations team will respond shortly.');
-    } catch (err: any) {
-      toast.error(err?.message || 'Unable to submit support ticket right now.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <>
-      <View style={styles.card}>
-        <Text style={styles.cardSectionTitle}>Raise a Support Ticket</Text>
-        <TextInput
-          value={ticketMessage}
-          onChangeText={setTicketMessage}
-          placeholder="Describe order, hub, or payout issue..."
-          multiline
-          style={{
-            borderWidth: 1,
-            borderColor: '#E4E0DB',
-            borderRadius: 10,
-            padding: 12,
-            minHeight: 80,
-            textAlignVertical: 'top',
-            marginBottom: 12,
-            color: '#171716',
-          }}
-        />
-        <TouchableOpacity
-          style={styles.primaryActionButton}
-          onPress={handleSubmitTicket}
-          disabled={submitting}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.primaryActionButtonText}>
-            {submitting ? 'Submitting...' : 'Submit Support Ticket'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.cardSectionTitle}>24/7 Partner Helpline</Text>
-
-        <View style={styles.row}>
-          <Text style={styles.rowLabel}>Toll-Free Helpline</Text>
-          <Text style={styles.rowValue}>1800-419-5834</Text>
-        </View>
-
-        <View style={styles.row}>
-          <Text style={styles.rowLabel}>Concierge Email</Text>
-          <Text style={styles.rowValue}>concierge@affordz.in</Text>
-        </View>
-
-        <View style={[styles.row, styles.rowLast]}>
-          <Text style={styles.rowLabel}>Support Availability</Text>
-          <Text style={[styles.rowValue, { color: '#16805A' }]}>24 Hours / 7 Days</Text>
-        </View>
-      </View>
-
-      <TouchableOpacity
-        style={styles.primaryActionButton}
-        onPress={() => Linking.openURL('tel:18004195834').catch(() => {})}
-        activeOpacity={0.8}
-      >
-        <KudiIcon name="phone" size={18} color="#FFFFFF" />
-        <Text style={styles.primaryActionButtonText}>Call Partner Support</Text>
-      </TouchableOpacity>
-    </>
-  );
-};
+export { HelpSupportSubview as HelpSubview } from './HelpSupportSubview';
 
 interface CashSubviewProps {
   cashInHandCod?: number;
@@ -185,6 +91,7 @@ export const InsuranceSubview: React.FC = () => {
 };
 
 export const LoanSubview: React.FC = () => {
+  const [loanNotice, setLoanNotice] = useState<string | null>(null);
   return (
     <>
       <View style={styles.loanBanner}>
@@ -209,11 +116,21 @@ export const LoanSubview: React.FC = () => {
 
       <TouchableOpacity
         style={styles.primaryActionButton}
-        onPress={() => toast.success('Loan application submitted. Agent will call you shortly.')}
+        onPress={() =>
+          setLoanNotice(
+            'Partner loan requests require hub verification. Contact your hub finance desk or Help & Support.',
+          )
+        }
         activeOpacity={0.8}
       >
         <Text style={styles.primaryActionButtonText}>Apply Instantly</Text>
       </TouchableOpacity>
+
+      {loanNotice ? (
+        <Text style={[styles.smallSubtext, { marginTop: 10, textAlign: 'center' }]}>
+          {loanNotice}
+        </Text>
+      ) : null}
     </>
   );
 };

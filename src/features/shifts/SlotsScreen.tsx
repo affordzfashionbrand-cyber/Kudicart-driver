@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { KudiIcon } from '../../components/KudiIcon';
-import { toast } from '../../store/useToastStore';
 import { shiftsApi } from '../../api';
+import { getFriendlyErrorMessage } from '../../utils/errorHandling';
 import {
   SlotStatus,
   SlotFilter,
@@ -22,9 +22,13 @@ export const SlotsScreen = ({ navigation }: any) => {
   const [isLocked, setIsLocked] = useState(false);
   const [lockMessage, setLockMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const fetchSchedule = (week: 'THIS_WEEK' | 'NEXT_WEEK') => {
     setLoading(true);
+    setLoadError(null);
+    setActionError(null);
     shiftsApi
       .getSlots(week)
       .then((res) => {
@@ -39,7 +43,9 @@ export const SlotsScreen = ({ navigation }: any) => {
         }
       })
       .catch((err) => {
-        toast.error(err?.message || 'Failed to load shift slots');
+        setLoadError(
+          getFriendlyErrorMessage(err, 'Unable to load shift slots right now. Please try again.'),
+        );
       })
       .finally(() => setLoading(false));
   };
@@ -77,8 +83,11 @@ export const SlotsScreen = ({ navigation }: any) => {
   };
 
   const handleToggleBooking = async (slotId: string) => {
+    setActionError(null);
     if (isNextWeek && isLocked) {
-      toast.warning(lockMessage || 'Next week slots cannot be booked yet.');
+      if (lockMessage) {
+        setActionError(lockMessage);
+      }
       return;
     }
 
@@ -88,18 +97,16 @@ export const SlotsScreen = ({ navigation }: any) => {
     if (slot.status === 'AVAILABLE') {
       try {
         await shiftsApi.bookSlot(slotId);
-        toast.success(`Slot booked for ${slot.timeRange}`);
         fetchSchedule(selectedWeek);
       } catch (err: any) {
-        toast.error(err?.message || 'Could not book slot');
+        setActionError(getFriendlyErrorMessage(err, 'Could not book slot. Please try again.'));
       }
     } else if (slot.status === 'BOOKED') {
       try {
         await shiftsApi.cancelSlot(slotId);
-        toast.info(`Slot booking cancelled for ${slot.timeRange}`);
         fetchSchedule(selectedWeek);
       } catch (err: any) {
-        toast.error(err?.message || 'Could not cancel slot');
+        setActionError(getFriendlyErrorMessage(err, 'Could not cancel slot. Please try again.'));
       }
     }
   };
@@ -271,14 +278,61 @@ export const SlotsScreen = ({ navigation }: any) => {
           </View>
         )}
 
+        {/* Action Error Banner */}
+        {actionError ? (
+          <View
+            accessibilityRole="alert"
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 8,
+              backgroundColor: '#FEF2F2',
+              borderWidth: 1,
+              borderColor: '#FECACA',
+              borderRadius: 10,
+              padding: 10,
+              marginBottom: 12,
+            }}
+          >
+            <KudiIcon name="alert-circle" size={16} color="#DC2626" />
+            <Text style={{ flex: 1, fontSize: 12.5, fontWeight: '600', color: '#991B1B' }}>
+              {actionError}
+            </Text>
+            <TouchableOpacity
+              onPress={() => setActionError(null)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityLabel="Dismiss error"
+            >
+              <KudiIcon name="close" size={14} color="#991B1B" />
+            </TouchableOpacity>
+          </View>
+        ) : null}
+
         {/* Section Header */}
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>{sectionTitle}</Text>
           <Text style={styles.sectionDateSub}>{selectedDay?.dateLabel || ''}</Text>
         </View>
 
-        {/* Slots List or Empty State */}
-        {filteredSlots.length === 0 ? (
+        {/* Slots List, Load Error, or Empty State */}
+        {loadError && filteredSlots.length === 0 ? (
+          <View style={styles.emptyFilterState}>
+            <Text style={styles.emptyFilterTitle}>Unable to load slots</Text>
+            <Text style={styles.emptyFilterSub}>{loadError}</Text>
+            <TouchableOpacity
+              onPress={() => fetchSchedule(selectedWeek)}
+              style={{
+                marginTop: 12,
+                backgroundColor: '#171716',
+                paddingHorizontal: 16,
+                paddingVertical: 8,
+                borderRadius: 8,
+              }}
+            >
+              <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        ) : filteredSlots.length === 0 ? (
           <View style={styles.emptyFilterState}>
             <Text style={styles.emptyFilterTitle}>
               {loading

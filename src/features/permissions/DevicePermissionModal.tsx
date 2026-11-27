@@ -13,7 +13,6 @@ import { colors } from '../../theme/colors';
 import { usePermissionStore } from '../../store/usePermissionStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { PermissionKey } from '../../services/permissionService';
-import { toast } from '../../store/useToastStore';
 
 interface PermissionStep {
   key: PermissionKey;
@@ -144,10 +143,6 @@ export const DevicePermissionModal = () => {
 
       if (remainingUngranted.length === 0) {
         completeDeviceSetup();
-        toast.show({
-          type: 'success',
-          message: 'All device permissions granted. Ready to deliver!',
-        });
       }
     } finally {
       setIsProcessing(false);

@@ -9,7 +9,6 @@ import {
 } from '../../store/useNotificationStore';
 import { useOrderStore } from '../../store/useOrderStore';
 import { KudiIcon } from '../../components/KudiIcon';
-import { toast } from '../../store/useToastStore';
 import { styles } from './notifications.styles';
 
 type FilterType = 'ALL' | NotificationCategory;
@@ -118,7 +117,6 @@ export const NotificationsScreen = ({ navigation }: any) => {
             style={styles.markAllReadBtn}
             onPress={() => {
               markAllAsRead();
-              toast.info('All notifications marked as read.');
             }}
             accessibilityRole="button"
             accessibilityLabel="Mark all notifications as read"

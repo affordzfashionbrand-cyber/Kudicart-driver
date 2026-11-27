@@ -9,7 +9,7 @@ import logo from '../../assets/logo.png';
 import { KudiIcon } from '../../components/KudiIcon';
 import { useAuthStore } from '../../store/useAuthStore';
 import { profileApi } from '../../api';
-import { toast } from '../../store/useToastStore';
+import { getFriendlyErrorMessage } from '../../utils/errorHandling';
 import { styles } from './documentUploads.styles';
 
 interface DocumentRowProps {
@@ -101,6 +101,7 @@ const DocumentRow = ({ title, docType, onPress, isReviewMode, isRejected, isUpda
 export const DocumentUploadsScreen = ({ navigation }: any) => {
   const { documents, kyc, fetchProfileAsync } = useDriverStore();
   const { kycStatus, rejectionReason: authRejectionReason, setKycStatus } = useAuthStore();
+  const [submitError, setSubmitError] = React.useState<string | null>(null);
   const isReviewMode = kycStatus === 'REJECTED';
 
   useFocusEffect(
@@ -169,17 +170,19 @@ export const DocumentUploadsScreen = ({ navigation }: any) => {
     if (!isAllComplete) return;
 
     if (isReviewMode) {
+      setSubmitError(null);
       try {
         await profileApi.submitKyc();
         setKycStatus('PENDING');
-        toast.success('KYC resubmitted for verification.');
         if (typeof navigation?.replace === 'function') {
           navigation.replace('VerificationPending');
         } else if (typeof navigation?.navigate === 'function') {
           navigation.navigate('VerificationPending');
         }
       } catch (err: any) {
-        toast.error(err?.message || 'Failed to submit KYC for verification. Please retry.');
+        setSubmitError(
+          getFriendlyErrorMessage(err, 'Failed to submit KYC for verification. Please retry.'),
+        );
       }
     } else {
       navigation.navigate('Selfie');
@@ -276,6 +279,23 @@ export const DocumentUploadsScreen = ({ navigation }: any) => {
           </View>
 
           <View style={styles.footer}>
+            {Boolean(submitError) && (
+              <View
+                style={{
+                  backgroundColor: '#FEF2F2',
+                  borderWidth: 1,
+                  borderColor: '#FECACA',
+                  borderRadius: 10,
+                  padding: 12,
+                  marginBottom: 12,
+                }}
+                accessibilityRole="alert"
+              >
+                <Text style={{ color: '#991B1B', fontSize: 13, fontWeight: '600' }}>
+                  {submitError}
+                </Text>
+              </View>
+            )}
             <PrimaryButton 
               title={isReviewMode ? 'Resubmit for verification' : 'Continue'} 
               onPress={handleContinue} 

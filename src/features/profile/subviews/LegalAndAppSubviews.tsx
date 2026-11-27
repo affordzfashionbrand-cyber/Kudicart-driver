@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { colors } from '../../../theme/colors';
-import { KudiIcon } from '../../../components/KudiIcon';
-import { toast } from '../../../store/useToastStore';
+import { APP_NAME, APP_VERSION } from '../../../config/appInfo';
+import { useDriverStore } from '../../../store/useDriverStore';
 import { subviewStyles as styles } from './profileSubviews.styles';
 
 export const AcademySubview: React.FC = () => {
@@ -36,13 +36,19 @@ export const AcademySubview: React.FC = () => {
         </View>
       </View>
 
-      <TouchableOpacity
-        style={styles.primaryActionButton}
-        onPress={() => toast.info('Academy video module loaded.')}
-        activeOpacity={0.8}
+      <View
+        style={{
+          backgroundColor: '#FFF7F2',
+          borderWidth: 1,
+          borderColor: '#FED7AA',
+          borderRadius: 12,
+          padding: 12,
+        }}
       >
-        <Text style={styles.primaryActionButtonText}>Continue Learning</Text>
-      </TouchableOpacity>
+        <Text style={{ fontSize: 12.5, fontWeight: '600', color: '#9A3412' }}>
+          In-app training video modules are assigned during onboarding or via your hub trainer.
+        </Text>
+      </View>
     </>
   );
 };
@@ -62,11 +68,12 @@ export const CardSubview: React.FC<CardSubviewProps> = ({
   hubName,
   phone,
 }) => {
+  const supportPhone = useDriverStore((s) => s.supportConfig?.phone);
   return (
     <>
       <View style={styles.digitalCardWrap}>
         <View style={styles.digitalCardHeader}>
-          <Text style={styles.digitalCardBrand}>AFFORDZ PARTNER</Text>
+          <Text style={styles.digitalCardBrand}>KUDICART PARTNER</Text>
           <View style={styles.digitalCardDot} />
         </View>
 
@@ -83,18 +90,27 @@ export const CardSubview: React.FC<CardSubviewProps> = ({
 
         <View style={styles.digitalCardFooter}>
           <Text style={styles.digitalCardFootText}>
-            Partner Contact: {phone || 'Not linked'} • Helpline: 1800-419-5834
+            Partner Contact: {phone || 'Not linked'}
+            {supportPhone ? ` • Helpline: ${supportPhone}` : ''}
           </Text>
         </View>
       </View>
 
-      <TouchableOpacity
-        style={styles.primaryActionButton}
-        onPress={() => toast.info('Digital Partner Card is active for in-person hub verification.')}
-        activeOpacity={0.8}
+      <View
+        style={{
+          backgroundColor: '#EDFDF5',
+          borderWidth: 1,
+          borderColor: '#A7F3D0',
+          borderRadius: 12,
+          paddingVertical: 12,
+          paddingHorizontal: 14,
+          alignItems: 'center',
+        }}
       >
-        <Text style={styles.primaryActionButtonText}>Verified Digital ID</Text>
-      </TouchableOpacity>
+        <Text style={{ fontSize: 13.5, fontWeight: '700', color: '#16805A' }}>
+          Verified Digital ID • Active for Hub Verification
+        </Text>
+      </View>
     </>
   );
 };
@@ -105,8 +121,13 @@ export const AboutSubview: React.FC<{ navigation?: any }> = ({ navigation }) => 
       <Text style={styles.cardSectionTitle}>Application Details</Text>
 
       <View style={styles.row}>
+        <Text style={styles.rowLabel}>App Name</Text>
+        <Text style={styles.rowValue}>{APP_NAME}</Text>
+      </View>
+
+      <View style={styles.row}>
         <Text style={styles.rowLabel}>App Version</Text>
-        <Text style={styles.rowValue}>v2.4.1 (Build 142)</Text>
+        <Text style={styles.rowValue}>v{APP_VERSION}</Text>
       </View>
 
       <View style={styles.row}>
@@ -121,13 +142,7 @@ export const AboutSubview: React.FC<{ navigation?: any }> = ({ navigation }) => 
 
       <TouchableOpacity
         style={styles.row}
-        onPress={() => {
-          if (navigation?.navigate) {
-            navigation.navigate('DevicePermissionSetup', { returnTo: 'Profile' });
-          } else {
-            toast.info('Opening Device Permissions...');
-          }
-        }}
+        onPress={() => navigation?.navigate?.('DevicePermissionSetup', { returnTo: 'Profile' })}
       >
         <Text style={styles.rowLabel}>Device & App Permissions</Text>
         <Text style={[styles.rowValue, { color: colors.primary }]}>Configure ›</Text>
@@ -135,13 +150,7 @@ export const AboutSubview: React.FC<{ navigation?: any }> = ({ navigation }) => 
 
       <TouchableOpacity
         style={styles.row}
-        onPress={() => {
-          if (navigation?.navigate) {
-            navigation.navigate('TermsAndConditions');
-          } else {
-            toast.info('Opening Terms of Service...');
-          }
-        }}
+        onPress={() => navigation?.navigate?.('TermsAndConditions')}
       >
         <Text style={styles.rowLabel}>Terms of Service</Text>
         <Text style={[styles.rowValue, { color: colors.primary }]}>View Agreement ›</Text>
@@ -149,13 +158,7 @@ export const AboutSubview: React.FC<{ navigation?: any }> = ({ navigation }) => 
 
       <TouchableOpacity
         style={[styles.row, styles.rowLast]}
-        onPress={() => {
-          if (navigation?.navigate) {
-            navigation.navigate('PrivacyPolicy');
-          } else {
-            toast.info('Opening Privacy Policy...');
-          }
-        }}
+        onPress={() => navigation?.navigate?.('PrivacyPolicy')}
       >
         <Text style={styles.rowLabel}>Privacy Policy</Text>
         <Text style={[styles.rowValue, { color: colors.primary }]}>View Policy ›</Text>

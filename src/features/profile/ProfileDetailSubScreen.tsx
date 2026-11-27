@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { colors } from '../../theme/colors';
@@ -37,15 +37,32 @@ export const ProfileDetailSubScreen = ({ navigation, route }: any) => {
   const screenId = route?.params?.id || 'store';
   const customTitle = route?.params?.title;
 
-  const { profile, vehicle, kyc, assignedStore, assignedHub, cashInHandCod, floatingCashLimit } =
-    useDriverStore();
+  const {
+    profile,
+    vehicle,
+    kyc,
+    documents,
+    assignedStore,
+    assignedHub,
+    supportConfig,
+    cashInHandCod,
+    floatingCashLimit,
+    fetchProfileAsync,
+  } = useDriverStore();
   const { historicalOrders, fetchHistoricalOrdersAsync } = useOrderStore();
 
   useEffect(() => {
     if (screenId === 'orderHistory') {
       fetchHistoricalOrdersAsync?.();
+    } else if (
+      screenId === 'documents' ||
+      screenId === 'store' ||
+      screenId === 'driverDetails' ||
+      screenId === 'help'
+    ) {
+      fetchProfileAsync?.();
     }
-  }, [screenId, fetchHistoricalOrdersAsync]);
+  }, [screenId, fetchHistoricalOrdersAsync, fetchProfileAsync]);
 
   const driverFullName = profile.fullName || profile.name || 'Delivery Partner';
   const nameParts = driverFullName.trim().split(' ');
@@ -56,35 +73,51 @@ export const ProfileDetailSubScreen = ({ navigation, route }: any) => {
   const documentsList: DocItem[] = [
     {
       id: 'dl',
+      docType: 'drivingLicence',
       title: 'Driving Licence',
       rawNumber: profile.licenseNumber,
       maskedNumber: maskDl(profile.licenseNumber),
-      status: kyc?.licenseStatus || 'Under review',
+      status: (documents?.drivingLicence as any)?.status || kyc?.licenseStatus || '',
       description: 'Official driving permit required for operating commercial and delivery vehicles.',
+      frontUrl: documents?.drivingLicence?.front?.uri || null,
+      backUrl: documents?.drivingLicence?.back?.uri || null,
+      mimeType: documents?.drivingLicence?.front?.type || documents?.drivingLicence?.back?.type,
     },
     {
       id: 'aadhaar',
+      docType: 'aadhaar',
       title: 'Aadhaar Card',
       rawNumber: profile.aadhaarNumber,
       maskedNumber: maskAadhaar(profile.aadhaarNumber),
-      status: kyc?.aadhaarStatus || 'Verified',
+      status: (documents?.aadhaar as any)?.status || kyc?.aadhaarStatus || '',
       description: 'Government identification used for background verification and compliance.',
+      frontUrl: documents?.aadhaar?.front?.uri || null,
+      backUrl: documents?.aadhaar?.back?.uri || null,
+      mimeType: documents?.aadhaar?.front?.type || documents?.aadhaar?.back?.type,
     },
     {
       id: 'pan',
+      docType: 'pan',
       title: 'PAN Card',
       rawNumber: profile.panNumber,
       maskedNumber: maskPan(profile.panNumber),
-      status: kyc?.panStatus || 'Verified',
+      status: (documents?.pan as any)?.status || kyc?.panStatus || '',
       description: 'Permanent Account Number required for tax deduction and weekly payouts.',
+      frontUrl: documents?.pan?.front?.uri || null,
+      backUrl: documents?.pan?.back?.uri || null,
+      mimeType: documents?.pan?.front?.type || documents?.pan?.back?.type,
     },
     {
       id: 'rc',
+      docType: 'vehicleRc',
       title: 'Vehicle RC',
       rawNumber: vehicle.registrationNumber || vehicle.rcNumber || '',
       maskedNumber: vehicle.registrationNumber || vehicle.rcNumber || 'Not provided',
-      status: vehicle.rcStatus || 'Verified',
+      status: (documents?.vehicleRc as any)?.status || vehicle.rcStatus || '',
       description: 'Vehicle registration certificate matching your active delivery vehicle.',
+      frontUrl: documents?.vehicleRc?.front?.uri || null,
+      backUrl: documents?.vehicleRc?.back?.uri || null,
+      mimeType: documents?.vehicleRc?.front?.type || documents?.vehicleRc?.back?.type,
     },
   ];
 
@@ -99,8 +132,12 @@ export const ProfileDetailSubScreen = ({ navigation, route }: any) => {
         return 'KudiCart Star';
       case 'assets':
         return 'Rider Assets';
+      case 'shiftHistory':
+        return 'Shift History';
       case 'slotHistory':
         return 'Slot History';
+      case 'driverDetails':
+        return 'Driver Details';
       case 'orderHistory':
         return 'Order History';
       case 'ev':
@@ -139,7 +176,14 @@ export const ProfileDetailSubScreen = ({ navigation, route }: any) => {
   const renderContent = () => {
     switch (screenId) {
       case 'store':
-        return <StoreSubview assignedHub={assignedHub} assignedStore={assignedStore} />;
+        return (
+          <StoreSubview
+            assignedHub={assignedHub}
+            assignedStore={assignedStore}
+            supportPhone={supportConfig?.phone}
+            navigation={navigation}
+          />
+        );
       case 'rateCards':
         return <RateCardsSubview />;
       case 'star':
@@ -152,6 +196,7 @@ export const ProfileDetailSubScreen = ({ navigation, route }: any) => {
         );
       case 'assets':
         return <AssetsSubview />;
+      case 'shiftHistory':
       case 'slotHistory':
         return <SlotHistorySubview />;
       case 'orderHistory':

@@ -1,10 +1,17 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { KudiIcon } from '../../../components/KudiIcon';
 import { DeliveryScooterIcon } from '../../../components/DeliveryScooterIcon';
 import { LiveRouteMap } from '../LiveRouteMap';
 import { RadarPulse } from './RadarPulse';
 import { dashboardStyles as styles } from './dashboard.styles';
+
+export interface OfflineNotice {
+  tone: 'warning' | 'error' | 'info';
+  message: string;
+  actionLabel?: string;
+  onAction?: () => void;
+}
 
 interface ActiveOrderProps {
   id: string;
@@ -24,6 +31,7 @@ interface DashboardOperationalStatusProps {
   activeOrder: ActiveOrderProps | null;
   hasActiveDelivery: boolean;
   navigation: any;
+  offlineNotice?: OfflineNotice | null;
 }
 
 export const DashboardOperationalStatus: React.FC<DashboardOperationalStatusProps> = ({
@@ -31,8 +39,37 @@ export const DashboardOperationalStatus: React.FC<DashboardOperationalStatusProp
   activeOrder,
   hasActiveDelivery,
   navigation,
+  offlineNotice,
 }) => {
+  const previewOrigin = useMemo(
+    () =>
+      activeOrder?.pickupCoordinates
+        ? {
+            lat: activeOrder.pickupCoordinates.latitude,
+            lng: activeOrder.pickupCoordinates.longitude,
+          }
+        : null,
+    [activeOrder?.pickupCoordinates?.latitude, activeOrder?.pickupCoordinates?.longitude],
+  );
+
+  const previewDestination = useMemo(
+    () =>
+      activeOrder?.deliveryCoordinates
+        ? {
+            lat: activeOrder.deliveryCoordinates.latitude,
+            lng: activeOrder.deliveryCoordinates.longitude,
+          }
+        : null,
+    [activeOrder?.deliveryCoordinates?.latitude, activeOrder?.deliveryCoordinates?.longitude],
+  );
+
   if (!isOnline) {
+    const isErrorTone = offlineNotice?.tone === 'error';
+    const isInfoTone = offlineNotice?.tone === 'info';
+    const noticeBg = isInfoTone ? '#F3F1EC' : isErrorTone ? '#FEF2F2' : '#FFFBEB';
+    const noticeBorder = isInfoTone ? '#E2DED7' : isErrorTone ? '#FECACA' : '#FDE68A';
+    const noticeColor = isInfoTone ? '#4A4945' : isErrorTone ? '#991B1B' : '#92400E';
+
     return (
       <View style={[styles.card, styles.centerCard]}>
         <View style={styles.statusInner}>
@@ -41,6 +78,60 @@ export const DashboardOperationalStatus: React.FC<DashboardOperationalStatusProp
           </View>
           <Text style={styles.statusHeadline}>You're offline</Text>
           <Text style={styles.statusSub}>Go online to start receiving orders.</Text>
+
+          {offlineNotice ? (
+            <View
+              accessibilityRole={isInfoTone ? 'text' : 'alert'}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                backgroundColor: noticeBg,
+                borderWidth: 1,
+                borderColor: noticeBorder,
+                borderRadius: 10,
+                paddingHorizontal: 12,
+                paddingVertical: 7,
+                marginTop: 10,
+                maxWidth: '94%',
+              }}
+            >
+              <KudiIcon
+                name={isInfoTone ? 'clock' : 'alert-circle'}
+                size={14}
+                color={noticeColor}
+              />
+              <Text
+                style={{
+                  fontSize: 12,
+                  fontWeight: '600',
+                  color: noticeColor,
+                  flexShrink: 1,
+                }}
+                numberOfLines={2}
+              >
+                {offlineNotice.message}
+              </Text>
+              {offlineNotice.actionLabel && offlineNotice.onAction ? (
+                <TouchableOpacity
+                  onPress={offlineNotice.onAction}
+                  hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      fontWeight: '700',
+                      color: noticeColor,
+                      textDecorationLine: 'underline',
+                    }}
+                  >
+                    {offlineNotice.actionLabel}
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          ) : null}
 
           <View style={styles.storeDetailsSection}>
             <TouchableOpacity
@@ -69,19 +160,25 @@ export const DashboardOperationalStatus: React.FC<DashboardOperationalStatusProp
             <Text style={styles.activeDeliveryStatusText}>
               {activeOrder.status === 'RETURNING'
                 ? activeOrder.tryAndBuyStage === 'STORE_RECONCILIATION'
-                  ? 'Waiting for confirmation'
-                  : activeOrder.tryAndBuyStage === 'STORE_RECONCILIATION'
-                  ? 'At store'
+                  ? 'Waiting for store confirmation'
                   : 'Returning to store'
-                : (activeOrder.isArrived || activeOrder.arrivedAt) &&
-                  activeOrder.isTryAndBuy &&
-                  activeOrder.tryAndBuyStage === 'TRIAL_IN_PROGRESS'
-                ? 'Trial in progress'
-                : activeOrder.isArrived || activeOrder.arrivedAt
-                ? 'At customer'
-                : activeOrder.status === 'PICKED_UP'
-                ? 'Picked up • Start delivery'
-                : 'On the way'}
+                : activeOrder.status === 'TRY_AND_BUY' ||
+                    ((activeOrder.isArrived || activeOrder.arrivedAt) && activeOrder.isTryAndBuy)
+                  ? activeOrder.tryAndBuyStage === 'TRIAL_IN_PROGRESS'
+                    ? 'Trial in progress'
+                    : 'Try & Buy at doorstep'
+                  : activeOrder.isArrived || activeOrder.arrivedAt
+                    ? 'At customer'
+                    : activeOrder.status === 'ACCEPTED' ||
+                        activeOrder.status === 'PACKING' ||
+                        activeOrder.status === 'PREPARING'
+                      ? 'Waiting for packing'
+                      : activeOrder.status === 'READY_FOR_PICKUP' ||
+                          activeOrder.status === 'ASSIGNED'
+                        ? 'Ready for pickup'
+                        : activeOrder.status === 'PICKED_UP'
+                          ? 'Picked up • Start delivery'
+                          : 'On the way'}
             </Text>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -106,25 +203,12 @@ export const DashboardOperationalStatus: React.FC<DashboardOperationalStatusProp
         {/* Map Preview Container */}
         <View style={styles.activeDeliveryMapWrap} pointerEvents="none">
           <LiveRouteMap
-            origin={
-              activeOrder.pickupCoordinates
-                ? {
-                    lat: activeOrder.pickupCoordinates.latitude,
-                    lng: activeOrder.pickupCoordinates.longitude,
-                  }
-                : null
-            }
-            destination={
-              activeOrder.deliveryCoordinates
-                ? {
-                    lat: activeOrder.deliveryCoordinates.latitude,
-                    lng: activeOrder.deliveryCoordinates.longitude,
-                  }
-                : null
-            }
+            origin={previewOrigin}
+            destination={previewDestination}
             originLabel={activeOrder.pickupLocation}
             destinationLabel={activeOrder.customerAddress}
             isPreview={true}
+            orderId={activeOrder.id}
           />
         </View>
 
@@ -139,17 +223,23 @@ export const DashboardOperationalStatus: React.FC<DashboardOperationalStatusProp
           <Text style={styles.continueActionText}>
             {activeOrder.status === 'RETURNING'
               ? activeOrder.tryAndBuyStage === 'STORE_RECONCILIATION'
-                ? 'View confirmation status'
-                : activeOrder.tryAndBuyStage === 'STORE_RECONCILIATION'
                 ? 'Reconcile return'
                 : 'Navigate to store'
-              : (activeOrder.isArrived || activeOrder.arrivedAt) &&
-                activeOrder.isTryAndBuy &&
-                activeOrder.tryAndBuyStage === 'TRIAL_IN_PROGRESS'
-              ? 'View trial in progress'
-              : activeOrder.status === 'PICKED_UP'
-              ? 'Start delivery'
-              : 'Continue delivery'}
+              : activeOrder.status === 'TRY_AND_BUY' ||
+                  ((activeOrder.isArrived || activeOrder.arrivedAt) && activeOrder.isTryAndBuy)
+                ? activeOrder.tryAndBuyStage === 'TRIAL_IN_PROGRESS'
+                  ? 'View trial in progress'
+                  : 'Manage Try & Buy'
+                : activeOrder.status === 'ACCEPTED' ||
+                    activeOrder.status === 'PACKING' ||
+                    activeOrder.status === 'PREPARING'
+                  ? 'View pickup details'
+                  : activeOrder.status === 'READY_FOR_PICKUP' ||
+                      activeOrder.status === 'ASSIGNED'
+                    ? 'Proceed to pickup'
+                    : activeOrder.status === 'PICKED_UP'
+                      ? 'Start delivery'
+                      : 'Continue delivery'}
           </Text>
         </TouchableOpacity>
       </View>

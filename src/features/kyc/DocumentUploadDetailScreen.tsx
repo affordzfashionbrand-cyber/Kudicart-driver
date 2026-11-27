@@ -10,8 +10,8 @@ import { pickFile } from '../../utils/filePicker';
 import { CameraModal } from '../../components/CameraModal';
 import logo from '../../assets/logo.png';
 import { KudiIcon } from '../../components/KudiIcon';
-import { toast } from '../../store/useToastStore';
 import { profileApi } from '../../api';
+import { getFriendlyErrorMessage } from '../../utils/errorHandling';
 import { styles } from './documentUploadDetail.styles';
 
 export const DocumentUploadDetailScreen = ({ route, navigation }: any) => {
@@ -152,8 +152,10 @@ export const DocumentUploadDetailScreen = ({ route, navigation }: any) => {
       if (!file) return;
       await handleProcessFile(side, file);
     } catch (e: any) {
-      setUploadError((prev) => ({ ...prev, [side]: e?.message || 'Upload failed. Tap to retry.' }));
-      toast.error(e?.message || 'Upload failed. Tap to retry.');
+      setUploadError((prev) => ({
+        ...prev,
+        [side]: getFriendlyErrorMessage(e, 'Upload failed. Tap to retry.'),
+      }));
     }
   };
 
@@ -163,7 +165,6 @@ export const DocumentUploadDetailScreen = ({ route, navigation }: any) => {
     const error = validateFile(file);
     if (error) {
       setUploadError((prev) => ({ ...prev, [side]: error }));
-      toast.error(error);
       return;
     }
 
@@ -214,12 +215,12 @@ export const DocumentUploadDetailScreen = ({ route, navigation }: any) => {
           },
         };
       });
-
-      toast.success(`${side === 'front' ? 'Front' : 'Back'} side uploaded.`);
     } catch (e: any) {
       setUploadingSide(null);
-      setUploadError((prev) => ({ ...prev, [side]: e?.message || 'Upload failed. Tap to retry.' }));
-      toast.error(e?.message || 'Upload failed. Tap to retry.');
+      setUploadError((prev) => ({
+        ...prev,
+        [side]: getFriendlyErrorMessage(e, 'Upload failed. Tap to retry.'),
+      }));
     }
   };
 
@@ -245,12 +246,16 @@ export const DocumentUploadDetailScreen = ({ route, navigation }: any) => {
   const handleSave = () => {
     if (isPan) {
       if (!frontFile) {
-        toast.warning('PAN card image is required.');
+        setUploadError((prev) => ({ ...prev, front: 'PAN card front image is required.' }));
         return;
       }
     } else {
       if (!frontFile || !backFile) {
-        toast.warning('Both front and back images are required.');
+        setUploadError((prev) => ({
+          ...prev,
+          ...(frontFile ? {} : { front: 'Front image is required.' }),
+          ...(backFile ? {} : { back: 'Back image is required.' }),
+        }));
         return;
       }
     }
@@ -272,7 +277,6 @@ export const DocumentUploadDetailScreen = ({ route, navigation }: any) => {
       };
     });
 
-    toast.success(`${title} updated successfully.`);
     navigation.goBack();
   };
 

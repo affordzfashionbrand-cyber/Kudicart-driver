@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Platform } from 'react-native';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { PrimaryButton } from '../../components/PrimaryButton';
@@ -7,19 +7,27 @@ import { colors } from '../../theme/colors';
 import { KudiIcon } from '../../components/KudiIcon';
 import logo from '../../assets/logo.png';
 import { useAuthStore } from '../../store/useAuthStore';
-import { useDriverStore } from '../../store/useDriverStore';
-
-import { usePermissionStore } from '../../store/usePermissionStore';
+import { getFriendlyErrorMessage } from '../../utils/errorHandling';
 
 export const VerificationApprovedScreen = ({ navigation }: any) => {
-  const { logout, setHasSeenKycApproved } = useAuthStore();
-  const { updateProfile } = useDriverStore();
+  const { logout, acknowledgeApprovalAsync } = useAuthStore();
+  const [isContinuing, setIsContinuing] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
-  const handleStartEarning = () => {
-    // Acknowledge approval screen and take driver directly into Home Page
-    setHasSeenKycApproved(true);
-    updateProfile({ status: 'Active' });
-    navigation.replace('MainApp');
+  const handleStartEarning = async () => {
+    if (isContinuing) return;
+    setIsContinuing(true);
+    setActionError(null);
+    try {
+      await acknowledgeApprovalAsync();
+      navigation.replace('MainApp');
+    } catch (err: any) {
+      setActionError(
+        getFriendlyErrorMessage(err, 'Unable to confirm approval status. Please try again.'),
+      );
+    } finally {
+      setIsContinuing(false);
+    }
   };
 
   return (
@@ -47,9 +55,30 @@ export const VerificationApprovedScreen = ({ navigation }: any) => {
 
         {/* Footer Actions */}
         <View style={styles.footer}>
+          {Boolean(actionError) && (
+            <View
+              style={{
+                backgroundColor: '#FEF2F2',
+                borderWidth: 1,
+                borderColor: '#FECACA',
+                borderRadius: 10,
+                paddingHorizontal: 12,
+                paddingVertical: 10,
+                marginBottom: 12,
+                width: '100%',
+              }}
+              accessibilityRole="alert"
+            >
+              <Text style={{ color: '#991B1B', fontSize: 13, fontWeight: '600', textAlign: 'center' }}>
+                {actionError}
+              </Text>
+            </View>
+          )}
           <PrimaryButton 
             title="Start earning" 
-            onPress={handleStartEarning} 
+            onPress={handleStartEarning}
+            loading={isContinuing}
+            disabled={isContinuing}
             style={styles.actionButton}
             textStyle={styles.actionButtonText}
           />

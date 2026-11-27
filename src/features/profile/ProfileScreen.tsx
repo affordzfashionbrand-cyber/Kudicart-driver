@@ -1,8 +1,10 @@
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Alert, Linking } from 'react-native';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { useDriverStore } from '../../store/useDriverStore';
 import { useAuthStore } from '../../store/useAuthStore';
+import { AppVersionStatus, profileApi } from '../../api';
+import { APP_NAME, APP_VERSION } from '../../config/appInfo';
 import { KudiIcon } from '../../components/KudiIcon';
 import { toast } from '../../store/useToastStore';
 import { styles } from './profile.styles';
@@ -17,6 +19,7 @@ const MenuIcon = ({ id, color }: { id: string; color: string }) => {
       return <KudiIcon name="home" size={19} color={color} />;
     case 'rateCards':
       return <Text style={[styles.currencyGlyph, { color }]}>₹</Text>;
+    case 'shiftHistory':
     case 'slotHistory':
       return <KudiIcon name="calendar" size={19} color={color} />;
     case 'orderHistory':
@@ -35,8 +38,17 @@ const MenuIcon = ({ id, color }: { id: string; color: string }) => {
 };
 
 export const ProfileScreen = ({ navigation }: any) => {
-  const { profile, isOnline } = useDriverStore();
+  const { profile, isOnline, fetchProfileAsync } = useDriverStore();
   const { logout } = useAuthStore();
+  const [versionStatus, setVersionStatus] = useState<AppVersionStatus | null>(null);
+
+  useEffect(() => {
+    fetchProfileAsync?.();
+    profileApi
+      .getAppVersionStatus(APP_VERSION)
+      .then((res) => setVersionStatus(res))
+      .catch(() => setVersionStatus(null));
+  }, [fetchProfileAsync]);
 
   // Driver Name formatting from authenticated store profile
   const driverFullName = profile.fullName || profile.name || 'Delivery Partner';
@@ -44,11 +56,20 @@ export const ProfileScreen = ({ navigation }: any) => {
   const firstName = nameParts[0] || 'Delivery';
   const lastName = nameParts.slice(1).join(' ');
 
+  const isFullTime = profile.workPreference === 'FULL_TIME';
+  const joinedYear = (() => {
+    if (!profile.createdAt) return null;
+    const d = new Date(profile.createdAt);
+    return Number.isNaN(d.getTime()) ? null : d.getFullYear();
+  })();
+
   // Focused delivery partner menu items
   const menuItems = [
     { id: 'store', label: 'Your Store' },
     { id: 'rateCards', label: 'My Rate Cards' },
-    { id: 'slotHistory', label: 'Slot History' },
+    isFullTime
+      ? { id: 'shiftHistory', label: 'Shift History' }
+      : { id: 'slotHistory', label: 'Slot History' },
     { id: 'orderHistory', label: 'Order History' },
     { id: 'help', label: 'Help & Support' },
     { id: 'notifications', label: 'Notification Center' },
@@ -58,19 +79,11 @@ export const ProfileScreen = ({ navigation }: any) => {
 
   const handleMenuPress = (id: string, label: string) => {
     if (id === 'notifications') {
-      if (navigation?.navigate) {
-        navigation.navigate('Notifications');
-      } else {
-        toast.info('Opening Notification Center...');
-      }
+      navigation?.navigate?.('Notifications');
       return;
     }
 
-    if (navigation?.navigate) {
-      navigation.navigate('ProfileDetailSub', { id, title: label });
-    } else {
-      toast.info(`Opening ${label}...`);
-    }
+    navigation?.navigate?.('ProfileDetailSub', { id, title: label });
   };
 
   const handleLogout = () => {
@@ -84,7 +97,6 @@ export const ProfileScreen = ({ navigation }: any) => {
           style: 'destructive',
           onPress: () => {
             logout();
-            toast.info('Logged out successfully.');
           },
         },
       ]
@@ -103,7 +115,9 @@ export const ProfileScreen = ({ navigation }: any) => {
           <View style={styles.badgeRow}>
             <View style={styles.sinceBadge}>
               <Text style={styles.sinceMedal}>🏅</Text>
-              <Text style={styles.sinceText}>Partner since 2024</Text>
+              <Text style={styles.sinceText}>
+                {joinedYear ? `Partner since ${joinedYear}` : 'Verified Partner'}
+              </Text>
             </View>
           </View>
 
@@ -132,10 +146,7 @@ export const ProfileScreen = ({ navigation }: any) => {
               style={styles.viewDetailsBtn}
               onPress={() => {
                 if (navigation?.navigate) {
-                  navigation.navigate('ProfileDetailSub', {
-                    id: 'driverDetails',
-                    title: 'Driver Details',
-                  });
+                  navigation.navigate('DriverProfileDetails');
                 }
               }}
               activeOpacity={0.7}
@@ -148,28 +159,42 @@ export const ProfileScreen = ({ navigation }: any) => {
           </View>
         </View>
 
-        {/* 2. UPDATE AVAILABLE BANNER */}
-        <View style={styles.updateCard}>
-          <View style={styles.updateLeft}>
-            <View style={styles.updateIconContainer}>
-              <KudiIcon name="chevron-up" size={18} color="#FF5A1F" />
+        {/* 2. REAL UPDATE AVAILABLE BANNER (only shown when backend reports a newer version) */}
+        {versionStatus?.updateAvailable ? (
+          <View style={styles.updateCard}>
+            <View style={styles.updateLeft}>
+              <View style={styles.updateIconContainer}>
+                <KudiIcon name="chevron-up" size={18} color="#FF5A1F" />
+              </View>
+              <View style={styles.updateTextCol}>
+                <Text style={styles.updateTitle}>Update Available</Text>
+                <Text style={styles.updateSubtitle}>
+                  {APP_NAME} v{versionStatus.latestVersion}
+                </Text>
+              </View>
             </View>
-            <View style={styles.updateTextCol}>
-              <Text style={styles.updateTitle}>Update Available</Text>
-              <Text style={styles.updateSubtitle}>KudiCart Driver v2.4.1</Text>
-            </View>
-          </View>
 
-          <TouchableOpacity
-            style={styles.updateButton}
-            onPress={() => toast.info('Checking Play Store for updates...')}
-            activeOpacity={0.7}
-            accessibilityRole="button"
-            accessibilityLabel="Update app"
-          >
-            <Text style={styles.updateButtonText}>Update</Text>
-          </TouchableOpacity>
-        </View>
+            {versionStatus.updateUrl ? (
+              <TouchableOpacity
+                style={styles.updateButton}
+                onPress={() => {
+                  Linking.openURL(versionStatus.updateUrl!).catch(() =>
+                    toast.error('Unable to open the update link.', {
+                      dedupeKey: 'profile-update-link-err',
+                    }),
+                  );
+                }}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Update app"
+              >
+                <Text style={styles.updateButtonText}>Update</Text>
+              </TouchableOpacity>
+            ) : (
+              <Text style={styles.updateSubtitle}>Available via Ops</Text>
+            )}
+          </View>
+        ) : null}
 
         {/* 3. MENU ITEMS LIST */}
         <View style={styles.menuContainer}>

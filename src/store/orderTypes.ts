@@ -1,5 +1,6 @@
 import type {
   OrderStatus as ContractOrderStatus,
+  DeliveryAssignmentStatus as ContractDeliveryAssignmentStatus,
   PaymentMethod as ContractPaymentMethod,
   PaymentStatus as ContractPaymentStatus,
   FulfillmentType,
@@ -7,6 +8,7 @@ import type {
 } from '../contracts/order-contracts';
 
 export type OrderStatus = ContractOrderStatus;
+export type DeliveryAssignmentStatus = ContractDeliveryAssignmentStatus;
 export type OrderType = 'STANDARD' | 'TRY_AND_BUY';
 export type { FulfillmentType };
 
@@ -35,6 +37,7 @@ export interface Order {
   version?: number;
   fulfillmentType?: FulfillmentType;
   orderType: OrderType;
+  deliveryAssignmentStatus?: DeliveryAssignmentStatus;
   isTryAndBuy: boolean;
   status: OrderStatus;
   isArrived?: boolean;

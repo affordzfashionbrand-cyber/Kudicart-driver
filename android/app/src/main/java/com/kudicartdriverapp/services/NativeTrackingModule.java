@@ -3,15 +3,19 @@ package com.kudicartdriverapp.services;
 import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
+import android.speech.tts.TextToSpeech;
 import androidx.core.content.ContextCompat;
 import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
+import java.util.Locale;
 
 public class NativeTrackingModule extends ReactContextBaseJavaModule {
 
     private final ReactApplicationContext reactContext;
+    private TextToSpeech textToSpeech;
+    private boolean ttsReady = false;
 
     public NativeTrackingModule(ReactApplicationContext reactContext) {
         super(reactContext);
@@ -111,6 +115,47 @@ public class NativeTrackingModule extends ReactContextBaseJavaModule {
             promise.resolve(true);
         } catch (Exception e) {
             promise.reject("STORAGE_REMOVE_ERROR", e.getMessage());
+        }
+    }
+
+    @ReactMethod
+    public void speakInstruction(String text, Promise promise) {
+        try {
+            if (text == null || text.trim().isEmpty()) {
+                promise.resolve(false);
+                return;
+            }
+            if (textToSpeech == null) {
+                textToSpeech = new TextToSpeech(reactContext, status -> {
+                    if (status == TextToSpeech.SUCCESS) {
+                        textToSpeech.setLanguage(Locale.US);
+                        ttsReady = true;
+                        textToSpeech.speak(text, TextToSpeech.QUEUE_FLUSH, null, "kudi_nav_step");
+                    }
+                });
+                promise.resolve(true);
+                return;
+            }
+            if (ttsReady) {
+                textToSpeech.speak(text, TextToSpeech.QUEUE_FLUSH, null, "kudi_nav_step");
+                promise.resolve(true);
+            } else {
+                promise.resolve(false);
+            }
+        } catch (Exception e) {
+            promise.resolve(false);
+        }
+    }
+
+    @ReactMethod
+    public void stopSpeech(Promise promise) {
+        try {
+            if (textToSpeech != null) {
+                textToSpeech.stop();
+            }
+            promise.resolve(true);
+        } catch (Exception e) {
+            promise.resolve(false);
         }
     }
 }

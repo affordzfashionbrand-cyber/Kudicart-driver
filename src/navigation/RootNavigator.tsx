@@ -20,6 +20,8 @@ import { DriverProfileDetailsScreen } from '../features/profile/DriverProfileDet
 import { ProfileDetailSubScreen } from '../features/profile/ProfileDetailSubScreen';
 import { HistoricalOrderDetailScreen } from '../features/orders/HistoricalOrderDetailScreen';
 import { DevicePermissionSetupScreen } from '../features/permissions/DevicePermissionSetupScreen';
+import { InAppMapScreen } from '../features/map/InAppMapScreen';
+import { IncentiveDetailsScreen } from '../features/earnings/IncentiveDetailsScreen';
 import { usePermissionStore } from '../store/usePermissionStore';
 
 export type RootStackParamList = {
@@ -40,6 +42,18 @@ export type RootStackParamList = {
   Notifications: undefined;
   DriverProfileDetails: undefined;
   ProfileDetailSub: { id: string; title?: string };
+  InAppMap: {
+    title?: string;
+    destinationLabel?: string;
+    destinationAddress?: string;
+    destination: { lat: number; lng: number } | null;
+    origin?: { lat: number; lng: number } | null;
+    orderId?: string;
+  };
+  IncentiveDetails: {
+    mode?: 'daily' | 'weekly' | 'opportunity';
+    opportunity?: any;
+  };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -100,6 +114,7 @@ export const RootNavigator = () => {
           try {
             toast.show({
               type: 'info',
+              dedupeKey: `fcm:${title || ''}:${orderId || ''}`,
               message: title ? `${title}${body ? `: ${body}` : ''}` : String(body),
             });
           } catch {}
@@ -191,6 +206,8 @@ export const RootNavigator = () => {
             <Stack.Screen name="Notifications" component={NotificationsScreen} />
             <Stack.Screen name="DriverProfileDetails" component={DriverProfileDetailsScreen} />
             <Stack.Screen name="ProfileDetailSub" component={ProfileDetailSubScreen} />
+            <Stack.Screen name="InAppMap" component={InAppMapScreen} />
+            <Stack.Screen name="IncentiveDetails" component={IncentiveDetailsScreen} />
             <Stack.Screen name="TermsAndConditions" component={TermsAndConditionsScreen} />
             <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
           </>

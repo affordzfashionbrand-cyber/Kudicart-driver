@@ -16,16 +16,21 @@ import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
 import { colors } from '../../theme/colors';
 import { useAuthStore } from '../../store/useAuthStore';
-import { toast } from '../../store/useToastStore';
 import { KudiIcon } from '../../components/KudiIcon';
+import { classifyOtpError } from '../../utils/errorHandling';
 
 export const OtpVerificationScreen = ({ navigation, route }: any) => {
-  const { phoneNumber } = route.params || {};
+  const { phoneNumber, devOtp } = route.params || {};
   const [otpArray, setOtpArray] = useState<string[]>(['', '', '', '', '', '']);
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+  const [inlineError, setInlineError] = useState<string | null>(null);
+  const [resendNotice, setResendNotice] = useState<string | null>(null);
   const [resendTimer, setResendTimer] = useState(30);
   const inputs = useRef<Array<TextInput | null>>([]);
+  const verifyInFlightRef = useRef(false);
+  const resendInFlightRef = useRef(false);
 
   // Formatted phone display without duplicated "+91" prefix
   const formattedPhone = useMemo(() => {
@@ -33,6 +38,15 @@ export const OtpVerificationScreen = ({ navigation, route }: any) => {
     const clean = raw.slice(-10);
     return `+91 ${clean}`;
   }, [phoneNumber]);
+
+  useEffect(() => {
+    if (devOtp) {
+      const digits = String(devOtp).split('').slice(0, 6);
+      if (digits.length === 6) {
+        setOtpArray(digits);
+      }
+    }
+  }, [devOtp]);
 
   useEffect(() => {
     if (resendTimer > 0) {
@@ -52,6 +66,12 @@ export const OtpVerificationScreen = ({ navigation, route }: any) => {
   }, []);
 
   const handleOtpChange = (value: string, index: number) => {
+    if (inlineError) {
+      setInlineError(null);
+    }
+    if (resendNotice) {
+      setResendNotice(null);
+    }
     // 1. If cleared
     if (value === '') {
       const newOtp = [...otpArray];
@@ -103,38 +123,62 @@ export const OtpVerificationScreen = ({ navigation, route }: any) => {
   };
 
   const handleVerify = async () => {
-    const code = otpArray.join('');
-    if (code.length < 6) {
-      toast.error('Please enter the complete 6-digit OTP.');
+    if (verifyInFlightRef.current || isVerifying || isResending) {
       return;
     }
 
+    const code = otpArray.join('');
+    if (code.length < 6) {
+      setInlineError('Please enter the complete 6-digit OTP.');
+      return;
+    }
+
+    verifyInFlightRef.current = true;
     setIsVerifying(true);
+    setInlineError(null);
+    setResendNotice(null);
     try {
       await useAuthStore.getState().confirmPhoneOtpAsync(phoneNumber, code);
-      setIsVerifying(false);
-      toast.success('Mobile verification successful.');
     } catch (err: any) {
+      const parsed = classifyOtpError(err, 'verify');
+      setInlineError(parsed.message);
+    } finally {
+      verifyInFlightRef.current = false;
       setIsVerifying(false);
-      toast.error(err?.message || 'Invalid verification OTP. Please try again.');
     }
   };
 
   const handleResend = async () => {
-    if (resendTimer === 0) {
-      try {
-        setResendTimer(30);
-        setOtpArray(['', '', '', '', '', '']);
-        const res = await useAuthStore.getState().sendPhoneOtpAsync(phoneNumber);
-        toast.success(res.message || 'A new OTP has been sent.');
+    if (resendTimer > 0 || resendInFlightRef.current || isResending || isVerifying) {
+      return;
+    }
+
+    resendInFlightRef.current = true;
+    setIsResending(true);
+    setInlineError(null);
+    setResendNotice(null);
+    try {
+      const res = await useAuthStore.getState().sendPhoneOtpAsync(phoneNumber);
+      setOtpArray(['', '', '', '', '', '']);
+      setResendTimer(30);
+      setResendNotice(res.message || 'A new OTP has been sent.');
+        if ((res as any)?.devOtp) {
+          const digits = String((res as any).devOtp).split('').slice(0, 6);
+          if (digits.length === 6) {
+            setOtpArray(digits);
+          }
+        }
         setTimeout(() => {
           inputs.current[0]?.focus();
         }, 100);
       } catch (err: any) {
-        toast.error(err?.message || 'Failed to resend OTP.');
+        const parsed = classifyOtpError(err, 'resend');
+        setInlineError(parsed.message);
+      } finally {
+        resendInFlightRef.current = false;
+        setIsResending(false);
       }
-    }
-  };
+    };
 
   const fullCode = otpArray.join('');
 
@@ -165,7 +209,10 @@ export const OtpVerificationScreen = ({ navigation, route }: any) => {
         >
           <View style={styles.content}>
             <Text style={styles.title}>Enter OTP</Text>
-            <Text style={styles.subtitle}>Sent to {formattedPhone}</Text>
+            <Text style={styles.subtitle}>
+              Sent to {formattedPhone}
+              {devOtp ? ` (Dev Code: ${devOtp})` : ''}
+            </Text>
 
             {/* OTP Input Section: Each box can be selected and edited directly */}
             <View style={styles.otpContainer}>
@@ -193,22 +240,48 @@ export const OtpVerificationScreen = ({ navigation, route }: any) => {
               ))}
             </View>
 
+            {Boolean(inlineError) && (
+              <View style={styles.inlineErrorBox} accessibilityRole="alert">
+                <KudiIcon name="error-circle" size={16} color="#DC2626" />
+                <Text style={styles.inlineErrorText}>{inlineError}</Text>
+              </View>
+            )}
+
+            {Boolean(resendNotice) && !inlineError && (
+              <View style={styles.resendNoticeBox} accessibilityLiveRegion="polite">
+                <KudiIcon name="check-circle" size={15} color="#15803D" />
+                <Text style={styles.resendNoticeText}>{resendNotice}</Text>
+              </View>
+            )}
+
             <View style={styles.resendContainer}>
-              <Text style={styles.resendText}>
-                Didn't receive the OTP?{' '}
-                {resendTimer > 0 ? (
-                  <Text style={styles.resendTimerText}>
-                    Resend in {resendTimer}s
-                  </Text>
-                ) : (
-                  <Text style={styles.resendLink} onPress={handleResend}>
-                    Resend OTP
-                  </Text>
-                )}
-              </Text>
+              {isResending ? (
+                <View style={styles.resendingRow}>
+                  <ActivityIndicator size="small" color={colors.primary} />
+                  <Text style={styles.resendText}>Sending a new OTP...</Text>
+                </View>
+              ) : (
+                <Text style={styles.resendText}>
+                  Didn't receive the OTP?{' '}
+                  {resendTimer > 0 ? (
+                    <Text style={styles.resendTimerText}>
+                      Resend in {resendTimer}s
+                    </Text>
+                  ) : (
+                    <Text
+                      style={styles.resendLink}
+                      onPress={handleResend}
+                      accessibilityRole="button"
+                      accessibilityLabel="Resend OTP"
+                    >
+                      Resend OTP
+                    </Text>
+                  )}
+                </Text>
+              )}
             </View>
 
-            {fullCode.length === 0 && (
+            {fullCode.length === 0 && !inlineError && !isResending && (
               <View style={styles.autoReadContainer}>
                 <ActivityIndicator size="small" color={colors.primary} />
                 <Text style={styles.autoReadText}>
@@ -222,7 +295,7 @@ export const OtpVerificationScreen = ({ navigation, route }: any) => {
             <PrimaryButton
               title="Verify OTP"
               onPress={handleVerify}
-              disabled={fullCode.length !== 6 || isVerifying}
+              disabled={fullCode.length !== 6 || isVerifying || isResending}
               loading={isVerifying}
               style={styles.verifyButton}
               textStyle={styles.verifyButtonText}
@@ -335,6 +408,42 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.primary,
     fontWeight: '600',
+  },
+  inlineErrorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: spacing.m,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  inlineErrorText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#991B1B',
+    lineHeight: 18,
+  },
+  resendNoticeBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: spacing.s,
+  },
+  resendNoticeText: {
+    fontSize: 12.5,
+    fontWeight: '600',
+    color: '#15803D',
+  },
+  resendingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   footer: {
     marginTop: spacing.xxl,

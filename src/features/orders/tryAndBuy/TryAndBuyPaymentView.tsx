@@ -6,7 +6,7 @@ import { styles } from './paymentView.styles';
 
 interface TryAndBuyPaymentViewProps {
   order: Order;
-  onConfirmPaymentAndBranch: () => void;
+  onConfirmPaymentAndBranch: (cashCollected: boolean) => void;
   onBack?: () => void;
 }
 
@@ -164,7 +164,9 @@ export const TryAndBuyPaymentView: React.FC<TryAndBuyPaymentViewProps> = ({
             styles.primaryBtn,
             isActionAllowed ? styles.primaryBtnActive : styles.primaryBtnDisabled,
           ]}
-          onPress={onConfirmPaymentAndBranch}
+          onPress={() =>
+            onConfirmPaymentAndBranch(isCod && finalAmount > 0 ? cashCollected : true)
+          }
           disabled={!isActionAllowed}
           activeOpacity={0.88}
         >

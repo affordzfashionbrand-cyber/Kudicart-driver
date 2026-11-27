@@ -9,14 +9,17 @@ export interface ToastAction {
 
 export interface ToastOptions {
   title?: string;
-  duration?: number; // Duration in milliseconds. 0 = persistent until manually dismissed. Default: 3500ms
+  duration?: number; // Duration in milliseconds. 0 = persistent until manually dismissed.
   action?: ToastAction;
+  dedupeKey?: string;
+  isBackground?: boolean;
 }
 
 export interface ToastPayload extends ToastOptions {
   id: string;
   message: string;
   type: ToastType;
+  expiresAt?: number;
 }
 
 interface ToastState {
@@ -32,6 +35,22 @@ interface ToastState {
 let dismissTimer: ReturnType<typeof setTimeout> | null = null;
 let lastToastTime = 0;
 let lastToastKey = '';
+let recentErrorTimestamps: number[] = [];
+
+const DUPLICATE_SUPPRESSION_MS = 1800;
+const ERROR_FLOOD_WINDOW_MS = 1200;
+const MAX_ERRORS_PER_WINDOW = 2;
+
+export function resetToastInternalState(): void {
+  if (dismissTimer) {
+    clearTimeout(dismissTimer);
+    dismissTimer = null;
+  }
+  lastToastTime = 0;
+  lastToastKey = '';
+  recentErrorTimestamps = [];
+  useToastStore.setState({ currentToast: null });
+}
 
 export const useToastStore = create<ToastState>((set, get) => ({
   currentToast: null,
@@ -51,27 +70,27 @@ export const useToastStore = create<ToastState>((set, get) => ({
       resolvedOptions = options || {};
     }
 
-    if (!resolvedMessage) return;
+    const trimmed = resolvedMessage.trim();
+    if (!trimmed || resolvedOptions.isBackground) return;
 
     const now = Date.now();
-    const dedupeKey = `${resolvedType}:${resolvedMessage.trim()}`;
+    const dedupeKey = resolvedOptions.dedupeKey || `${resolvedType}:${trimmed}`;
 
     const getDefaultDuration = (t: ToastType): number => {
       switch (t) {
         case 'error':
-          return 4500; // 4–5s for errors needing attention
+          return 4500;
         case 'warning':
-          return 3500; // ~3.5s for warnings
+          return 3500;
         case 'success':
         case 'info':
         default:
-          return 2500; // 2–3s for routine success & info messages
+          return 2500;
       }
     };
 
-    // Consecutive duplicate suppression:
-    // If the identical message and type is fired within 1500ms, refresh dismiss timer without flickering UI
-    if (dedupeKey === lastToastKey && now - lastToastTime < 1500) {
+    // Consecutive duplicate suppression: refresh dismiss timer without stacking or flickering
+    if (dedupeKey === lastToastKey && now - lastToastTime < DUPLICATE_SUPPRESSION_MS) {
       if (dismissTimer) {
         clearTimeout(dismissTimer);
       }
@@ -87,6 +106,17 @@ export const useToastStore = create<ToastState>((set, get) => ({
       return;
     }
 
+    // Flood guard: prevent cascading background/concurrent error bursts from flooding the UI
+    if (resolvedType === 'error') {
+      recentErrorTimestamps = recentErrorTimestamps.filter(
+        (ts) => now - ts < ERROR_FLOOD_WINDOW_MS,
+      );
+      if (recentErrorTimestamps.length >= MAX_ERRORS_PER_WINDOW) {
+        return;
+      }
+      recentErrorTimestamps.push(now);
+    }
+
     lastToastKey = dedupeKey;
     lastToastTime = now;
 
@@ -95,20 +125,21 @@ export const useToastStore = create<ToastState>((set, get) => ({
       dismissTimer = null;
     }
 
+    const duration =
+      resolvedOptions.duration !== undefined
+        ? resolvedOptions.duration
+        : getDefaultDuration(resolvedType);
     const id = `${now}_${Math.random().toString(36).substring(2, 8)}`;
     const newToast: ToastPayload = {
       id,
       message: resolvedMessage,
       type: resolvedType,
+      expiresAt: duration > 0 ? now + duration : undefined,
       ...resolvedOptions,
     };
 
     set({ currentToast: newToast });
 
-    const duration =
-      resolvedOptions.duration !== undefined
-        ? resolvedOptions.duration
-        : getDefaultDuration(resolvedType);
     if (duration > 0) {
       dismissTimer = setTimeout(() => {
         get().hideToast();

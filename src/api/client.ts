@@ -307,9 +307,13 @@ async function performSingleRequest<T = any>(
     }
 
     if (!res.ok) {
-      const errorMessage =
-        (data && (data.message || data.error)) || `HTTP error ${res.status}: ${res.statusText}`;
-      const err = new Error(errorMessage) as any;
+      const rawMessage = data?.message ?? data?.error;
+      const normalizedMessage = Array.isArray(rawMessage)
+        ? rawMessage.map((m: any) => String(m || '').trim()).filter(Boolean).join('. ')
+        : rawMessage
+          ? String(rawMessage)
+          : `HTTP error ${res.status}: ${res.statusText}`;
+      const err = new Error(normalizedMessage) as any;
       err.status = res.status;
       err.data = data;
       throw err;
@@ -317,7 +321,14 @@ async function performSingleRequest<T = any>(
 
     return data as T;
   } catch (err: any) {
-    // Return structured error
+    if (err && typeof err.status !== 'number') {
+      const networkErr = new Error(
+        'Unable to connect to the server. Please check your internet connection and try again.',
+      ) as any;
+      networkErr.isNetworkError = true;
+      networkErr.cause = err;
+      throw networkErr;
+    }
     throw err;
   }
 }

@@ -31,6 +31,7 @@ export const DriverDetailsScreen = ({ navigation }: any) => {
   const [touchedFields, setTouchedFields] = useState<{ [key: string]: boolean }>({});
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [showAadhaar, setShowAadhaar] = useState(false);
 
   useEffect(() => {
@@ -98,6 +99,7 @@ export const DriverDetailsScreen = ({ navigation }: any) => {
     }
 
     setIsSubmitting(true);
+    setSubmitError(null);
     try {
       const res = await updateProfileAsync({
         fullName,
@@ -114,6 +116,8 @@ export const DriverDetailsScreen = ({ navigation }: any) => {
         if (res.error && res.error.toLowerCase().includes('18')) {
           setErrors((prev) => ({ ...prev, dob: 'Driver must be at least 18 years old' }));
           setTouchedFields((prev) => ({ ...prev, dob: true }));
+        } else if (res.error) {
+          setSubmitError(res.error);
         }
       }
     } finally {
@@ -426,6 +430,24 @@ export const DriverDetailsScreen = ({ navigation }: any) => {
           </View>
 
           <View style={styles.footer}>
+            {Boolean(submitError) && (
+              <View
+                style={{
+                  width: '100%',
+                  backgroundColor: '#FEF2F2',
+                  borderWidth: 1,
+                  borderColor: '#FECACA',
+                  borderRadius: 10,
+                  padding: 12,
+                  marginBottom: 12,
+                }}
+                accessibilityRole="alert"
+              >
+                <Text style={{ color: '#991B1B', fontSize: 13, fontWeight: '600' }}>
+                  {submitError}
+                </Text>
+              </View>
+            )}
             <PrimaryButton
               title="Continue"
               onPress={handleContinue}

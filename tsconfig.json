@@ -3,7 +3,7 @@
   "compilerOptions": {
     "strict": true,
     "lib": ["esnext", "dom"],
-    "types": ["react-native", "jest", "vite/client"],
+    "types": ["react-native", "jest", "vite/client", "node"],
     "baseUrl": "./src",
     "paths": {
       "@/*": ["*"]

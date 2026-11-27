@@ -11,6 +11,7 @@ import { spacing } from '../../theme/spacing';
 import { colors } from '../../theme/colors';
 import { useDriverStore } from '../../store/useDriverStore';
 import { KudiIcon } from '../../components/KudiIcon';
+import { getDocStatusConfig } from './subviews/DocumentsSubview';
 
 const maskDl = (dl?: string) => {
   if (!dl) return 'Not available';
@@ -22,15 +23,18 @@ const maskDl = (dl?: string) => {
 };
 
 export const DriverProfileDetailsScreen = ({ navigation }: any) => {
-  const { profile, vehicle, fetchProfileAsync } = useDriverStore();
+  const { profile, vehicle, documents, fetchProfileAsync } = useDriverStore();
 
   React.useEffect(() => {
     fetchProfileAsync?.();
   }, [fetchProfileAsync]);
 
   const driverFullName = profile.fullName || profile.name || 'Delivery Partner';
-  const isPartTime = profile.workPreference !== 'FULL_TIME';
+  const isPartTime = profile.workPreference === 'PART_TIME';
   const partnerId = profile.id || 'Pending Assignment';
+  const rcStatusConfig = getDocStatusConfig(
+    (documents?.vehicleRc as any)?.status || vehicle.rcStatus,
+  );
 
   const handleBack = () => {
     if (navigation?.canGoBack && navigation.canGoBack()) {
@@ -124,9 +128,28 @@ export const DriverProfileDetailsScreen = ({ navigation }: any) => {
 
           <View style={[styles.row, styles.rowLast]}>
             <Text style={styles.rowLabel}>RC Status</Text>
-            <View style={styles.statusVerifiedPill}>
-              <KudiIcon name="check-circle" size={12} color="#16805A" />
-              <Text style={styles.statusVerifiedText}>Verified</Text>
+            <View
+              style={[
+                styles.statusVerifiedPill,
+                {
+                  backgroundColor: rcStatusConfig.badgeBg,
+                  borderColor: rcStatusConfig.badgeBorder,
+                },
+              ]}
+            >
+              <KudiIcon
+                name={rcStatusConfig.iconName}
+                size={12}
+                color={rcStatusConfig.textColor}
+              />
+              <Text
+                style={[
+                  styles.statusVerifiedText,
+                  { color: rcStatusConfig.textColor },
+                ]}
+              >
+                {rcStatusConfig.label}
+              </Text>
             </View>
           </View>
         </View>

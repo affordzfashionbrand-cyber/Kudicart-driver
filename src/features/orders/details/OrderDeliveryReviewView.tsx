@@ -11,6 +11,7 @@ interface OrderDeliveryReviewViewProps {
   onOpenCamera: () => void;
   onOpenMap: () => void;
   onConfirmDelivery: (cashCollected?: boolean) => void;
+  actionError?: string | null;
   defaultProductThumbnails?: string[];
 }
 
@@ -21,6 +22,7 @@ export const OrderDeliveryReviewView: React.FC<OrderDeliveryReviewViewProps> = (
   onOpenCamera,
   onOpenMap,
   onConfirmDelivery,
+  actionError,
 }) => {
   const isCodPending = order.paymentMethod === 'COD' && order.paymentStatus !== 'COMPLETED';
   const [cashCollected, setCashCollected] = useState(!isCodPending);
@@ -241,6 +243,27 @@ export const OrderDeliveryReviewView: React.FC<OrderDeliveryReviewViewProps> = (
 
       {/* 3. FIXED BOTTOM ACTION */}
       <View style={styles.reviewFooter}>
+        {actionError ? (
+          <View
+            accessibilityRole="alert"
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 8,
+              backgroundColor: '#FEF2F2',
+              borderWidth: 1,
+              borderColor: '#FECACA',
+              borderRadius: 10,
+              padding: 10,
+              marginBottom: 10,
+            }}
+          >
+            <KudiIcon name="alert-circle" size={16} color="#DC2626" />
+            <Text style={{ flex: 1, fontSize: 12.5, fontWeight: '600', color: '#991B1B' }}>
+              {actionError}
+            </Text>
+          </View>
+        ) : null}
         <TouchableOpacity
           style={[
             styles.confirmPickupBtn,

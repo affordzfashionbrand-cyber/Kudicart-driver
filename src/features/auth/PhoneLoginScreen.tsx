@@ -6,8 +6,8 @@ import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
 import { colors } from '../../theme/colors';
 import { useAuthStore } from '../../store/useAuthStore';
-import { toast } from '../../store/useToastStore';
 import { permissionService } from '../../services/permissionService';
+import { getFriendlyErrorMessage } from '../../utils/errorHandling';
 import logo from '../../assets/logo.png';
 
 export const PhoneLoginScreen = ({ navigation }: any) => {
@@ -15,6 +15,8 @@ export const PhoneLoginScreen = ({ navigation }: any) => {
   const [isFocused, setIsFocused] = useState(false);
   const [isTouched, setIsTouched] = useState(false);
   const [isTermsAccepted, setIsTermsAccepted] = useState(false);
+  const [termsError, setTermsError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   // Validation rules for Indian mobile numbers:
@@ -52,6 +54,7 @@ export const PhoneLoginScreen = ({ navigation }: any) => {
     }
     setPhone(digits.slice(0, 10));
     setIsTouched(true);
+    if (submitError) setSubmitError(null);
   };
 
   useEffect(() => {
@@ -61,14 +64,16 @@ export const PhoneLoginScreen = ({ navigation }: any) => {
   }, []);
 
   const handleGetOtp = async () => {
+    setSubmitError(null);
     if (!isValidPhone) {
-      toast.error('Enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9.');
+      setIsTouched(true);
       return;
     }
     if (!isTermsAccepted) {
-      toast.warning('Please accept the Terms of Service to continue.');
+      setTermsError('Please accept the Terms and Conditions to continue.');
       return;
     }
+    setTermsError(null);
 
     setIsLoading(true);
     try {
@@ -90,14 +95,14 @@ export const PhoneLoginScreen = ({ navigation }: any) => {
       const fullPhone = `+91${phone}`;
       const res = await useAuthStore.getState().sendPhoneOtpAsync(fullPhone);
       setIsLoading(false);
-      toast.success(res.message || `OTP sent to +91 ${phone}`);
       navigation.navigate('OtpVerification', {
         phoneNumber: fullPhone,
+        devOtp: (res as any)?.devOtp,
       });
     } catch (err: any) {
       setIsLoading(false);
-      toast.error(
-        err?.message || 'Failed to dispatch OTP. Please check your network.',
+      setSubmitError(
+        getFriendlyErrorMessage(err, 'Failed to dispatch OTP. Please check your network and try again.'),
       );
     }
   };
@@ -152,7 +157,10 @@ export const PhoneLoginScreen = ({ navigation }: any) => {
 
             <TouchableOpacity
               style={styles.checkboxContainer}
-              onPress={() => setIsTermsAccepted(!isTermsAccepted)}
+              onPress={() => {
+                setIsTermsAccepted(!isTermsAccepted);
+                if (termsError) setTermsError(null);
+              }}
               activeOpacity={0.7}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
@@ -185,6 +193,26 @@ export const PhoneLoginScreen = ({ navigation }: any) => {
                 .
               </Text>
             </TouchableOpacity>
+            {Boolean(termsError) && (
+              <Text style={styles.validationError}>{termsError}</Text>
+            )}
+            {Boolean(submitError) && (
+              <View
+                style={{
+                  marginTop: spacing.m,
+                  padding: 12,
+                  borderRadius: 10,
+                  backgroundColor: '#FEF2F2',
+                  borderWidth: 1,
+                  borderColor: '#FECACA',
+                }}
+                accessibilityRole="alert"
+              >
+                <Text style={{ color: '#991B1B', fontSize: 13, fontWeight: '600' }}>
+                  {submitError}
+                </Text>
+              </View>
+            )}
           </View>
 
           <View style={styles.footer}>

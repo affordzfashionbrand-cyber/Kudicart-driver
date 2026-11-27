@@ -6,3 +6,4 @@ export * from './earningsApi';
 export * from './notificationsApi';
 export * from './ordersApi';
 export * from './mediaApi';
+export * from './supportApi';

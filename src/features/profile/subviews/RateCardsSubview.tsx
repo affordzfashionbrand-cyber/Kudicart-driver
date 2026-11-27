@@ -1,51 +1,74 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 import { colors } from '../../../theme/colors';
 import { KudiIcon } from '../../../components/KudiIcon';
-import { earningsApi } from '../../../api/earningsApi';
+import { earningsApi, RateCardResponse } from '../../../api/earningsApi';
+import { getFriendlyErrorMessage } from '../../../utils/errorHandling';
 import { subviewStyles as styles } from './profileSubviews.styles';
 
 export const RateCardsSubview: React.FC = () => {
-  const [rateCardTier, setRateCardTier] = useState<'fullTime' | 'partTime'>('fullTime');
+  const [rateCard, setRateCard] = useState<RateCardResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showAllDailyTiers, setShowAllDailyTiers] = useState(false);
-  const [basePayout, setBasePayout] = useState<number>(55);
-  const [dailyMilestones, setDailyMilestones] = useState<Array<{ orders: number; bonus: number }>>([
-    { orders: 15, bonus: 50 },
-    { orders: 20, bonus: 86 },
-    { orders: 25, bonus: 130 },
-    { orders: 30, bonus: 175 },
-  ]);
+
+  const loadRateCard = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await earningsApi.getRateCard();
+      setRateCard(data);
+    } catch (err: any) {
+      setError(getFriendlyErrorMessage(err, 'Unable to load rate card details.'));
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    earningsApi
-      .getEarnings(0)
-      .then((res: any) => {
-        if (typeof res?.basePayoutPerOrder === 'number' && res.basePayoutPerOrder > 0) {
-          setBasePayout(res.basePayoutPerOrder);
-        }
-      })
-      .catch(() => {});
+    void loadRateCard();
+  }, [loadRateCard]);
 
-    earningsApi
-      .getBonusProgress()
-      .then((res) => {
-        if (Array.isArray(res?.dailyBonus?.milestones) && res.dailyBonus.milestones.length > 0) {
-          setDailyMilestones(
-            res.dailyBonus.milestones.map((m) => ({ orders: m.orders, bonus: m.bonus })),
-          );
-        }
-      })
-      .catch(() => {});
-  }, []);
+  if (isLoading && !rateCard) {
+    return (
+      <View style={[styles.card, { alignItems: 'center', paddingVertical: 32, gap: 10 }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={styles.smallSubtext}>Loading rate card & incentive structure...</Text>
+      </View>
+    );
+  }
+
+  if (error && !rateCard) {
+    return (
+      <View style={[styles.card, { alignItems: 'center', paddingVertical: 28, gap: 10 }]}>
+        <KudiIcon name="error-circle" size={30} color="#DC2626" />
+        <Text style={styles.rowLabelBold}>Could not load rate card</Text>
+        <Text style={styles.smallSubtext}>{error}</Text>
+        <TouchableOpacity
+          style={[styles.primaryActionButton, { paddingHorizontal: 20 }]}
+          onPress={() => void loadRateCard()}
+        >
+          <Text style={styles.primaryActionButtonText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const basePayout = rateCard?.basePayoutPerOrder ?? 0;
+  const dailyMilestones = rateCard?.dailyMilestones || [];
+  const weeklyMilestones = rateCard?.weeklyMilestones || [];
+  const activeSurges = rateCard?.activeSurges || [];
 
   return (
     <>
-      {/* Affordz Partner Policy Header Card */}
       <View style={styles.policyHeaderCard}>
         <View style={styles.policyHeaderRow}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.policyTitle}>Affordz Delivery Partner Policy</Text>
-            <Text style={styles.policySubtitle}>Base Payout ₹{basePayout}/order • Active</Text>
+            <Text style={styles.policyTitle}>KudiCart Delivery Partner Rate Card</Text>
+            <Text style={styles.policySubtitle}>
+              Base Payout ₹{basePayout}/order • Floating Cash Limit ₹
+              {(rateCard?.floatingCashLimit ?? 0).toLocaleString('en-IN')}
+            </Text>
           </View>
           <View style={styles.pilotBadge}>
             <Text style={styles.pilotBadgeText}>Active</Text>
@@ -53,278 +76,92 @@ export const RateCardsSubview: React.FC = () => {
         </View>
       </View>
 
-      {/* 1. Distance & Base Payout */}
       <View style={styles.card}>
-        <Text style={styles.cardSectionTitle}>Delivery Distance & Base Payout</Text>
-
-        <View style={styles.row}>
-          <View>
-            <Text style={styles.rowLabelBold}>0 – 1 km</Text>
-            <Text style={styles.smallSubtext}>Short-distance order</Text>
+        <Text style={styles.cardSectionTitle}>Delivery Order Payouts</Text>
+        {(rateCard?.payoutRules || []).map((rule, idx, arr) => (
+          <View key={rule.id} style={[styles.row, idx === arr.length - 1 && styles.rowLast]}>
+            <View style={{ flex: 1, paddingRight: 8 }}>
+              <Text style={styles.rowLabelBold}>{rule.title}</Text>
+              <Text style={styles.smallSubtext}>{rule.description}</Text>
+            </View>
+            <Text style={styles.highlightValue}>{rule.amountLabel}</Text>
           </View>
-          <Text style={styles.highlightValue}>₹20 / order</Text>
-        </View>
-
-        <View style={styles.row}>
-          <View>
-            <Text style={styles.rowLabelBold}>Above 1 km – 2 km</Text>
-            <Text style={styles.smallSubtext}>Mid-range delivery</Text>
-          </View>
-          <Text style={styles.highlightValue}>₹25 / order</Text>
-        </View>
-
-        <View style={styles.row}>
-          <View>
-            <Text style={styles.rowLabelBold}>Above 2 km</Text>
-            <Text style={styles.smallSubtext}>Extended distance slab</Text>
-          </View>
-          <Text style={styles.highlightValue}>₹30 / order</Text>
-        </View>
-
-        <View style={styles.radiusNoteBox}>
-          <KudiIcon name="info-circle" size={15} color="#65635F" />
-          <Text style={styles.radiusNoteText}>
-            Payouts are calculated on actual pickup-to-drop distance verified via GPS.
-          </Text>
-        </View>
+        ))}
       </View>
 
-      {/* 2. Partner Category & Weekly Bonus */}
-      <View style={styles.card}>
-        <View style={styles.cardHeaderWithTabs}>
-          <Text style={styles.cardSectionTitle}>Working Category & Weekly Bonus</Text>
-        </View>
-
-        <View style={styles.categoryToggleContainer}>
-          <TouchableOpacity
-            style={[
-              styles.categoryTab,
-              rateCardTier === 'fullTime' && styles.categoryTabActive,
-            ]}
-            onPress={() => setRateCardTier('fullTime')}
-            activeOpacity={0.7}
-            accessibilityRole="button"
-            accessibilityLabel="View Full-Time category"
-          >
-            <Text
-              style={[
-                styles.categoryTabText,
-                rateCardTier === 'fullTime' && styles.categoryTabTextActive,
-              ]}
-            >
-              Full-Time (8 hrs)
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.categoryTab,
-              rateCardTier === 'partTime' && styles.categoryTabActive,
-            ]}
-            onPress={() => setRateCardTier('partTime')}
-            activeOpacity={0.7}
-            accessibilityRole="button"
-            accessibilityLabel="View Part-Time category"
-          >
-            <Text
-              style={[
-                styles.categoryTabText,
-                rateCardTier === 'partTime' && styles.categoryTabTextActive,
-              ]}
-            >
-              Part-Time (5 hrs)
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {rateCardTier === 'fullTime' ? (
-          <>
-            <View style={styles.row}>
-              <Text style={styles.rowLabel}>Working Schedule</Text>
-              <Text style={styles.rowValue}>8 hrs/day • 6 days/week</Text>
-            </View>
-            <View style={styles.row}>
-              <Text style={styles.rowLabel}>Weekly Rest Day</Text>
-              <Text style={styles.rowValue}>1 scheduled day off</Text>
-            </View>
-            <View style={styles.row}>
-              <Text style={styles.rowLabel}>Weekly Order Target</Text>
-              <Text style={styles.rowValue}>119 completed orders (~20/day)</Text>
-            </View>
-            <View style={styles.row}>
-              <Text style={styles.rowLabel}>Attendance & Bonus</Text>
-              <Text style={[styles.highlightValue, { color: '#16805A' }]}>₹1,100 / week</Text>
-            </View>
-            <View style={styles.illustrativeBox}>
-              <View style={styles.illustrativeHeader}>
-                <Text style={styles.illustrativeTitle}>Illustrative Weekly Total</Text>
-                <Text style={styles.illustrativeAmount}>~₹4,523 / week</Text>
-              </View>
-              <Text style={styles.illustrativeBreakdown}>
-                Base payout (~₹2,915) + Daily incentives (~₹508) + Attendance bonus (₹1,100). Customer tips & surge extra.
-              </Text>
-            </View>
-          </>
-        ) : (
-          <>
-            <View style={styles.row}>
-              <Text style={styles.rowLabel}>Working Schedule</Text>
-              <Text style={styles.rowValue}>5 hrs/day • 6 days/week</Text>
-            </View>
-            <View style={styles.row}>
-              <Text style={styles.rowLabel}>Weekly Rest Day</Text>
-              <Text style={styles.rowValue}>1 scheduled day off</Text>
-            </View>
-            <View style={styles.row}>
-              <Text style={styles.rowLabel}>Weekly Order Target</Text>
-              <Text style={styles.rowValue}>75 completed orders (~12.5/day)</Text>
-            </View>
-            <View style={styles.row}>
-              <Text style={styles.rowLabel}>Attendance & Bonus</Text>
-              <Text style={[styles.highlightValue, { color: '#16805A' }]}>₹500 / week</Text>
-            </View>
-            <View style={styles.illustrativeBox}>
-              <View style={styles.illustrativeHeader}>
-                <Text style={styles.illustrativeTitle}>Illustrative Weekly Total</Text>
-                <Text style={styles.illustrativeAmount}>~₹2,337.50 / week</Text>
-              </View>
-              <Text style={styles.illustrativeBreakdown}>
-                Base payout (~₹1,837.50) + Attendance bonus (₹500). Customer tips & surge extra.
-              </Text>
-            </View>
-          </>
-        )}
-      </View>
-
-      {/* 3. Daily Performance Incentive */}
-      <View style={styles.card}>
-        <Text style={styles.cardSectionTitle}>Daily Performance Incentive</Text>
-        <Text style={styles.bodyText}>
-          Total daily bonus earned for that day's eligible completed order count:
-        </Text>
-
-        <View style={styles.tierGrid}>
-          {dailyMilestones.map((tier) => (
-            <View key={tier.orders} style={styles.tierPill}>
-              <Text style={styles.tierPillOrders}>{tier.orders} orders</Text>
-              <Text style={styles.tierPillBonusHighlight}>₹{tier.bonus}</Text>
-            </View>
-          ))}
-        </View>
-
-        <TouchableOpacity
-          style={styles.expandTiersButton}
-          onPress={() => setShowAllDailyTiers(!showAllDailyTiers)}
-          activeOpacity={0.7}
-          accessibilityRole="button"
-          accessibilityLabel="Toggle daily performance tier list"
-        >
-          <Text style={styles.expandTiersText}>
-            {showAllDailyTiers ? 'Hide Detailed Tier List' : 'View Complete Tier Breakdown'}
+      {dailyMilestones.length > 0 ? (
+        <View style={styles.card}>
+          <Text style={styles.cardSectionTitle}>Daily Performance Incentive</Text>
+          <Text style={styles.bodyText}>
+            Earned once you reach the daily completed delivery milestone:
           </Text>
-          <KudiIcon
-            name={showAllDailyTiers ? 'chevron-up' : 'chevron-down'}
-            size={15}
-            color={colors.primary}
-          />
-        </TouchableOpacity>
 
-        {showAllDailyTiers && (
-          <View style={styles.fullTierTable}>
-            {dailyMilestones.map((tier, idx) => (
-              <View
-                key={tier.orders}
-                style={[
-                  styles.tierRow,
-                  idx === dailyMilestones.length - 1 && styles.rowLast,
-                ]}
-              >
-                <Text style={styles.tierRowLabel}>{tier.orders} orders</Text>
-                <Text style={styles.tierRowValue}>₹{tier.bonus}</Text>
+          <View style={styles.tierGrid}>
+            {dailyMilestones.map((tier) => (
+              <View key={tier.orders} style={styles.tierPill}>
+                <Text style={styles.tierPillOrders}>{tier.orders} orders</Text>
+                <Text style={styles.tierPillBonusHighlight}>₹{tier.bonus}</Text>
               </View>
             ))}
           </View>
-        )}
-      </View>
 
-      {/* 4. Peak-Hour Incentive & Customer Tips */}
-      <View style={styles.card}>
-        <Text style={styles.cardSectionTitle}>Peak Incentive & Customer Tips</Text>
-
-        <View style={styles.row}>
-          <View style={{ flex: 1, paddingRight: 8 }}>
-            <Text style={styles.rowLabelBold}>Peak-Hour Incentive</Text>
-            <Text style={styles.smallSubtext}>When officially activated during high demand</Text>
-          </View>
-          <Text style={styles.highlightValue}>+₹5 / order</Text>
-        </View>
-
-        <View style={[styles.row, styles.rowLast]}>
-          <View style={{ flex: 1, paddingRight: 8 }}>
-            <Text style={styles.rowLabelBold}>Customer Tips</Text>
-            <Text style={styles.smallSubtext}>100% to partner — Affordz retains 0%</Text>
-          </View>
-          <Text style={[styles.highlightValue, { color: '#16805A' }]}>100% Partner</Text>
-        </View>
-      </View>
-
-      {/* 5. Customer Delivery Fee Reference */}
-      <View style={styles.card}>
-        <Text style={styles.cardSectionTitle}>Customer Delivery Fee Structure</Text>
-        <Text style={styles.bodyText}>
-          Paid by customer according to order value (separate from your partner payout):
-        </Text>
-
-        <View style={styles.row}>
-          <Text style={styles.rowLabel}>Below ₹400</Text>
-          <Text style={styles.rowValue}>₹49 delivery fee</Text>
-        </View>
-
-        <View style={styles.row}>
-          <Text style={styles.rowLabel}>₹400 – ₹699</Text>
-          <Text style={styles.rowValue}>₹49 delivery fee</Text>
-        </View>
-
-        <View style={[styles.row, styles.rowLast]}>
-          <Text style={styles.rowLabel}>₹700 and above</Text>
-          <Text style={[styles.highlightValue, { color: '#16805A' }]}>FREE delivery</Text>
-        </View>
-      </View>
-
-      {/* 6. Settlement & Operational Guidelines */}
-      <View style={styles.card}>
-        <Text style={styles.cardSectionTitle}>Settlement & Operational Rules</Text>
-
-        <View style={styles.guidelineRow}>
-          <KudiIcon name="calendar" size={16} color={colors.primary} />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.guidelineTitle}>Weekly Payout Schedule</Text>
-            <Text style={styles.guidelineDesc}>
-              Earnings are processed weekly following automated verification of completed orders, distance, and attendance.
+          <TouchableOpacity
+            style={styles.expandTiersButton}
+            onPress={() => setShowAllDailyTiers(!showAllDailyTiers)}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Toggle daily performance tier list"
+          >
+            <Text style={styles.expandTiersText}>
+              {showAllDailyTiers ? 'Hide Detailed Breakdown' : 'View Weekly Milestone Tiers'}
             </Text>
-          </View>
-        </View>
+            <KudiIcon
+              name={showAllDailyTiers ? 'chevron-up' : 'chevron-down'}
+              size={15}
+              color={colors.primary}
+            />
+          </TouchableOpacity>
 
-        <View style={styles.guidelineRow}>
-          <KudiIcon name="check-circle" size={16} color="#16805A" />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.guidelineTitle}>Scheduled Rest Day</Text>
-            <Text style={styles.guidelineDesc}>
-              1 scheduled weekly day off is not treated as an absence and does not reduce attendance bonus eligibility.
-            </Text>
-          </View>
+          {showAllDailyTiers && weeklyMilestones.length > 0 ? (
+            <View style={styles.fullTierTable}>
+              {weeklyMilestones.map((tier, idx) => (
+                <View
+                  key={tier.orders}
+                  style={[
+                    styles.tierRow,
+                    idx === weeklyMilestones.length - 1 && styles.rowLast,
+                  ]}
+                >
+                  <Text style={styles.tierRowLabel}>{tier.orders} weekly orders</Text>
+                  <Text style={styles.tierRowValue}>₹{tier.bonus}</Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
         </View>
+      ) : null}
 
-        <View style={[styles.guidelineRow, styles.rowLast]}>
-          <KudiIcon name="shield" size={16} color="#0284C7" />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.guidelineTitle}>Safety First Priority</Text>
-            <Text style={styles.guidelineDesc}>
-              Safety takes absolute priority over delivery targets. Partners must never compromise road safety.
-            </Text>
-          </View>
+      {activeSurges.length > 0 ? (
+        <View style={styles.card}>
+          <Text style={styles.cardSectionTitle}>Active Zone Surges</Text>
+          {activeSurges.map((s, idx) => (
+            <View
+              key={s.id}
+              style={[styles.row, idx === activeSurges.length - 1 && styles.rowLast]}
+            >
+              <View style={{ flex: 1, paddingRight: 8 }}>
+                <Text style={styles.rowLabelBold}>{s.title}</Text>
+                <Text style={styles.smallSubtext}>
+                  {s.area} · {s.timeWindow}
+                </Text>
+              </View>
+              <Text style={[styles.highlightValue, { color: '#16805A' }]}>
+                +₹{s.bonusAmount}/order
+              </Text>
+            </View>
+          ))}
         </View>
-      </View>
+      ) : null}
     </>
   );
 };

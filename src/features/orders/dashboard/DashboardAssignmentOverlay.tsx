@@ -1,6 +1,7 @@
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
 import { KudiIcon } from '../../../components/KudiIcon';
+import { useOrderStore } from '../../../store/useOrderStore';
 import { dashboardStyles as styles } from './dashboard.styles';
 
 interface AssignmentOrder {
@@ -14,6 +15,7 @@ interface AssignmentOrder {
   date?: string;
   status: string;
   accepted?: boolean;
+  isTryAndBuy?: boolean;
 }
 
 interface DashboardAssignmentOverlayProps {
@@ -21,10 +23,37 @@ interface DashboardAssignmentOverlayProps {
   navigation: any;
 }
 
+const QUICK_REASONS = ['Vehicle issue', 'Too far from hub', 'Shift ending', 'Other'];
+
 export const DashboardAssignmentOverlay: React.FC<DashboardAssignmentOverlayProps> = ({
   activeOrder,
   navigation,
 }) => {
+  const { acceptOrder, rejectOrder, lastSyncError } = useOrderStore();
+  const [isDeclining, setIsDeclining] = useState(false);
+  const [declineReason, setDeclineReason] = useState(QUICK_REASONS[0]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleAccept = async () => {
+    setIsSubmitting(true);
+    try {
+      await acceptOrder(activeOrder.id);
+      navigation.navigate('OrderDetails', { orderId: activeOrder.id });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleConfirmDecline = async () => {
+    setIsSubmitting(true);
+    try {
+      await rejectOrder(activeOrder.id, declineReason.trim() || 'Rejected by delivery partner');
+      setIsDeclining(false);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <View style={styles.assignmentOverlay}>
       {/* Top bar */}
@@ -111,14 +140,120 @@ export const DashboardAssignmentOverlay: React.FC<DashboardAssignmentOverlayProp
       </ScrollView>
 
       {/* Bottom action */}
-      <View style={styles.assignmentFooter}>
-        <TouchableOpacity
-          style={styles.primaryBtn}
-          onPress={() => navigation.navigate('OrderDetails', { orderId: activeOrder.id })}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.primaryBtnText}>Review order</Text>
-        </TouchableOpacity>
+      <View style={[styles.assignmentFooter, { gap: 10 }]}>
+        {lastSyncError ? (
+          <Text style={{ color: '#DC2626', fontSize: 12, fontWeight: '600', textAlign: 'center' }}>
+            {lastSyncError}
+          </Text>
+        ) : null}
+
+        {isDeclining ? (
+          <View style={{ gap: 8 }}>
+            <Text style={{ fontSize: 12.5, fontWeight: '700', color: '#171716' }}>
+              Select reason for declining:
+            </Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+              {QUICK_REASONS.map((r) => (
+                <TouchableOpacity
+                  key={r}
+                  onPress={() => setDeclineReason(r)}
+                  style={{
+                    paddingHorizontal: 10,
+                    paddingVertical: 6,
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    borderColor: declineReason === r ? '#FF5A1F' : '#E2DED7',
+                    backgroundColor: declineReason === r ? '#FFF0E8' : '#FFFFFF',
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      fontWeight: '600',
+                      color: declineReason === r ? '#FF5A1F' : '#65635F',
+                    }}
+                  >
+                    {r}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TextInput
+              value={declineReason}
+              onChangeText={setDeclineReason}
+              placeholder="Optional rejection note..."
+              style={{
+                backgroundColor: '#FFFFFF',
+                borderWidth: 1,
+                borderColor: '#E2DED7',
+                borderRadius: 10,
+                paddingHorizontal: 12,
+                paddingVertical: 8,
+                fontSize: 13,
+                color: '#171716',
+              }}
+            />
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <TouchableOpacity
+                style={[styles.primaryBtn, { flex: 1, backgroundColor: '#EAE6DF' }]}
+                onPress={() => setIsDeclining(false)}
+                disabled={isSubmitting}
+              >
+                <Text style={[styles.primaryBtnText, { color: '#171716' }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.primaryBtn, { flex: 1, backgroundColor: '#DC2626' }]}
+                onPress={handleConfirmDecline}
+                disabled={isSubmitting}
+              >
+                <Text style={styles.primaryBtnText}>
+                  {isSubmitting ? 'Declining...' : 'Confirm Decline'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <View style={{ gap: 8 }}>
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <TouchableOpacity
+                style={[
+                  styles.primaryBtn,
+                  {
+                    flex: 1,
+                    backgroundColor: '#FFFFFF',
+                    borderWidth: 1,
+                    borderColor: '#DC2626',
+                  },
+                ]}
+                onPress={() => setIsDeclining(true)}
+                disabled={isSubmitting}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.primaryBtnText, { color: '#DC2626' }]}>Decline</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.primaryBtn, { flex: 2 }]}
+                onPress={handleAccept}
+                disabled={isSubmitting}
+                activeOpacity={0.8}
+              >
+                {isSubmitting ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Text style={styles.primaryBtnText}>Accept Assignment</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('OrderDetails', { orderId: activeOrder.id })}
+              style={{ alignItems: 'center', paddingVertical: 4 }}
+            >
+              <Text style={{ fontSize: 12.5, fontWeight: '600', color: '#65635F' }}>
+                Review order details
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
     </View>
   );

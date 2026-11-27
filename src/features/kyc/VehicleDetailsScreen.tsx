@@ -40,6 +40,7 @@ export const VehicleDetailsScreen = ({ navigation }: any) => {
   const [touchedFields, setTouchedFields] = useState<{ [key: string]: boolean }>({});
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchProfileAsync().catch(() => {});
@@ -93,6 +94,7 @@ export const VehicleDetailsScreen = ({ navigation }: any) => {
     }
 
     setIsSubmitting(true);
+    setSubmitError(null);
     try {
       const res = await updateVehicleAsync({
         registrationNumber,
@@ -102,6 +104,8 @@ export const VehicleDetailsScreen = ({ navigation }: any) => {
       });
       if (res.success) {
         navigation.navigate('DocumentUploads');
+      } else if (res.error) {
+        setSubmitError(res.error);
       }
     } finally {
       setIsSubmitting(false);
@@ -349,6 +353,24 @@ export const VehicleDetailsScreen = ({ navigation }: any) => {
           </View>
 
           <View style={styles.footer}>
+            {Boolean(submitError) && (
+              <View
+                style={{
+                  width: '100%',
+                  backgroundColor: '#FEF2F2',
+                  borderWidth: 1,
+                  borderColor: '#FECACA',
+                  borderRadius: 10,
+                  padding: 12,
+                  marginBottom: 12,
+                }}
+                accessibilityRole="alert"
+              >
+                <Text style={{ color: '#991B1B', fontSize: 13, fontWeight: '600' }}>
+                  {submitError}
+                </Text>
+              </View>
+            )}
             <PrimaryButton
               title="Continue"
               onPress={handleContinue}

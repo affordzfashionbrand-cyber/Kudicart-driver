@@ -63,6 +63,9 @@ class DriverRealtimeSocket {
       ws.onopen = () => {
         this.isConnecting = false;
         this.startPing();
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'SUBSCRIBE_FEED' }));
+        }
         if (this.subscribedOrderId) {
           this.subscribe(this.subscribedOrderId);
         }
@@ -87,6 +90,12 @@ class DriverRealtimeSocket {
           }
 
           if (
+            msg.type === 'DELIVERY_ASSIGNMENT_CREATED' ||
+            msg.type === 'DELIVERY_ASSIGNMENT_FAILED'
+          ) {
+            void useOrderStore.getState().fetchAssignedOrdersAsync();
+            queryClient.invalidateQueries({ queryKey: ['driver-orders'] });
+          } else if (
             msg.type === 'TRY_AND_BUY_UPDATED' ||
             msg.type === 'ORDER_STATUS_UPDATE' ||
             msg.type === 'ORDER_ARRIVED'

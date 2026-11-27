@@ -14,12 +14,6 @@ interface TryAndBuyReturnCollectionViewProps {
   onBack?: () => void;
 }
 
-const DEFAULT_THUMBNAILS = [
-  'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=120&q=80',
-  'https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=120&q=80',
-  'https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=120&q=80',
-];
-
 export const TryAndBuyReturnCollectionView: React.FC<TryAndBuyReturnCollectionViewProps> = ({
   order,
   onToggleCollected,
@@ -91,11 +85,22 @@ export const TryAndBuyReturnCollectionView: React.FC<TryAndBuyReturnCollectionVi
                   {isCollected && <KudiIcon name="check" size={14} color="#FFFFFF" />}
                 </View>
 
-                <Image
-                  source={{ uri: DEFAULT_THUMBNAILS[index % DEFAULT_THUMBNAILS.length] }}
-                  style={styles.itemThumb}
-                  resizeMode="cover"
-                />
+                {item.image ? (
+                  <Image
+                    source={{ uri: item.image }}
+                    style={styles.itemThumb}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View
+                    style={[
+                      styles.itemThumb,
+                      { backgroundColor: '#F3F1EC', alignItems: 'center', justifyContent: 'center' },
+                    ]}
+                  >
+                    <KudiIcon name="package" size={18} color="#8A8781" />
+                  </View>
+                )}
 
                 <View style={styles.itemInfo}>
                   <Text style={styles.itemName}>{item.name}</Text>

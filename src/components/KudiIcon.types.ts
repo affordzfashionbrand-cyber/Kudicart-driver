@@ -55,6 +55,15 @@ export type IconName =
   | 'cloud-rain'
   | 'download'
   | 'arrow-right'
+  | 'arrow-up'
+  | 'corner-up-left'
+  | 'corner-up-right'
+  | 'rotate-ccw'
+  | 'git-fork'
+  | 'map'
+  | 'compass'
+  | 'volume-2'
+  | 'volume-x'
   | 'refresh'
   | 'refresh-cw';
 

@@ -16,9 +16,13 @@ interface DashboardEarningsCardProps {
     loginHours: string;
     ordersDone: number;
   };
+  isOnline?: boolean;
 }
 
-export const DashboardEarningsCard: React.FC<DashboardEarningsCardProps> = ({ workSummary }) => {
+export const DashboardEarningsCard: React.FC<DashboardEarningsCardProps> = ({
+  workSummary,
+  isOnline = false,
+}) => {
   const earnings = workSummary?.totalEarnings ?? 0;
   const loginHours = workSummary?.loginHours || '0h 00m';
   const ordersDone = workSummary?.ordersDone ?? 0;
@@ -32,7 +36,9 @@ export const DashboardEarningsCard: React.FC<DashboardEarningsCardProps> = ({ wo
       <View style={styles.cardHeader}>
         <Text style={styles.cardTitle}>Today's earnings</Text>
         <View style={styles.shiftChip}>
-          <Text style={styles.shiftChipText} numberOfLines={1}>Active shift</Text>
+          <Text style={styles.shiftChipText} numberOfLines={1}>
+            {isOnline ? 'Online · On duty' : 'Offline'}
+          </Text>
         </View>
       </View>
       <View style={styles.amountContainer}>

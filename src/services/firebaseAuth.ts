@@ -43,6 +43,26 @@ function getNativeAuthInstance(): any | null {
   }
 }
 
+function formatNativeFirebaseError(err: any): Error {
+  const code = String(err?.code || '');
+  const message = String(err?.message || '');
+  let friendly = message;
+
+  if (code === 'auth/invalid-verification-code') {
+    friendly = 'Invalid OTP. Please try again.';
+  } else if (code === 'auth/code-expired' || code === 'auth/session-expired') {
+    friendly = 'This OTP has expired. Please request a new OTP.';
+  } else if (code === 'auth/too-many-requests' || code === 'auth/quota-exceeded') {
+    friendly = 'Too many attempts. Please wait a moment or request a new OTP.';
+  } else if (code === 'auth/network-request-failed') {
+    friendly = 'Network error contacting Firebase. Please check your connection.';
+  }
+
+  const out = new Error(friendly || 'OTP verification failed.') as Error & { code?: string };
+  out.code = code || 'FIREBASE_ERROR';
+  return out;
+}
+
 export const firebaseAuthService: FirebaseAuthBridge = {
   isAvailable: () => getNativeAuthInstance() !== null,
 
@@ -59,23 +79,32 @@ export const firebaseAuthService: FirebaseAuthBridge = {
         'Firebase Phone Auth is not configured on this build (missing google-services.json or native module).',
       );
     }
-    pendingConfirmation = await authInstance.signInWithPhoneNumber(phoneNumber);
-    return true;
+    try {
+      pendingConfirmation = await authInstance.signInWithPhoneNumber(phoneNumber);
+      return true;
+    } catch (err: any) {
+      throw formatNativeFirebaseError(err);
+    }
   },
 
   confirmPhoneOtp: async (otpCode: string) => {
+    const trimmed = otpCode.trim();
     if (!pendingConfirmation) {
       throw new Error('Firebase verification session expired. Please request a new OTP.');
     }
-    const credential = await pendingConfirmation.confirm(otpCode);
-    const authInstance = getNativeAuthInstance();
-    const user = credential?.user || authInstance?.currentUser;
-    const idToken = await user?.getIdToken?.(true);
-    pendingConfirmation = null;
-    if (!idToken || typeof idToken !== 'string') {
-      throw new Error('Failed to retrieve Firebase ID token after OTP verification.');
+    try {
+      const credential = await pendingConfirmation.confirm(trimmed);
+      const authInstance = getNativeAuthInstance();
+      const user = credential?.user || authInstance?.currentUser;
+      const idToken = await user?.getIdToken?.(true);
+      if (!idToken || typeof idToken !== 'string') {
+        throw new Error('Failed to retrieve Firebase ID token after OTP verification.');
+      }
+      pendingConfirmation = null;
+      return idToken;
+    } catch (err: any) {
+      throw formatNativeFirebaseError(err);
     }
-    return idToken;
   },
 
   getFreshIdToken: async (forceRefresh = true) => {

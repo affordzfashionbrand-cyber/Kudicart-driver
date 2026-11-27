@@ -48,14 +48,22 @@ export function mapBackendDriverOrder(raw: any): Order {
         ? raw.itemsCount
         : items.reduce((sum, it) => sum + (it.quantity || 1), 0),
     toteId: raw.toteId || `T-${String(raw.orderNumber || raw.id).slice(-3)}`,
-    distance: raw.distance || '2.0 km',
-    eta: raw.eta || '15 mins',
-    earnings: raw.earnings ?? 55,
+    distance: raw.distance || null,
+    eta: raw.eta || null,
+    earnings: typeof raw.earnings === 'number' ? raw.earnings : 0,
     status: (raw.status || 'ASSIGNED') as OrderStatus,
+    deliveryAssignmentStatus:
+      raw.deliveryAssignmentStatus || raw.dispatchAssignment?.assignmentStatus || undefined,
     isArrived: Boolean(raw.isArrived || raw.arrivedAt),
     arrivedAt: raw.arrivedAt || null,
     deliveredAt: raw.deliveredAt || null,
-    accepted: raw.accepted ?? raw.status !== 'ASSIGNED',
+    accepted:
+      raw.accepted !== undefined
+        ? Boolean(raw.accepted)
+        : raw.deliveryAssignmentStatus
+          ? raw.deliveryAssignmentStatus === 'ACCEPTED_BY_DELIVERY_PARTNER' ||
+            raw.deliveryAssignmentStatus === 'COMPLETED'
+          : raw.status !== 'ASSIGNED',
     isTryAndBuy: Boolean(raw.isTryAndBuy || raw.orderType === 'TRY_AND_BUY'),
     orderType: (raw.isTryAndBuy || raw.orderType === 'TRY_AND_BUY') ? 'TRY_AND_BUY' : 'STANDARD',
     tryAndBuyStage: resolvedStage,
@@ -135,6 +143,20 @@ export const ordersApi = {
     });
   },
 
+  rejectOrder: async (
+    orderId: string,
+    reason?: string,
+    idempotencyKey?: string,
+  ) => {
+    return request<any>(`/driver/orders/${orderId}/reject`, {
+      method: 'POST',
+      headers: idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : undefined,
+      body: JSON.stringify({
+        reason: reason?.trim() || 'Rejected by delivery partner',
+      }),
+    });
+  },
+
   pickupOrder: async (
     orderId: string,
     verificationPhotos: string[] = [],
@@ -191,9 +213,11 @@ export const ordersApi = {
   recordSelections: async (
     orderId: string,
     selections: Record<string, 'KEEP' | 'RETURN'>,
+    idempotencyKey?: string,
   ) => {
     return request<any>(`/driver/orders/${orderId}/try-and-buy/selections`, {
       method: 'POST',
+      headers: idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : undefined,
       body: JSON.stringify({ selections }),
     });
   },
@@ -223,9 +247,10 @@ export const ordersApi = {
     });
   },
 
-  arriveAtStore: async (orderId: string) => {
+  arriveAtStore: async (orderId: string, idempotencyKey?: string) => {
     return request<any>(`/driver/orders/${orderId}/try-and-buy/arrive-store`, {
       method: 'POST',
+      headers: idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : undefined,
     });
   },
 
@@ -233,9 +258,11 @@ export const ordersApi = {
     orderId: string,
     supervisorConfirmed?: boolean,
     note = 'Reconciled at darkstore hub',
+    idempotencyKey?: string,
   ) => {
     return request<any>(`/driver/orders/${orderId}/try-and-buy/reconcile-store`, {
       method: 'POST',
+      headers: idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : undefined,
       body: JSON.stringify({
         note,
         ...(typeof supervisorConfirmed === 'boolean' ? { supervisorConfirmed } : {}),

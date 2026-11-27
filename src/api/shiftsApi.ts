@@ -28,9 +28,48 @@ export interface SlotListingResponse {
   }>;
 }
 
+export interface ShiftHistoryResponse {
+  mode: 'SHIFT_HISTORY' | 'SLOT_HISTORY';
+  workPreference: 'FULL_TIME' | 'PART_TIME';
+  weekIndex: number;
+  label: string;
+  totalShifts?: number;
+  completedShifts?: number;
+  totalHours?: number;
+  completedSlots?: number;
+  bookedHours?: number;
+  deliveries: number;
+  totalEarnings: number;
+  items: Array<{
+    id: string;
+    slotId?: string;
+    day: string;
+    dateLabel: string;
+    dateKey?: string;
+    timeRange: string;
+    duration: string;
+    hub?: string;
+    hubAddress?: string;
+    demand?: string;
+    bonusText?: string | null;
+    status: string;
+    statusLabel: string;
+    attendance?: string;
+    breakTime?: string | null;
+    hours: number;
+  }>;
+  availableWeeks: Array<{ weekIndex: number; label: string }>;
+}
+
 export const shiftsApi = {
   getShifts: async (): Promise<ShiftScheduleResponse> => {
     return request<ShiftScheduleResponse>('/driver/shifts', { method: 'GET' });
+  },
+
+  getHistory: async (weekIndex = 0): Promise<ShiftHistoryResponse> => {
+    return request<ShiftHistoryResponse>(`/driver/shifts/history?weekIndex=${weekIndex}`, {
+      method: 'GET',
+    });
   },
 
   getSlots: async (week: 'THIS_WEEK' | 'NEXT_WEEK' = 'THIS_WEEK'): Promise<SlotListingResponse> => {

@@ -12,6 +12,7 @@ interface OrderPickupReviewViewProps {
   onConfirmPickup: () => void;
   onStartDelivery?: () => void;
   onBack: () => void;
+  actionError?: string | null;
   defaultProductThumbnails?: string[];
 }
 
@@ -23,8 +24,11 @@ export const OrderPickupReviewView: React.FC<OrderPickupReviewViewProps> = ({
   onConfirmPickup,
   onStartDelivery,
   onBack,
+  actionError,
 }) => {
-  const isAlreadyPickedUp = order.status === 'PICKED_UP';
+  const isAlreadyPickedUp = order.status === 'PICKED_UP' || order.status === 'OUT_FOR_DELIVERY';
+  const isReadyForPickup = order.status === 'READY_FOR_PICKUP' || isAlreadyPickedUp;
+  const canConfirmPickup = isReadyForPickup && pickupImages.length > 0;
   return (
     <SafeAreaView style={[styles.main, { backgroundColor: '#F3F1EC' }]}>
       {/* 1. TOP NAVIGATION BAR */}
@@ -193,6 +197,48 @@ export const OrderPickupReviewView: React.FC<OrderPickupReviewViewProps> = ({
 
       {/* 3. FIXED BOTTOM ACTION */}
       <View style={styles.reviewFooter}>
+        {!isReadyForPickup ? (
+          <View
+            accessibilityRole="alert"
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 8,
+              backgroundColor: '#FFF7ED',
+              borderWidth: 1,
+              borderColor: '#FED7AA',
+              borderRadius: 10,
+              padding: 10,
+              marginBottom: 10,
+            }}
+          >
+            <KudiIcon name="clock" size={16} color="#C2410C" />
+            <Text style={{ flex: 1, fontSize: 12.5, fontWeight: '600', color: '#9A3412' }}>
+              Order is still being packed. Confirm pickup unlocks once the store marks it Ready for Pickup.
+            </Text>
+          </View>
+        ) : null}
+        {actionError ? (
+          <View
+            accessibilityRole="alert"
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 8,
+              backgroundColor: '#FEF2F2',
+              borderWidth: 1,
+              borderColor: '#FECACA',
+              borderRadius: 10,
+              padding: 10,
+              marginBottom: 10,
+            }}
+          >
+            <KudiIcon name="alert-circle" size={16} color="#DC2626" />
+            <Text style={{ flex: 1, fontSize: 12.5, fontWeight: '600', color: '#991B1B' }}>
+              {actionError}
+            </Text>
+          </View>
+        ) : null}
         {isAlreadyPickedUp ? (
           <TouchableOpacity
             style={[styles.confirmPickupBtn, styles.confirmPickupBtnActive]}
@@ -207,19 +253,19 @@ export const OrderPickupReviewView: React.FC<OrderPickupReviewViewProps> = ({
           <TouchableOpacity
             style={[
               styles.confirmPickupBtn,
-              pickupImages.length > 0 ? styles.confirmPickupBtnActive : styles.confirmPickupBtnDisabled,
+              canConfirmPickup ? styles.confirmPickupBtnActive : styles.confirmPickupBtnDisabled,
             ]}
             onPress={onConfirmPickup}
-            disabled={pickupImages.length === 0}
+            disabled={!canConfirmPickup}
             activeOpacity={0.85}
           >
             <Text
               style={[
                 styles.confirmPickupBtnText,
-                pickupImages.length > 0 ? styles.confirmPickupBtnTextActive : styles.confirmPickupBtnTextDisabled,
+                canConfirmPickup ? styles.confirmPickupBtnTextActive : styles.confirmPickupBtnTextDisabled,
               ]}
             >
-              Confirm pickup
+              {isReadyForPickup ? 'Confirm pickup' : 'Waiting for packing'}
             </Text>
           </TouchableOpacity>
         )}

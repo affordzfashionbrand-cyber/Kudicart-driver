@@ -19,6 +19,7 @@ import { OrderMapNavigationMode } from './details/OrderMapNavigationMode';
 import { OrderDeliveryReviewView } from './details/OrderDeliveryReviewView';
 import { OrderPickupReviewView } from './details/OrderPickupReviewView';
 import { permissionService } from '../../services/permissionService';
+import { getFriendlyErrorMessage } from '../../utils/errorHandling';
 
 export const OrderDetailsScreen = ({ route, navigation }: any) => {
   const { orderId } = route.params || {};
@@ -37,6 +38,7 @@ export const OrderDetailsScreen = ({ route, navigation }: any) => {
     markArrivedAtStore,
     reconcileStoreReturn,
     refreshOrderAsync,
+    lastSyncError,
   } = useOrderStore();
   const isDark = useColorScheme() === 'dark';
   const theme = isDark ? tokens.colors.dark : tokens.colors.light;
@@ -89,16 +91,15 @@ export const OrderDetailsScreen = ({ route, navigation }: any) => {
   const [handoverImages, setHandoverImages] = useState<string[]>([]);
   const [returnImages, setReturnImages] = useState<string[]>([]);
   const [fullScreenMap, setFullScreenMap] = useState(false);
+  const [proofError, setProofError] = useState<string | null>(null);
 
   const handleOpenCamera = async (target: CameraTarget) => {
+    setProofError(null);
     const status = await permissionService.check('camera');
     if (status !== 'granted') {
       const res = await permissionService.request('camera');
       if (res !== 'granted') {
-        toast.show({
-          type: 'error',
-          message: 'Camera permission is required to capture parcel proof.',
-        });
+        setProofError('Camera permission is required to capture parcel proof.');
         return;
       }
     }
@@ -142,8 +143,10 @@ export const OrderDetailsScreen = ({ route, navigation }: any) => {
   // --------------------------------------------------------
   // ACTIVE DELIVERY WORKSPACE
   // --------------------------------------------------------
+  const isTryAndBuyActive = Boolean(order.isTryAndBuy && order.status === 'TRY_AND_BUY');
   const isOutForDelivery = order.status === 'OUT_FOR_DELIVERY';
-  const isArrived = isOutForDelivery && Boolean(order.isArrived || order.arrivedAt);
+  const isArrived =
+    (isOutForDelivery && Boolean(order.isArrived || order.arrivedAt)) || isTryAndBuyActive;
   const isReturning = order.status === 'RETURNING';
 
   if (showCamera) {
@@ -154,8 +157,9 @@ export const OrderDetailsScreen = ({ route, navigation }: any) => {
         onCapture={async (photoUri) => {
           const capturedTarget = showCamera;
           setShowCamera(false);
+          setProofError(null);
           if (!photoUri) {
-            toast.error('Camera did not return a valid photo. Please try again.');
+            setProofError('Camera did not return a valid photo. Please try again.');
             return;
           }
           let finalUri = photoUri;
@@ -166,7 +170,9 @@ export const OrderDetailsScreen = ({ route, navigation }: any) => {
                 `${capturedTarget}_${order.id}_${Date.now()}.jpg`,
               );
             } catch (err: any) {
-              toast.error(err?.message || 'Failed to upload proof photo. Please retry.');
+              setProofError(
+                getFriendlyErrorMessage(err, 'Failed to upload proof photo. Please retry.'),
+              );
               return;
             }
           }
@@ -236,13 +242,13 @@ export const OrderDetailsScreen = ({ route, navigation }: any) => {
         theme={theme}
         hubCoordinates={hubCoords}
         destCoordinates={destCoords}
-        onMarkArrived={() => {
+        onMarkArrived={async () => {
           if (isReturning) {
             if (order.isTryAndBuy) {
               markArrivedAtStore(order.id);
             } else {
-              completeOrder(order.id);
-              navigation.goBack();
+              const ok = await completeOrder(order.id);
+              if (ok) navigation.goBack();
             }
           } else {
             markArrived(order.id);
@@ -261,9 +267,32 @@ export const OrderDetailsScreen = ({ route, navigation }: any) => {
     if (stage === 'HANDOVER_PENDING') {
       return (
         <SafeAreaView style={[styles.main, { backgroundColor: '#F3F1EC' }]}>
+          {proofError ? (
+            <View
+              accessibilityRole="alert"
+              style={{
+                backgroundColor: '#FEF2F2',
+                borderBottomWidth: 1,
+                borderBottomColor: '#FECACA',
+                paddingHorizontal: 14,
+                paddingVertical: 10,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 8,
+              }}
+            >
+              <KudiIcon name="alert-circle" size={16} color="#DC2626" />
+              <Text style={{ flex: 1, fontSize: 12.5, fontWeight: '600', color: '#991B1B' }}>
+                {proofError}
+              </Text>
+            </View>
+          ) : null}
           <TryAndBuyHandoverView
             order={order}
-            onConfirmHandover={(code) => confirmHandoverAndStartTrial(order.id, code, handoverImages)}
+            onConfirmHandover={(code) => {
+              setProofError(null);
+              confirmHandoverAndStartTrial(order.id, code, handoverImages);
+            }}
             onOpenMap={() => setFullScreenMap(true)}
             handoverImages={handoverImages}
             onOpenCamera={() => handleOpenCamera('handover')}
@@ -281,7 +310,9 @@ export const OrderDetailsScreen = ({ route, navigation }: any) => {
             onBack={() => navigation.goBack()}
             onRefreshSelection={() => refreshOrderAsync(order.id)}
             onContactCustomer={() =>
-              toast.info('Customer calling is disabled. Confirm doorstep arrival to coordinate.')
+              toast.info('Customer calling is disabled. Confirm doorstep arrival to coordinate.', {
+                dedupeKey: 'trybuy-call-disabled',
+              })
             }
           />
         </SafeAreaView>
@@ -303,13 +334,36 @@ export const OrderDetailsScreen = ({ route, navigation }: any) => {
     if (stage === 'RETURN_COLLECTION') {
       return (
         <SafeAreaView style={[styles.main, { backgroundColor: '#F3F1EC' }]}>
+          {proofError ? (
+            <View
+              accessibilityRole="alert"
+              style={{
+                backgroundColor: '#FEF2F2',
+                borderBottomWidth: 1,
+                borderBottomColor: '#FECACA',
+                paddingHorizontal: 14,
+                paddingVertical: 10,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 8,
+              }}
+            >
+              <KudiIcon name="alert-circle" size={16} color="#DC2626" />
+              <Text style={{ flex: 1, fontSize: 12.5, fontWeight: '600', color: '#991B1B' }}>
+                {proofError}
+              </Text>
+            </View>
+          ) : null}
           <TryAndBuyReturnCollectionView
             order={order}
             onToggleCollected={(itemId) => toggleItemCollected(order.id, itemId)}
             onOpenCamera={() => handleOpenCamera('return')}
             returnImages={returnImages}
             onRemoveImage={(idx) => setReturnImages(returnImages.filter((_, i) => i !== idx))}
-            onConfirmCollection={(images) => confirmReturnCollection(order.id, images)}
+            onConfirmCollection={(images) => {
+              setProofError(null);
+              confirmReturnCollection(order.id, images);
+            }}
           />
         </SafeAreaView>
       );
@@ -320,10 +374,10 @@ export const OrderDetailsScreen = ({ route, navigation }: any) => {
         <SafeAreaView style={[styles.main, { backgroundColor: '#F3F1EC' }]}>
           <TryAndBuyPaymentView
             order={order}
-            onConfirmPaymentAndBranch={() => {
+            onConfirmPaymentAndBranch={async (cashCollected) => {
               const returnedCount = (order.items || []).filter((i: any) => i.decision === 'RETURN').length;
-              confirmPaymentAndBranch(order.id);
-              if (returnedCount === 0) {
+              const ok = await confirmPaymentAndBranch(order.id, cashCollected);
+              if (ok && returnedCount === 0) {
                 navigation.goBack();
               }
             }}
@@ -344,10 +398,14 @@ export const OrderDetailsScreen = ({ route, navigation }: any) => {
         setDeliveryImages={setDeliveryImages}
         onOpenCamera={() => handleOpenCamera('delivery')}
         onOpenMap={() => setFullScreenMap(true)}
-        onConfirmDelivery={(cashCollected) => {
-          completeOrder(order.id, deliveryImages, cashCollected);
-          toast.success('Order delivered successfully.');
-          navigation.goBack();
+        actionError={proofError || lastSyncError}
+        onConfirmDelivery={async (cashCollected) => {
+          setProofError(null);
+          const ok = await completeOrder(order.id, deliveryImages, cashCollected);
+          if (ok) {
+            toast.success('Order delivered.', { dedupeKey: `order-delivered:${order.id}` });
+            navigation.goBack();
+          }
         }}
       />
     );
@@ -362,13 +420,14 @@ export const OrderDetailsScreen = ({ route, navigation }: any) => {
       pickupImages={pickupImages}
       setPickupImages={setPickupImages}
       onOpenCamera={() => handleOpenCamera('pickup')}
+      actionError={proofError || lastSyncError}
       onConfirmPickup={() => {
+        setProofError(null);
         confirmPickup(order.id, pickupImages);
-        toast.success('Pickup verified. Tap Start Delivery when departing hub.');
       }}
       onStartDelivery={() => {
+        setProofError(null);
         startDelivery(order.id);
-        toast.success('Delivery started! Live tracking active.');
       }}
       onBack={() => navigation.goBack()}
     />

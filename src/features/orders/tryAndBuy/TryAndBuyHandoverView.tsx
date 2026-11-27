@@ -14,12 +14,6 @@ interface TryAndBuyHandoverViewProps {
   onRemoveImage?: (index: number) => void;
 }
 
-const DEFAULT_THUMBNAILS = [
-  'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=120&q=80',
-  'https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=120&q=80',
-  'https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=120&q=80',
-];
-
 export const TryAndBuyHandoverView: React.FC<TryAndBuyHandoverViewProps> = ({
   order,
   onConfirmHandover,
@@ -28,16 +22,13 @@ export const TryAndBuyHandoverView: React.FC<TryAndBuyHandoverViewProps> = ({
   onOpenCamera,
   onRemoveImage,
 }) => {
-  // Photo management (props with local fallback)
+  // Photo management (props)
   const [internalImages, setInternalImages] = useState<string[]>([]);
   const images = handoverImages ?? internalImages;
 
   const handleOpenCamera = () => {
     if (onOpenCamera) {
       onOpenCamera();
-    } else {
-      const nextImg = `file:///photos/handover_${Date.now()}.jpg`;
-      setInternalImages([...internalImages, nextImg]);
     }
   };
 
@@ -185,11 +176,22 @@ export const TryAndBuyHandoverView: React.FC<TryAndBuyHandoverViewProps> = ({
                   key={item.id || index}
                   style={[styles.productRow, !isLast && styles.productBorder]}
                 >
-                  <Image
-                    source={{ uri: DEFAULT_THUMBNAILS[index % DEFAULT_THUMBNAILS.length] }}
-                    style={styles.productThumb}
-                    resizeMode="cover"
-                  />
+                  {item.image ? (
+                    <Image
+                      source={{ uri: item.image }}
+                      style={styles.productThumb}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View
+                      style={[
+                        styles.productThumb,
+                        { backgroundColor: '#F3F1EC', alignItems: 'center', justifyContent: 'center' },
+                      ]}
+                    >
+                      <KudiIcon name="package" size={18} color="#8A8781" />
+                    </View>
+                  )}
                   <View style={styles.productInfo}>
                     <Text style={styles.productName}>{item.name}</Text>
                     {item.variant ? (

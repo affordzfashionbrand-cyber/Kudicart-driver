@@ -54,10 +54,11 @@ function formatFirebaseError(err: any): Error {
           : (serverMsg || 'reCAPTCHA verification failed. Please try again via http://127.0.0.1:3002/');
         break;
       case 'auth/invalid-verification-code':
-        userMessage = 'Invalid verification code. Please check and re-enter.';
+        userMessage = 'Invalid OTP. Please try again.';
         break;
       case 'auth/code-expired':
-        userMessage = 'Verification code has expired. Please request a new code.';
+      case 'auth/session-expired':
+        userMessage = 'This OTP has expired. Please request a new OTP.';
         break;
       case 'auth/missing-verification-code':
         userMessage = 'Please enter the verification code.';
@@ -103,13 +104,22 @@ function getEnvVar(key: string, fallback: string): string {
   return fallback;
 }
 
+const DEFAULT_FIREBASE_CONFIG = {
+  apiKey: 'AIzaSyDNrOgdNcWwL4RxN9f-3Ktp7e73rSlOifc',
+  authDomain: 'kudikart-3ec2e.firebaseapp.com',
+  projectId: 'kudikart-3ec2e',
+  storageBucket: 'kudikart-3ec2e.firebasestorage.app',
+  messagingSenderId: '174851114581',
+  appId: '1:174851114581:web:142cf1f26ea50affe836dc',
+};
+
 const firebaseConfig = {
-  apiKey: getEnvVar('VITE_FIREBASE_API_KEY', ''),
-  authDomain: getEnvVar('VITE_FIREBASE_AUTH_DOMAIN', ''),
-  projectId: getEnvVar('VITE_FIREBASE_PROJECT_ID', ''),
-  storageBucket: getEnvVar('VITE_FIREBASE_STORAGE_BUCKET', ''),
-  messagingSenderId: getEnvVar('VITE_FIREBASE_MESSAGING_SENDER_ID', ''),
-  appId: getEnvVar('VITE_FIREBASE_APP_ID', ''),
+  apiKey: getEnvVar('VITE_FIREBASE_API_KEY', DEFAULT_FIREBASE_CONFIG.apiKey),
+  authDomain: getEnvVar('VITE_FIREBASE_AUTH_DOMAIN', DEFAULT_FIREBASE_CONFIG.authDomain),
+  projectId: getEnvVar('VITE_FIREBASE_PROJECT_ID', DEFAULT_FIREBASE_CONFIG.projectId),
+  storageBucket: getEnvVar('VITE_FIREBASE_STORAGE_BUCKET', DEFAULT_FIREBASE_CONFIG.storageBucket),
+  messagingSenderId: getEnvVar('VITE_FIREBASE_MESSAGING_SENDER_ID', DEFAULT_FIREBASE_CONFIG.messagingSenderId),
+  appId: getEnvVar('VITE_FIREBASE_APP_ID', DEFAULT_FIREBASE_CONFIG.appId),
 };
 
 export const FIREBASE_TEST_NUMBERS = [
@@ -126,6 +136,7 @@ export function isFirebaseTestNumber(phone: string): boolean {
 
 let activeRecaptchaVerifier: RecaptchaVerifier | null = null;
 let activeConfirmationResult: ConfirmationResult | null = null;
+let recaptchaCounter = 0;
 
 function getFirebaseAuth(): Auth | null {
   if (typeof window === 'undefined' || typeof document === 'undefined') {
@@ -166,6 +177,7 @@ function clearRecaptcha(): void {
 function createFreshRecaptchaVerifier(auth: Auth): RecaptchaVerifier {
   clearRecaptcha();
 
+  let targetElementId = 'recaptcha-container';
   if (typeof document !== 'undefined') {
     let containerEl = document.getElementById('recaptcha-container');
     if (!containerEl && document.body) {
@@ -177,9 +189,16 @@ function createFreshRecaptchaVerifier(auth: Auth): RecaptchaVerifier {
       containerEl.style.zIndex = '2147483647';
       document.body.appendChild(containerEl);
     }
+    if (containerEl) {
+      recaptchaCounter += 1;
+      const widgetHost = document.createElement('div');
+      widgetHost.id = `recaptcha-widget-${recaptchaCounter}`;
+      containerEl.appendChild(widgetHost);
+      targetElementId = widgetHost.id;
+    }
   }
 
-  activeRecaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+  activeRecaptchaVerifier = new RecaptchaVerifier(auth, targetElementId, {
     size: 'invisible',
     callback: () => {
       // Invisible reCAPTCHA verification resolved
@@ -206,8 +225,7 @@ export const firebaseAuthService: FirebaseAuthBridge = {
     if (bridge?.hasPendingConfirmation) {
       return Boolean(bridge.hasPendingConfirmation());
     }
-    const auth = getFirebaseAuth();
-    return activeConfirmationResult !== null || Boolean(auth?.currentUser);
+    return activeConfirmationResult !== null;
   },
 
   clearPendingConfirmation: () => {
@@ -269,27 +287,20 @@ export const firebaseAuthService: FirebaseAuthBridge = {
       return bridge.confirmPhoneOtp(otpCode);
     }
 
-    const auth = getFirebaseAuth();
+    const trimmedCode = otpCode.trim();
     if (!activeConfirmationResult) {
-      if (auth?.currentUser) {
-        try {
-          const freshToken = await auth.currentUser.getIdToken(true);
-          if (freshToken) return freshToken;
-        } catch {}
-      }
       throw new Error('Firebase verification session expired. Please request a new OTP.');
     }
 
     try {
-      const result = await activeConfirmationResult.confirm(otpCode.trim());
-      activeConfirmationResult = null;
-      clearRecaptcha();
-
+      const result = await activeConfirmationResult.confirm(trimmedCode);
       const user = result.user;
       const idToken = await user.getIdToken(true);
       if (!idToken || typeof idToken !== 'string') {
         throw new Error('Failed to obtain Firebase ID token after OTP confirmation.');
       }
+      activeConfirmationResult = null;
+      clearRecaptcha();
       return idToken;
     } catch (err: any) {
       throw formatFirebaseError(err);

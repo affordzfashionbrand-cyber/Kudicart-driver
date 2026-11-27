@@ -1,6 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { toast } from '../../../store/useToastStore';
 import { subviewStyles as styles } from './profileSubviews.styles';
 
 interface StarSubviewProps {
@@ -49,6 +48,7 @@ export const StarSubview: React.FC<StarSubviewProps> = ({
 };
 
 export const AssetsSubview: React.FC = () => {
+  const [notice, setNotice] = useState<string | null>(null);
   return (
     <>
       <View style={styles.card}>
@@ -77,16 +77,25 @@ export const AssetsSubview: React.FC = () => {
 
       <TouchableOpacity
         style={styles.primaryActionButton}
-        onPress={() => toast.info('Asset replacement request logged. Hub team will contact you.')}
+        onPress={() =>
+          setNotice(
+            'Gear replacements are issued directly at your assigned hub or via Help & Support.',
+          )
+        }
         activeOpacity={0.8}
       >
         <Text style={styles.primaryActionButtonText}>Request Gear Replacement</Text>
       </TouchableOpacity>
+
+      {notice ? (
+        <Text style={[styles.smallSubtext, { marginTop: 10, textAlign: 'center' }]}>{notice}</Text>
+      ) : null}
     </>
   );
 };
 
 export const EvMarketplaceSubview: React.FC = () => {
+  const [notice, setNotice] = useState<string | null>(null);
   return (
     <>
       <View style={styles.card}>
@@ -116,11 +125,17 @@ export const EvMarketplaceSubview: React.FC = () => {
 
       <TouchableOpacity
         style={styles.primaryActionButton}
-        onPress={() => toast.success('EV Partner assistance details sent to your registered mobile.')}
+        onPress={() =>
+          setNotice('EV rental enrollment is coordinated through your hub supervisor or Help & Support.')
+        }
         activeOpacity={0.8}
       >
         <Text style={styles.primaryActionButtonText}>Inquire for Rental</Text>
       </TouchableOpacity>
+
+      {notice ? (
+        <Text style={[styles.smallSubtext, { marginTop: 10, textAlign: 'center' }]}>{notice}</Text>
+      ) : null}
     </>
   );
 };

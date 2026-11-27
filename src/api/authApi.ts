@@ -11,7 +11,10 @@ export interface VerifyOtpResponse {
   success: boolean;
   token: string;
   role: string;
+  driverId?: string;
   kycStatus: string;
+  hasSeenApproval?: boolean;
+  approvalAcknowledgedAt?: string | null;
   user: {
     id: string;
     driverId: string;
@@ -20,6 +23,8 @@ export interface VerifyOtpResponse {
     phone: string;
     email: string;
     kycStatus: string;
+    hasSeenApproval?: boolean;
+    approvalAcknowledgedAt?: string | null;
     isOnline: boolean;
     workPreference: string;
   };
@@ -31,6 +36,8 @@ export interface AccountStatusResponse {
   fullName: string;
   kycStatus: string;
   isApproved: boolean;
+  hasSeenApproval?: boolean;
+  approvalAcknowledgedAt?: string | null;
   isOnline: boolean;
   workPreference: string;
   rejectionReason: string | null;

@@ -7,9 +7,9 @@ import logo from '../../assets/logo.png';
 import { KudiIcon } from '../../components/KudiIcon';
 import { useAuthStore } from '../../store/useAuthStore';
 import { profileApi } from '../../api';
-import { toast } from '../../store/useToastStore';
 import { colors } from '../../theme/colors';
 import { pickFile } from '../../utils/filePicker';
+import { getFriendlyErrorMessage } from '../../utils/errorHandling';
 import { CameraModal } from '../../components/CameraModal';
 import { styles } from './selfie.styles';
 
@@ -19,6 +19,7 @@ export const SelfieScreen = ({ navigation }: any) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [screenError, setScreenError] = useState<string | null>(null);
   
   const hasSelfie = !!documents.selfie;
 
@@ -36,6 +37,7 @@ export const SelfieScreen = ({ navigation }: any) => {
   const handleCaptureSelfie = async (file: DocumentFile) => {
     try {
       setIsUploading(true);
+      setScreenError(null);
       await profileApi.uploadDocument({
         docType: 'selfie',
         fileUri: file.uri,
@@ -45,15 +47,10 @@ export const SelfieScreen = ({ navigation }: any) => {
       });
 
       setSelfie(file);
-      toast.show({
-        type: 'success',
-        message: 'Selfie captured and uploaded successfully.',
-      });
     } catch (err: any) {
-      toast.show({
-        type: 'error',
-        message: err?.message || 'Failed to upload selfie to backend.',
-      });
+      setScreenError(
+        getFriendlyErrorMessage(err, 'Failed to upload selfie. Please try again.'),
+      );
     } finally {
       setIsUploading(false);
     }
@@ -66,6 +63,7 @@ export const SelfieScreen = ({ navigation }: any) => {
       if (!file) return;
 
       setIsUploading(true);
+      setScreenError(null);
       await profileApi.uploadDocument({
         docType: 'selfie',
         fileUri: file.uri,
@@ -75,34 +73,27 @@ export const SelfieScreen = ({ navigation }: any) => {
       });
 
       setSelfie(file);
-      toast.show({
-        type: 'success',
-        message: 'Selfie uploaded successfully.',
-      });
     } catch (err: any) {
-      toast.show({
-        type: 'error',
-        message: err?.message || 'Failed to upload photo.',
-      });
+      setScreenError(
+        getFriendlyErrorMessage(err, 'Failed to upload photo. Please try again.'),
+      );
     } finally {
       setIsUploading(false);
     }
   };
 
   const handleRetake = () => {
+    setScreenError(null);
     setIsCameraOpen(true);
   };
 
   const handleContinue = async () => {
     try {
       setIsSubmitting(true);
+      setScreenError(null);
       const res = await profileApi.submitKyc();
       const updatedStatus = res?.kycStatus || 'UNDER_REVIEW';
       setKycStatus(updatedStatus);
-      toast.show({
-        type: 'success',
-        message: 'KYC documents submitted for verification.',
-      });
       if (typeof navigation?.replace === 'function') {
         navigation.replace('VerificationPending');
       } else if (typeof navigation?.navigate === 'function') {
@@ -124,10 +115,12 @@ export const SelfieScreen = ({ navigation }: any) => {
         }
         return;
       }
-      toast.show({
-        type: 'error',
-        message: err?.message || 'Failed to submit KYC documents. Please verify all required documents are uploaded.',
-      });
+      setScreenError(
+        getFriendlyErrorMessage(
+          err,
+          'Failed to submit KYC documents. Please verify all required documents are uploaded.',
+        ),
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -264,6 +257,24 @@ export const SelfieScreen = ({ navigation }: any) => {
           </View>
 
           <View style={styles.footer}>
+            {Boolean(screenError) && (
+              <View
+                style={{
+                  width: '100%',
+                  backgroundColor: '#FEF2F2',
+                  borderWidth: 1,
+                  borderColor: '#FECACA',
+                  borderRadius: 10,
+                  padding: 12,
+                  marginBottom: 12,
+                }}
+                accessibilityRole="alert"
+              >
+                <Text style={{ color: '#991B1B', fontSize: 13, fontWeight: '600' }}>
+                  {screenError}
+                </Text>
+              </View>
+            )}
             <PrimaryButton 
               title={isSubmitting ? "Submitting..." : "Continue"} 
               onPress={handleContinue} 

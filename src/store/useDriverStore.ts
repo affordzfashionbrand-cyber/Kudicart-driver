@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { profileApi, ordersApi } from '../api';
 import { isLocalFileUri } from '../api/mediaApi';
-import { toast } from './useToastStore';
 
 
 export interface DriverProfile {
@@ -20,6 +19,7 @@ export interface DriverProfile {
   dob: string;
   licenseNumber: string;
   workPreference: 'FULL_TIME' | 'PART_TIME' | '';
+  createdAt?: string | null;
 }
 
 export interface DocumentFile {
@@ -83,8 +83,14 @@ interface DriverState {
     name: string;
     locality: string;
     address: string;
+    lat?: number | null;
+    lng?: number | null;
     deliveryMinutes?: number;
   } | null;
+  supportConfig?: {
+    phone?: string | null;
+    email?: string | null;
+  };
   cashInHandCod?: number;
   floatingCashLimit?: number;
   workSummary?: {
@@ -104,7 +110,10 @@ interface DriverState {
   fetchProfileAsync: () => Promise<void>;
   fetchDashboardAsync: () => Promise<void>;
   setIsOnline: (isOnline: boolean) => void;
-  setIsOnlineAsync: (isOnline: boolean) => Promise<boolean>;
+  setIsOnlineAsync: (
+    isOnline: boolean,
+    coords?: { latitude: number; longitude: number; accuracy?: number },
+  ) => Promise<boolean>;
   setActiveSurges: (surges: SurgeIncentive[]) => void;
   updateProfile: (updates: Partial<DriverProfile>) => void;
   updateProfileAsync: (updates: Partial<DriverProfile>) => Promise<{ success: boolean; error?: string }>;
@@ -123,20 +132,21 @@ export const useDriverStore = create<DriverState>((set) => ({
     role: 'Delivery Partner',
     status: 'Active',
     phone: '',
-    tier: 'Silver Tier',
+    tier: '',
     avatarInitial: 'DP',
     aadhaarNumber: '',
     panNumber: '',
     dob: '',
     licenseNumber: '',
     workPreference: 'FULL_TIME',
+    createdAt: null,
   },
   vehicle: {
     registrationNumber: '',
     vehicleType: 'Bike',
     make: '',
     model: '',
-    rcStatus: 'Under review',
+    rcStatus: '',
     rcNumber: '',
   },
   documents: {
@@ -147,27 +157,23 @@ export const useDriverStore = create<DriverState>((set) => ({
     selfie: null,
   },
   kyc: {
-    licenseStatus: 'Under review',
+    licenseStatus: '',
     licenseNumber: '',
-    aadhaarStatus: 'Under review',
+    aadhaarStatus: '',
     aadhaarNumber: '',
-    panStatus: 'Under review',
+    panStatus: '',
   },
   isOnline: false,
-  schedule: {
-    timeRange: '09:00 AM — 06:00 PM',
-    status: 'IN_PROGRESS',
-  },
+  schedule: undefined,
   assignedStore: {
     name: '',
     address: '',
   },
+  supportConfig: {},
   workSummary: {
     totalEarnings: 0,
     loginHours: '0h 00m',
     ordersDone: 0,
-    totalSlot: '09:00 AM — 06:00 PM',
-    workingDays: '0 / 6 days',
   },
   weeklyBonusProgress: {
     eligibleOrders: 0,
@@ -218,14 +224,33 @@ export const useDriverStore = create<DriverState>((set) => ({
             dob: res.dob || state.profile.dob,
             licenseNumber: res.licenseNumber || state.profile.licenseNumber,
             workPreference: res.workPreference || state.profile.workPreference,
+            createdAt: res.createdAt || state.profile.createdAt,
           },
-          vehicle: res.vehicle ? { ...state.vehicle, ...res.vehicle } : state.vehicle,
+          vehicle: res.vehicle
+            ? {
+                ...state.vehicle,
+                ...res.vehicle,
+                rcStatus:
+                  res.documents?.vehicleRc?.status ||
+                  res.vehicle?.rcStatus ||
+                  state.vehicle.rcStatus,
+              }
+            : state.vehicle,
           kyc: {
             ...state.kyc,
             status: res.kycStatus || state.kyc?.status,
-            licenseStatus: res.kycStatus || state.kyc?.licenseStatus,
-            aadhaarStatus: res.kycStatus || state.kyc?.aadhaarStatus,
-            panStatus: res.kycStatus || state.kyc?.panStatus,
+            licenseStatus:
+              res.documents?.drivingLicence?.status ||
+              res.kycStatus ||
+              state.kyc?.licenseStatus,
+            aadhaarStatus:
+              res.documents?.aadhaar?.status ||
+              res.kycStatus ||
+              state.kyc?.aadhaarStatus,
+            panStatus:
+              res.documents?.pan?.status ||
+              res.kycStatus ||
+              state.kyc?.panStatus,
             rejectionReason: res.rejectionReason || state.kyc?.rejectionReason,
             ...(res.kyc || {}),
           },
@@ -261,6 +286,7 @@ export const useDriverStore = create<DriverState>((set) => ({
           isOnline: typeof res.isOnline === 'boolean' ? res.isOnline : state.isOnline,
           assignedStore: res.assignedStore || state.assignedStore,
           assignedHub: res.assignedHub !== undefined ? res.assignedHub : state.assignedHub,
+          supportConfig: res.supportConfig || state.supportConfig,
           cashInHandCod:
             typeof res.cashInHandCod === 'number' ? res.cashInHandCod : state.cashInHandCod,
           floatingCashLimit:
@@ -340,9 +366,18 @@ export const useDriverStore = create<DriverState>((set) => ({
           ? {
               ...state.kyc,
               status: profileData.kycStatus,
-              licenseStatus: state.kyc?.licenseStatus || profileData.kycStatus,
-              aadhaarStatus: state.kyc?.aadhaarStatus || profileData.kycStatus,
-              panStatus: state.kyc?.panStatus || profileData.kycStatus,
+              licenseStatus:
+                profileData?.documents?.drivingLicence?.status ||
+                state.kyc?.licenseStatus ||
+                profileData.kycStatus,
+              aadhaarStatus:
+                profileData?.documents?.aadhaar?.status ||
+                state.kyc?.aadhaarStatus ||
+                profileData.kycStatus,
+              panStatus:
+                profileData?.documents?.pan?.status ||
+                state.kyc?.panStatus ||
+                profileData.kycStatus,
               rejectionReason: profileData?.rejectionReason || state.kyc?.rejectionReason,
             }
           : state.kyc;
@@ -399,14 +434,32 @@ export const useDriverStore = create<DriverState>((set) => ({
 
   setIsOnline: (isOnline: boolean) => set({ isOnline }),
 
-  setIsOnlineAsync: async (isOnline: boolean) => {
-    const res = await profileApi.updateAvailability(isOnline);
+  setIsOnlineAsync: async (
+    isOnline: boolean,
+    coords?: { latitude: number; longitude: number; accuracy?: number },
+  ) => {
+    const res = await profileApi.updateAvailability(isOnline, coords);
     set({ isOnline: res.isOnline });
     return true;
   },
   setActiveSurges: (activeSurges: SurgeIncentive[]) => set({ activeSurges }),
 
   updateProfile: (updates) => {
+    const ALLOWED_KEYS: Array<keyof DriverProfile> = [
+      'fullName',
+      'aadhaarNumber',
+      'panNumber',
+      'dob',
+      'licenseNumber',
+      'workPreference',
+    ];
+    const sanitizedUpdates = ALLOWED_KEYS.reduce((acc, key) => {
+      if (updates[key] !== undefined) {
+        (acc as any)[key] = updates[key];
+      }
+      return acc;
+    }, {} as Partial<DriverProfile>);
+
     set((state) => {
       const updatedProfile = { ...state.profile, ...updates };
       if (updates.fullName) {
@@ -418,12 +471,14 @@ export const useDriverStore = create<DriverState>((set) => ({
       }
       return { profile: updatedProfile, lastError: null };
     });
-    profileApi.updateDetails(updates).catch((err: any) => {
+
+    if (Object.keys(sanitizedUpdates).length === 0) {
+      return;
+    }
+
+    profileApi.updateDetails(sanitizedUpdates).catch((err: any) => {
       const msg = err?.message || 'Unable to save profile details';
       set({ lastError: msg });
-      try {
-        toast.show({ type: 'error', message: msg });
-      } catch {}
     });
   },
 
@@ -455,9 +510,6 @@ export const useDriverStore = create<DriverState>((set) => ({
     } catch (err: any) {
       const msg = err?.message || 'Unable to save profile details';
       set({ lastError: msg });
-      try {
-        toast.show({ type: 'error', message: msg });
-      } catch {}
       return { success: false, error: msg };
     }
   },
@@ -467,9 +519,6 @@ export const useDriverStore = create<DriverState>((set) => ({
     profileApi.updateVehicle(updates).catch((err: any) => {
       const msg = err?.message || 'Unable to save vehicle details';
       set({ lastError: msg });
-      try {
-        toast.show({ type: 'error', message: msg });
-      } catch {}
     });
   },
 
@@ -490,9 +539,6 @@ export const useDriverStore = create<DriverState>((set) => ({
     } catch (err: any) {
       const msg = err?.message || 'Unable to save vehicle details';
       set({ lastError: msg });
-      try {
-        toast.show({ type: 'error', message: msg });
-      } catch {}
       return { success: false, error: msg };
     }
   },
@@ -541,9 +587,6 @@ export const useDriverStore = create<DriverState>((set) => ({
         .catch((err: any) => {
           const msg = err?.message || 'Unable to upload KYC document';
           set({ lastError: msg });
-          try {
-            toast.show({ type: 'error', message: msg });
-          } catch {}
         });
     }
   },
@@ -568,9 +611,6 @@ export const useDriverStore = create<DriverState>((set) => ({
         .catch((err: any) => {
           const msg = err?.message || 'Unable to upload selfie';
           set({ lastError: msg });
-          try {
-            toast.show({ type: 'error', message: msg });
-          } catch {}
         });
     }
   },

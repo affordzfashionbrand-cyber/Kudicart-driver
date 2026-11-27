@@ -174,7 +174,12 @@ describe('Order & Try & Buy State Machine Flows', () => {
 
     const ok = await useOrderStore.getState().reconcileStoreReturn(tnbOrder.id);
     expect(ok).toBe(true);
-    expect(ordersApi.reconcileStoreReturn).toHaveBeenCalledWith(tnbOrder.id, undefined, undefined);
+    expect(ordersApi.reconcileStoreReturn).toHaveBeenCalledWith(
+      tnbOrder.id,
+      undefined,
+      undefined,
+      expect.any(String),
+    );
     expect(useOrderStore.getState().activeOrders).toHaveLength(0);
     expect(useOrderStore.getState().historicalOrders[0].status).toBe('RETURNED');
     expect(useOrderStore.getState().historicalOrders[0].storeReconciliationStatus).toBe('RECONCILED');
